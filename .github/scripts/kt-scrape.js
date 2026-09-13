@@ -8,125 +8,41 @@ const today = new Date().toISOString().split('T')[0];
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
   const page = await browser.newPage();
 
-  // Login: go to KT, get session cookie, then POST login with form encoding
-  console.log('Loading KT homepage...');
+  // Login via Puppeteer request interception — POST to /user/login with proper cookies
+  console.log('Logging in...');
+
+  // First get the initial page cookies (JSESSIONID etc)
   await page.goto('https://www.kaloricketabulky.sk/', { waitUntil: 'networkidle2', timeout: 30000 });
+  const initialCookies = await page.cookies();
+  console.log('Initial cookies:', initialCookies.map(c => c.name).join(', '));
 
-  // Use Angular $http with form encoding (not JSON)
-  console.log('Logging in via Angular $http (form-encoded)...');
-  const loginResult = await page.evaluate(async (email, password) => {
-    if (typeof angular === 'undefined') return { ok: false, err: 'no angular' };
-    const el = document.querySelector('[ng-app]') || document.querySelector('.ng-scope') || document.body;
-    const inj = angular.element(el).injector();
-    if (!inj) return { ok: false, err: 'no injector' };
-    const $http = inj.get('$http');
-
-    // KT login endpoint expects form-encoded, not JSON
-    const formData = 'email=' + encodeURIComponent(email) + '&password=' + encodeURIComponent(password) + '&_remember=1';
-
-    const endpoints = [
-      '/login',
-      '/user/login',
-    ];
-
-    for (const url of endpoints) {
-      try {
-        const resp = await new Promise((resolve, reject) => {
-          $http({
-            method: 'POST',
-            url: url,
-            data: formData,
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-          }).then(
-            r => resolve({ ok: true, status: r.status, url }),
-            e => resolve({ ok: false, status: e.status, url, redirect: e.headers ? e.headers('location') : '' })
-          );
-        });
-        if (resp.ok) return resp;
-      } catch(e) {}
-    }
-    return { ok: false, err: 'all failed' };
+  // Use page.evaluate to submit the login form via XMLHttpRequest (synchronous-ish)
+  // This ensures cookies from the response are properly set in the browser
+  const loginResult = await page.evaluate((email, password) => {
+    return new Promise((resolve) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/user/login', true);
+      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+      xhr.withCredentials = true;
+      xhr.onload = () => resolve({ status: xhr.status, url: xhr.responseURL, hasRedirect: xhr.responseURL !== location.origin + '/user/login' });
+      xhr.onerror = () => resolve({ status: 0, error: 'network error' });
+      xhr.send('email=' + encodeURIComponent(email) + '&password=' + encodeURIComponent(password) + '&_remember=1');
+    });
   }, process.env.KT_EMAIL, process.env.KT_PASSWORD);
+  console.log('XHR login result:', JSON.stringify(loginResult));
 
-  console.log('Login result:', JSON.stringify(loginResult));
-  await page.reload({ waitUntil: 'networkidle2', timeout: 20000 });
+  // Check cookies after login
+  const postLoginCookies = await page.cookies();
+  const newCookies = postLoginCookies.filter(c => !initialCookies.find(ic => ic.name === c.name && ic.value === c.value));
+  console.log('New cookies after login:', newCookies.map(c => c.name + '=' + c.value.substring(0, 20) + '...').join(', '));
 
+  // Reload to pick up logged-in state
+  await page.goto('https://www.kaloricketabulky.sk/', { waitUntil: 'networkidle2', timeout: 20000 });
   const loggedIn = await page.evaluate(() => {
     const el = document.getElementById('logged');
     return el ? el.value : 'not-found';
   });
   console.log('Logged in:', loggedIn);
-
-  if (loggedIn !== 'true' && loggedIn !== '1') {
-    // Fill hidden login form fields via Puppeteer and trigger Angular digest
-    console.log('Filling login form via DOM...');
-
-    // Make login form inputs focusable by scrolling them into view
-    const filled = await page.evaluate((email, password) => {
-      const emailInput = document.querySelector('input[ng-model="loginForm.email"]');
-      const pwInput = document.querySelector('input[ng-model="loginForm.password"]');
-      if (!emailInput || !pwInput) return { found: false, email: !!emailInput, pw: !!pwInput };
-
-      // Make sure inputs are interactable
-      emailInput.style.display = 'block';
-      emailInput.style.visibility = 'visible';
-      emailInput.style.opacity = '1';
-      pwInput.style.display = 'block';
-      pwInput.style.visibility = 'visible';
-      pwInput.style.opacity = '1';
-
-      // Set values via Angular
-      const scope = angular.element(emailInput).scope();
-      if (scope) {
-        scope.loginForm = scope.loginForm || {};
-        scope.loginForm.email = email;
-        scope.loginForm.password = password;
-        scope.$apply();
-      }
-
-      return { found: true, scopeExists: !!scope, loginForm: scope ? JSON.stringify(scope.loginForm) : null };
-    }, process.env.KT_EMAIL, process.env.KT_PASSWORD);
-    console.log('Fill result:', JSON.stringify(filled));
-
-    if (filled.found) {
-      // Now intercept network to see what the login POST looks like
-      const requests = [];
-      page.on('request', req => {
-        if (req.url().includes('login')) {
-          requests.push({ url: req.url(), method: req.method(), postData: req.postData()?.substring(0, 200) });
-        }
-      });
-
-      // Click the login button via scope
-      await page.evaluate(() => {
-        const emailInput = document.querySelector('input[ng-model="loginForm.email"]');
-        const scope = angular.element(emailInput).scope();
-        if (scope && typeof scope.login === 'function') {
-          scope.login();
-        }
-      });
-
-      await new Promise(r => setTimeout(r, 5000));
-      console.log('Login requests:', JSON.stringify(requests));
-
-      const loggedIn2 = await page.evaluate(() => {
-        const el = document.getElementById('logged');
-        return el ? el.value : 'not-found';
-      });
-      console.log('Logged in after form login:', loggedIn2);
-
-      if (loggedIn2 !== 'true' && loggedIn2 !== '1') {
-        // Check if page URL changed (redirect after login)
-        console.log('URL after login:', page.url());
-        await page.reload({ waitUntil: 'networkidle2' });
-        const loggedIn3 = await page.evaluate(() => {
-          const el = document.getElementById('logged');
-          return el ? el.value : 'not-found';
-        });
-        console.log('Logged in after reload:', loggedIn3);
-      }
-    }
-  }
 
   // Navigate to diary
   console.log('Navigating to diary...');
