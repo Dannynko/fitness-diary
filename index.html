@@ -1077,7 +1077,7 @@
                         for (const r of byMeal[meal]) {
                             const name = r.foodName || r.ktId || '?';
                             const amt = r.amount || '';
-                            const label = name + (amt ? ' <span style="font-size:0.65rem;color:var(--text-muted);margin-left:12px;">(' + amt + ')</span>' : '');
+                            const label = name + (amt ? ' <span style="font-size:0.65rem;color:var(--text-muted);margin-left:6px;">(' + amt + ')</span>' : '');
                             rows += '<tr class="detail-row-' + date + '" style="display:none;font-size:0.7rem;color:var(--text-muted);line-height:1.2;">';
                             rows += '<td colspan="2" style="padding:1px 3px 1px 24px;' + bb + bl + bg + 'text-align:left;color:var(--text);">' + label + '</td>';
                             rows += '<td style="padding:1px 3px;' + bb + bg + '">' + r.protein.toFixed(1) + ' g</td>';
