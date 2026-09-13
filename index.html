@@ -1617,7 +1617,7 @@
                 localStorage.setItem('lastSyncTime', new Date().toISOString());
                 updateSyncStatus();
                 renderAll();
-                showToast('Synchronizované (' + remoteNew.length + ' nových z cloudu)');
+                showToast('Synchronizované (' + mergedRecords.length + ' záznamov)');
             } catch (e) {
                 showToast('Sync chyba: ' + e.message, true);
             } finally {
