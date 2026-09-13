@@ -1633,41 +1633,45 @@
         }
 
         // ===== APPLE HEALTH IMPORT =====
+        function processHealthDay(day) {
+            let healthData = JSON.parse(localStorage.getItem('healthData') || '[]');
+            healthData = healthData.filter(h => h.date !== day.date);
+            healthData.push(day);
+            localStorage.setItem('healthData', JSON.stringify(healthData));
+
+            if (day.activeCalories > 0) {
+                const existing = records.find(r => r.date === day.date && r.source === 'health');
+                if (existing) {
+                    existing.caloriesOut = day.activeCalories;
+                } else {
+                    records.push({
+                        id: 'health-' + day.date,
+                        date: day.date,
+                        foodName: '',
+                        caloriesIn: 0,
+                        caloriesOut: day.activeCalories,
+                        protein: 0,
+                        carbs: 0,
+                        fat: 0,
+                        source: 'health'
+                    });
+                }
+            }
+        }
+
         async function importAppleHealth() {
             try {
                 const text = await navigator.clipboard.readText();
-                const data = JSON.parse(text);
-                if (data.type !== 'appleHealth') throw new Error('Neplatný formát');
+                const raw = JSON.parse(text);
+                const days = Array.isArray(raw) ? raw : [raw];
+                if (days.length === 0 || !days[0].date) throw new Error('Neplatný formát');
 
-                let healthData = JSON.parse(localStorage.getItem('healthData') || '[]');
-                healthData = healthData.filter(h => h.date !== data.date);
-                healthData.push(data);
-                localStorage.setItem('healthData', JSON.stringify(healthData));
-
-                if (data.activeCalories > 0) {
-                    const existing = records.find(r => r.date === data.date && r.source === 'health');
-                    if (existing) {
-                        existing.caloriesOut = data.activeCalories;
-                    } else {
-                        records.push({
-                            id: 'health-' + data.date,
-                            date: data.date,
-                            foodName: '',
-                            caloriesIn: 0,
-                            caloriesOut: data.activeCalories,
-                            protein: 0,
-                            carbs: 0,
-                            fat: 0,
-                            source: 'health'
-                        });
-                    }
-                    saveRecords();
-                }
-
+                days.forEach(day => processHealthDay(day));
+                saveRecords();
                 renderAll();
-                showToast('Apple Health dáta importované (' + data.date + ')');
+                showToast('Apple Health: ' + days.length + ' dní importovaných');
             } catch(e) {
-                showToast('Chyba: ' + e.message + '. Skopíruj dáta z Apple Health Shortcut.', true);
+                showToast('Chyba: ' + e.message, true);
             }
         }
 
