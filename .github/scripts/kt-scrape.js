@@ -58,110 +58,73 @@ const today = new Date().toISOString().split('T')[0];
   console.log('Logged in:', loggedIn);
 
   if (loggedIn !== 'true' && loggedIn !== '1') {
-    // Find ALL inputs including hidden ones, looking for login ng-models
-    console.log('Searching for login form fields in DOM...');
-    const allInputs = await page.evaluate(() => {
-      return [...document.querySelectorAll('input')].map(el => ({
-        type: el.type, name: el.name, id: el.id,
-        ngModel: el.getAttribute('ng-model') || '',
-        visible: el.offsetParent !== null,
-        parent: el.parentElement?.className?.substring(0, 50) || ''
-      })).filter(i => i.ngModel.match(/email|password|heslo|login|user/i) || i.type === 'password');
-    });
-    console.log('Login-related inputs:', JSON.stringify(allInputs, null, 2));
+    // Fill hidden login form fields via Puppeteer and trigger Angular digest
+    console.log('Filling login form via DOM...');
 
-    // We know ng-model="loginForm.email" and ng-model="loginForm.password" exist
-    // Find the scope with loginForm and set values, then find and call the login submit function
-    const loginAttempt = await page.evaluate(async (email, password) => {
-      if (typeof angular === 'undefined') return 'no angular';
-      const el = document.querySelector('[ng-app]') || document.querySelector('.ng-scope') || document.body;
-      const inj = angular.element(el).injector();
-      if (!inj) return 'no injector';
-      const rs = inj.get('$rootScope');
+    // Make login form inputs focusable by scrolling them into view
+    const filled = await page.evaluate((email, password) => {
+      const emailInput = document.querySelector('input[ng-model="loginForm.email"]');
+      const pwInput = document.querySelector('input[ng-model="loginForm.password"]');
+      if (!emailInput || !pwInput) return { found: false, email: !!emailInput, pw: !!pwInput };
 
-      // Find scope with loginForm
-      let loginScope = null;
-      let loginFns = [];
-      function walk(scope, depth) {
-        if (!scope || depth > 20) return;
-        if (scope.loginForm && !loginScope) loginScope = scope;
-        // Collect all functions with 'login' in name
-        for (const k in scope) {
-          if (typeof scope[k] === 'function' && k.toLowerCase().includes('login') && !k.includes('Visibility')) {
-            loginFns.push({ scope, fn: k, depth });
-          }
-        }
-        let child = scope.$$childHead;
-        while (child) { walk(child, depth + 1); child = child.$$nextSibling; }
-      }
-      walk(rs, 0);
+      // Make sure inputs are interactable
+      emailInput.style.display = 'block';
+      emailInput.style.visibility = 'visible';
+      emailInput.style.opacity = '1';
+      pwInput.style.display = 'block';
+      pwInput.style.visibility = 'visible';
+      pwInput.style.opacity = '1';
 
-      const fnNames = loginFns.map(f => f.fn);
-
-      if (!loginScope) return 'no loginForm scope found. Login fns: ' + fnNames.join(', ');
-
-      // Set loginForm values
-      if (!loginScope.loginForm) loginScope.loginForm = {};
-      loginScope.loginForm.email = email;
-      loginScope.loginForm.password = password;
-      loginScope.$apply();
-
-      // List all keys on loginScope for debugging
-      const scopeKeys = Object.keys(loginScope).filter(k => k.charAt(0) !== '$').map(k => k + ':' + typeof loginScope[k]);
-
-      // Call login and capture result
-      if (typeof loginScope.login === 'function') {
-        try {
-          const result = loginScope.login();
-          // If it returns a promise, wait for it
-          if (result && typeof result.then === 'function') {
-            const r = await result.then(
-              v => ({ ok: true, val: JSON.stringify(v).substring(0, 300) }),
-              e => ({ ok: false, err: e.data ? JSON.stringify(e.data).substring(0, 300) : e.message || String(e), status: e.status })
-            );
-            return 'login() promise: ' + JSON.stringify(r) + '. Keys: ' + scopeKeys.join(', ');
-          }
-          return 'login() returned: ' + String(result).substring(0, 200) + '. Keys: ' + scopeKeys.join(', ');
-        } catch(e) { return 'login() error: ' + e.message; }
+      // Set values via Angular
+      const scope = angular.element(emailInput).scope();
+      if (scope) {
+        scope.loginForm = scope.loginForm || {};
+        scope.loginForm.email = email;
+        scope.loginForm.password = password;
+        scope.$apply();
       }
 
-      const submitNames = ['submitLogin', 'doLogin', 'loginSubmit', 'signIn', 'userLogin', 'logIn'];
-      for (const name of submitNames) {
-        if (typeof loginScope[name] === 'function') {
-          try {
-            loginScope[name]();
-            return 'called ' + name;
-          } catch(e) { return 'error calling ' + name + ': ' + e.message; }
-        }
-      }
-
-      // Try any login function from the scope tree
-      for (const f of loginFns) {
-        try {
-          f.scope[f.fn]();
-          return 'called ' + f.fn + ' (depth ' + f.depth + '). Keys: ' + scopeKeys.join(', ');
-        } catch(e) {}
-      }
-
-      return 'loginForm set but no submit fn. Keys: ' + scopeKeys.join(', ') + '. Login fns: ' + fnNames.join(', ');
+      return { found: true, scopeExists: !!scope, loginForm: scope ? JSON.stringify(scope.loginForm) : null };
     }, process.env.KT_EMAIL, process.env.KT_PASSWORD);
-    console.log('Login attempt:', loginAttempt);
+    console.log('Fill result:', JSON.stringify(filled));
 
-    await new Promise(r => setTimeout(r, 5000));
+    if (filled.found) {
+      // Now intercept network to see what the login POST looks like
+      const requests = [];
+      page.on('request', req => {
+        if (req.url().includes('login')) {
+          requests.push({ url: req.url(), method: req.method(), postData: req.postData()?.substring(0, 200) });
+        }
+      });
 
-    const loggedIn2 = await page.evaluate(() => {
-      const el = document.getElementById('logged');
-      return el ? el.value : 'not-found';
-    });
-    console.log('Logged in after login attempt:', loggedIn2);
+      // Click the login button via scope
+      await page.evaluate(() => {
+        const emailInput = document.querySelector('input[ng-model="loginForm.email"]');
+        const scope = angular.element(emailInput).scope();
+        if (scope && typeof scope.login === 'function') {
+          scope.login();
+        }
+      });
 
-    if (loggedIn2 !== 'true' && loggedIn2 !== '1') {
-      await page.reload({ waitUntil: 'networkidle2' });
-      const loggedIn3 = await page.evaluate(() => {
+      await new Promise(r => setTimeout(r, 5000));
+      console.log('Login requests:', JSON.stringify(requests));
+
+      const loggedIn2 = await page.evaluate(() => {
         const el = document.getElementById('logged');
         return el ? el.value : 'not-found';
       });
-      console.log('Logged in after reload:', loggedIn3);
+      console.log('Logged in after form login:', loggedIn2);
+
+      if (loggedIn2 !== 'true' && loggedIn2 !== '1') {
+        // Check if page URL changed (redirect after login)
+        console.log('URL after login:', page.url());
+        await page.reload({ waitUntil: 'networkidle2' });
+        const loggedIn3 = await page.evaluate(() => {
+          const el = document.getElementById('logged');
+          return el ? el.value : 'not-found';
+        });
+        console.log('Logged in after reload:', loggedIn3);
+      }
     }
   }
 
