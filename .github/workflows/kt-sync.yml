@@ -2,8 +2,8 @@ name: KT Daily Sync
 
 on:
   schedule:
-    - cron: '0 18 * * *'  # 18:00 UTC = 20:00 CEST
-  workflow_dispatch: # manual trigger
+    - cron: '0 18 * * *'
+  workflow_dispatch:
 
 jobs:
   sync:
@@ -18,216 +18,219 @@ jobs:
         with:
           script: |
             const GIST_ID = 'ffe6105f3e59d233d6107f50ac5cf9ab';
-
-            // Login to KT
-            const loginResp = await fetch('https://www.kaloricketabulky.sk/api/v1/user/login', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                email: process.env.KT_EMAIL,
-                password: process.env.KT_PASSWORD
-              }),
-              redirect: 'manual'
-            });
-
-            if (!loginResp.ok && loginResp.status !== 302) {
-              // Try form-based login
-              const formResp = await fetch('https://www.kaloricketabulky.sk/prihlasenie', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({
-                  email: process.env.KT_EMAIL,
-                  password: process.env.KT_PASSWORD,
-                  remember: '1'
-                }),
-                redirect: 'manual'
-              });
-              var cookies = (formResp.headers.get('set-cookie') || '').split(',').map(c => c.split(';')[0].trim()).filter(Boolean).join('; ');
-              if (!cookies) {
-                core.setFailed('KT login failed');
-                return;
-              }
-            } else {
-              var cookies = (loginResp.headers.get('set-cookie') || '').split(',').map(c => c.split(';')[0].trim()).filter(Boolean).join('; ');
-            }
-
-            console.log('Logged in, cookies obtained');
-
-            // Fetch diary page
             const today = new Date().toISOString().split('T')[0];
-            const diaryUrl = 'https://www.kaloricketabulky.sk/moj-diar?date=' + today;
 
-            const diaryResp = await fetch(diaryUrl, {
-              headers: { 'Cookie': cookies }
-            });
-            const html = await diaryResp.text();
-
-            // Try to find diary data in the HTML/JS
-            // KT embeds diary data in Angular scope, but we can try API endpoints
-            const apiUrls = [
-              'https://www.kaloricketabulky.sk/api/v1/diary?date=' + today,
-              'https://www.kaloricketabulky.sk/api/v1/diary/day?date=' + today,
-              'https://www.kaloricketabulky.sk/api/diary?date=' + today
+            // Step 1: Discover login endpoint
+            const endpoints = [
+              { url: 'https://www.kaloricketabulky.sk/prihlasenie', method: 'POST', type: 'form',
+                body: new URLSearchParams({ email: process.env.KT_EMAIL, password: process.env.KT_PASSWORD, remember: '1' }) },
+              { url: 'https://www.kaloricketabulky.sk/api/v1/user/login', method: 'POST', type: 'json',
+                body: JSON.stringify({ email: process.env.KT_EMAIL, password: process.env.KT_PASSWORD }) },
+              { url: 'https://www.kaloricketabulky.sk/login', method: 'POST', type: 'form',
+                body: new URLSearchParams({ email: process.env.KT_EMAIL, password: process.env.KT_PASSWORD, _remember: '1' }) },
+              { url: 'https://www.kaloricketabulky.sk/users/sign_in', method: 'POST', type: 'form',
+                body: new URLSearchParams({ 'user[email]': process.env.KT_EMAIL, 'user[password]': process.env.KT_PASSWORD }) },
             ];
 
-            let diaryData = null;
-            for (const url of apiUrls) {
+            let cookies = '';
+            for (const ep of endpoints) {
               try {
-                const resp = await fetch(url, {
-                  headers: { 'Cookie': cookies, 'Accept': 'application/json' }
+                const headers = ep.type === 'json'
+                  ? { 'Content-Type': 'application/json' }
+                  : { 'Content-Type': 'application/x-www-form-urlencoded' };
+
+                const resp = await fetch(ep.url, {
+                  method: ep.method,
+                  headers,
+                  body: ep.body,
+                  redirect: 'manual'
                 });
-                if (resp.ok) {
-                  const text = await resp.text();
-                  if (text.startsWith('{') || text.startsWith('[')) {
-                    diaryData = JSON.parse(text);
-                    console.log('Found diary data at:', url);
-                    break;
+
+                const setCookie = resp.headers.getSetCookie ? resp.headers.getSetCookie() : [];
+                const rawCookies = setCookie.length > 0
+                  ? setCookie.map(c => c.split(';')[0]).join('; ')
+                  : '';
+
+                console.log(`[${ep.url}] status=${resp.status}, cookies=${rawCookies.length > 0 ? 'YES (' + rawCookies.length + ' chars)' : 'NONE'}`);
+
+                if (rawCookies && (resp.status === 200 || resp.status === 302 || resp.status === 301)) {
+                  cookies = rawCookies;
+                  console.log('Login successful via:', ep.url);
+                  break;
+                }
+
+                // Check response body for clues
+                const text = await resp.text();
+                console.log('Response snippet:', text.substring(0, 300).replace(/\n/g, ' '));
+              } catch(e) {
+                console.log(`[${ep.url}] error: ${e.message}`);
+              }
+            }
+
+            if (!cookies) {
+              // Try GET on login page to find CSRF token and form action
+              try {
+                const pageResp = await fetch('https://www.kaloricketabulky.sk/prihlasenie');
+                const pageHtml = await pageResp.text();
+                const pageCookies = pageResp.headers.getSetCookie ? pageResp.headers.getSetCookie().map(c => c.split(';')[0]).join('; ') : '';
+
+                // Find form action and CSRF token
+                const formAction = (pageHtml.match(/action="([^"]*login[^"]*)"/) || [])[1] || '';
+                const csrfToken = (pageHtml.match(/name="_token"[^>]*value="([^"]*)"/) || pageHtml.match(/name="csrf[^"]*"[^>]*value="([^"]*)"/) || pageHtml.match(/name="_csrf[^"]*"[^>]*value="([^"]*)"/) || [])[1] || '';
+                const formFields = pageHtml.match(/<input[^>]*name="[^"]*"[^>]*>/g) || [];
+
+                console.log('Login page form action:', formAction || 'not found');
+                console.log('CSRF token:', csrfToken ? 'found (' + csrfToken.length + ' chars)' : 'not found');
+                console.log('Form fields:', formFields.map(f => (f.match(/name="([^"]*)"/) || [])[1]).filter(Boolean).join(', '));
+
+                if (csrfToken || pageCookies) {
+                  const loginUrl = formAction ? new URL(formAction, 'https://www.kaloricketabulky.sk').href : 'https://www.kaloricketabulky.sk/prihlasenie';
+                  const params = new URLSearchParams({
+                    email: process.env.KT_EMAIL,
+                    password: process.env.KT_PASSWORD,
+                  });
+                  if (csrfToken) params.set('_token', csrfToken);
+
+                  const loginResp = await fetch(loginUrl, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/x-www-form-urlencoded',
+                      'Cookie': pageCookies
+                    },
+                    body: params,
+                    redirect: 'manual'
+                  });
+
+                  const loginCookies = loginResp.headers.getSetCookie ? loginResp.headers.getSetCookie().map(c => c.split(';')[0]).join('; ') : '';
+                  console.log('CSRF login attempt:', loginResp.status, 'cookies:', loginCookies ? 'YES' : 'NONE');
+
+                  if (loginCookies) {
+                    cookies = [pageCookies, loginCookies].filter(Boolean).join('; ');
+                    console.log('Login successful with CSRF!');
                   }
                 }
-              } catch(e) {}
-            }
-
-            // If API didn't work, parse HTML for embedded JSON
-            if (!diaryData) {
-              const jsonMatch = html.match(/diary\s*[:=]\s*(\{[\s\S]*?\});/);
-              if (jsonMatch) {
-                try { diaryData = JSON.parse(jsonMatch[1]); } catch(e) {}
+              } catch(e) {
+                console.log('Login page error:', e.message);
               }
             }
 
-            // If still no data, try scraping the HTML table
-            if (!diaryData) {
-              console.log('API endpoints not found, parsing HTML...');
-              const items = [];
-              const mealRegex = /<h[23][^>]*>([^<]+)<\/h[23]>/g;
-              const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/g;
-              const cellRegex = /<td[^>]*>([\s\S]*?)<\/td>/g;
-
-              // Look for food entries in HTML
-              const foodPattern = /data-food[^>]*>([^<]+)/g;
-              let match;
-              while ((match = foodPattern.exec(html)) !== null) {
-                console.log('Found food reference:', match[1].substring(0, 50));
-              }
-
-              // Log a snippet of HTML for debugging
-              const diarySection = html.indexOf('diary');
-              if (diarySection > -1) {
-                console.log('Diary section found at char', diarySection);
-                console.log('Snippet:', html.substring(diarySection, diarySection + 500).replace(/<[^>]+>/g, ' ').substring(0, 200));
-              }
-
-              if (items.length === 0) {
-                console.log('HTML length:', html.length);
-                console.log('Contains angular:', html.includes('ng-app'));
-                console.log('Contains diary:', html.includes('diary'));
-                console.log('Page title:', (html.match(/<title>([^<]*)<\/title>/) || [])[1]);
-                core.setFailed('Could not parse diary data from KT. The page may require JavaScript rendering.');
-                return;
-              }
-            }
-
-            // Process diary data into records
-            let items = [];
-            if (diaryData) {
-              const mealNames = ['Raňajky', 'Desiata', 'Obed', 'Olovrant', 'Večera', 'Druhá večera'];
-
-              const times = diaryData.times || diaryData.meals || diaryData.entries || [];
-              if (Array.isArray(times)) {
-                for (let t = 0; t < times.length; t++) {
-                  const time = times[t];
-                  const mealName = time.title || time.name || mealNames[t] || 'Jedlo ' + (t + 1);
-
-                  // Find food array in the time object
-                  let foodArray = time.foods || time.items || time.entries || [];
-                  if (!Array.isArray(foodArray) || foodArray.length === 0) {
-                    for (const k of Object.keys(time)) {
-                      if (Array.isArray(time[k]) && time[k].length > 0) {
-                        foodArray = time[k];
-                        break;
-                      }
-                    }
-                  }
-
-                  for (const food of foodArray) {
-                    const title = food.title || food.name || food.food_name || '';
-                    const energy = food.energy || food.kcal || food.calories || 0;
-                    const protein = food.protein || food.proteins || food.bielkoviny || 0;
-                    const carbs = food.carbs || food.carbohydrates || food.sacharidy || 0;
-                    const fat = food.fat || food.fats || food.tuky || 0;
-                    const amount = food.amount || food.quantity || food.weight || 0;
-                    const unit = food.unit || 'g';
-
-                    if (title) {
-                      items.push({
-                        id: Date.now() + '_' + Math.random().toString(36).substr(2, 5),
-                        date: today,
-                        foodName: String(title),
-                        amount: amount ? amount + ' ' + unit : '',
-                        protein: Number(protein) || 0,
-                        carbs: Number(carbs) || 0,
-                        fat: Number(fat) || 0,
-                        caloriesIn: Number(energy) || 0,
-                        caloriesOut: 0,
-                        meal: mealName,
-                        source: 'kt',
-                        ktId: title + '_' + today + '_' + energy
-                      });
-                    }
-                  }
-                }
-              }
-            }
-
-            if (items.length === 0) {
-              console.log('No food items found for today');
-              console.log('Diary data keys:', diaryData ? Object.keys(diaryData) : 'null');
-              if (diaryData) console.log('Diary structure:', JSON.stringify(diaryData).substring(0, 500));
+            if (!cookies) {
+              core.setFailed('All login methods failed. KT may require browser-based auth.');
               return;
             }
 
-            console.log('Found ' + items.length + ' food items');
+            // Step 2: Fetch diary
+            const diaryUrls = [
+              'https://www.kaloricketabulky.sk/api/v1/diary?date=' + today,
+              'https://www.kaloricketabulky.sk/api/v1/diary/day?date=' + today,
+              'https://www.kaloricketabulky.sk/api/diary/' + today,
+              'https://www.kaloricketabulky.sk/moj-diar?date=' + today
+            ];
 
-            // Fetch existing Gist data
-            const gistResp = await fetch('https://api.github.com/gists/' + GIST_ID, {
-              headers: {
-                'Authorization': 'token ' + process.env.GH_GIST_TOKEN,
-                'Accept': 'application/vnd.github.v3+json'
+            let diaryData = null;
+            let diaryHtml = '';
+            for (const url of diaryUrls) {
+              try {
+                const resp = await fetch(url, {
+                  headers: { 'Cookie': cookies, 'Accept': 'application/json, text/html' }
+                });
+                console.log(`[diary] ${url} -> ${resp.status}`);
+                if (resp.ok) {
+                  const text = await resp.text();
+                  if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+                    diaryData = JSON.parse(text);
+                    console.log('Got JSON diary data! Keys:', Object.keys(diaryData).join(', '));
+                    break;
+                  } else {
+                    diaryHtml = text;
+                    console.log('Got HTML, length:', text.length);
+                  }
+                }
+              } catch(e) {
+                console.log(`[diary] ${url} error: ${e.message}`);
               }
+            }
+
+            if (!diaryData && !diaryHtml) {
+              core.setFailed('Could not fetch diary');
+              return;
+            }
+
+            // If we only got HTML, log useful debugging info
+            if (!diaryData && diaryHtml) {
+              console.log('Page title:', (diaryHtml.match(/<title>([^<]*)<\/title>/) || [])[1]);
+              console.log('Has ng-app:', diaryHtml.includes('ng-app'));
+              console.log('Has diary:', diaryHtml.includes('"diary"'));
+              // Look for API calls in scripts
+              const apiCalls = diaryHtml.match(/https?:\/\/[^'"]*api[^'"]*/g) || [];
+              console.log('API URLs found in HTML:', [...new Set(apiCalls)].join('\n'));
+              core.setFailed('KT uses Angular SPA - needs Puppeteer for JS rendering');
+              return;
+            }
+
+            // Step 3: Process items
+            const mealNames = ['Raňajky', 'Desiata', 'Obed', 'Olovrant', 'Večera', 'Druhá večera'];
+            let items = [];
+
+            const times = diaryData.times || diaryData.meals || diaryData.entries || diaryData.data || [];
+            if (Array.isArray(times)) {
+              for (let t = 0; t < times.length; t++) {
+                const time = times[t];
+                const mealName = time.title || time.name || mealNames[t] || 'Jedlo ' + (t + 1);
+                let foodArray = time.foods || time.items || time.entries || [];
+                if (!Array.isArray(foodArray) || foodArray.length === 0) {
+                  for (const k of Object.keys(time)) {
+                    if (Array.isArray(time[k]) && time[k].length > 0) { foodArray = time[k]; break; }
+                  }
+                }
+                for (const food of foodArray) {
+                  const title = food.title || food.name || food.food_name || '';
+                  const energy = food.energy || food.kcal || food.calories || 0;
+                  const protein = food.protein || food.proteins || food.bielkoviny || 0;
+                  const carbs = food.carbs || food.carbohydrates || food.sacharidy || 0;
+                  const fat = food.fat || food.fats || food.tuky || 0;
+                  const amount = food.amount || food.quantity || food.weight || 0;
+                  const unit = food.unit || 'g';
+                  if (title) {
+                    items.push({
+                      id: Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                      date: today, foodName: String(title),
+                      amount: amount ? amount + ' ' + unit : '',
+                      protein: Number(protein) || 0, carbs: Number(carbs) || 0, fat: Number(fat) || 0,
+                      caloriesIn: Number(energy) || 0, caloriesOut: 0,
+                      meal: mealName, source: 'kt',
+                      ktId: title + '_' + today + '_' + energy
+                    });
+                  }
+                }
+              }
+            }
+
+            console.log('Parsed ' + items.length + ' items');
+            if (items.length === 0) {
+              console.log('Diary structure:', JSON.stringify(diaryData).substring(0, 1000));
+              return;
+            }
+
+            // Step 4: Push to Gist
+            const gistResp = await fetch('https://api.github.com/gists/' + GIST_ID, {
+              headers: { 'Authorization': 'token ' + process.env.GH_GIST_TOKEN, 'Accept': 'application/vnd.github.v3+json' }
             });
             const gist = await gistResp.json();
-            const content = gist.files?.['fitness-data.json']?.content || '{}';
-            const data = JSON.parse(content);
-            const existingRecords = data.records || [];
-
-            // Remove today's KT records and add new ones
-            const filtered = existingRecords.filter(r => !(r.source === 'kt' && r.date === today));
+            const data = JSON.parse(gist.files?.['fitness-data.json']?.content || '{}');
+            const existing = data.records || [];
+            const filtered = existing.filter(r => !(r.source === 'kt' && r.date === today));
             const merged = [...filtered, ...items];
-
-            // Dedup
             const seen = new Set();
-            const deduped = [];
-            for (const r of merged) {
+            data.records = merged.filter(r => {
               const key = r.ktId || r.id || (r.date + (r.foodName || '') + (r.source || ''));
-              if (!seen.has(key)) { seen.add(key); deduped.push(r); }
-            }
-
-            data.records = deduped;
-
-            // Push to Gist
-            const pushResp = await fetch('https://api.github.com/gists/' + GIST_ID, {
-              method: 'PATCH',
-              headers: {
-                'Authorization': 'token ' + process.env.GH_GIST_TOKEN,
-                'Accept': 'application/vnd.github.v3+json'
-              },
-              body: JSON.stringify({
-                files: { 'fitness-data.json': { content: JSON.stringify(data) } }
-              })
+              if (seen.has(key)) return false;
+              seen.add(key); return true;
             });
 
-            if (pushResp.ok) {
-              console.log('Successfully synced ' + items.length + ' items to Gist');
-            } else {
-              core.setFailed('Gist push failed: ' + pushResp.status);
-            }
+            const pushResp = await fetch('https://api.github.com/gists/' + GIST_ID, {
+              method: 'PATCH',
+              headers: { 'Authorization': 'token ' + process.env.GH_GIST_TOKEN, 'Accept': 'application/vnd.github.v3+json' },
+              body: JSON.stringify({ files: { 'fitness-data.json': { content: JSON.stringify(data) } } })
+            });
+            console.log(pushResp.ok ? 'Synced ' + items.length + ' items to Gist' : 'Gist push failed: ' + pushResp.status);
