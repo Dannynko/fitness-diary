@@ -8,36 +8,32 @@ const today = new Date().toISOString().split('T')[0];
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
   const page = await browser.newPage();
 
-  // Login via Puppeteer request interception — POST to /user/login with proper cookies
-  console.log('Logging in...');
+  // Login via request interception: intercept the first navigation as a POST
+  console.log('Logging in via POST navigation...');
 
-  // First get the initial page cookies (JSESSIONID etc)
-  await page.goto('https://www.kaloricketabulky.sk/', { waitUntil: 'networkidle2', timeout: 30000 });
-  const initialCookies = await page.cookies();
-  console.log('Initial cookies:', initialCookies.map(c => c.name).join(', '));
+  await page.setRequestInterception(true);
+  let intercepted = false;
+  page.on('request', req => {
+    if (!intercepted && req.url() === 'https://www.kaloricketabulky.sk/user/login') {
+      intercepted = true;
+      req.continue({
+        method: 'POST',
+        postData: 'email=' + encodeURIComponent(process.env.KT_EMAIL) + '&password=' + encodeURIComponent(process.env.KT_PASSWORD) + '&_remember=1',
+        headers: { ...req.headers(), 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
+    } else {
+      req.continue();
+    }
+  });
 
-  // Use page.evaluate to submit the login form via XMLHttpRequest (synchronous-ish)
-  // This ensures cookies from the response are properly set in the browser
-  const loginResult = await page.evaluate((email, password) => {
-    return new Promise((resolve) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', '/user/login', true);
-      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-      xhr.withCredentials = true;
-      xhr.onload = () => resolve({ status: xhr.status, url: xhr.responseURL, hasRedirect: xhr.responseURL !== location.origin + '/user/login' });
-      xhr.onerror = () => resolve({ status: 0, error: 'network error' });
-      xhr.send('email=' + encodeURIComponent(email) + '&password=' + encodeURIComponent(password) + '&_remember=1');
-    });
-  }, process.env.KT_EMAIL, process.env.KT_PASSWORD);
-  console.log('XHR login result:', JSON.stringify(loginResult));
+  await page.goto('https://www.kaloricketabulky.sk/user/login', { waitUntil: 'networkidle2', timeout: 20000 });
+  await page.setRequestInterception(false);
 
-  // Check cookies after login
-  const postLoginCookies = await page.cookies();
-  const newCookies = postLoginCookies.filter(c => !initialCookies.find(ic => ic.name === c.name && ic.value === c.value));
-  console.log('New cookies after login:', newCookies.map(c => c.name + '=' + c.value.substring(0, 20) + '...').join(', '));
+  const afterLoginUrl = page.url();
+  console.log('After login URL:', afterLoginUrl);
+  const cookies = await page.cookies();
+  console.log('Cookies:', cookies.map(c => c.name).join(', '));
 
-  // Reload to pick up logged-in state
-  await page.goto('https://www.kaloricketabulky.sk/', { waitUntil: 'networkidle2', timeout: 20000 });
   const loggedIn = await page.evaluate(() => {
     const el = document.getElementById('logged');
     return el ? el.value : 'not-found';
