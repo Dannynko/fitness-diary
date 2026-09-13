@@ -741,9 +741,20 @@
     <script>
         let records = JSON.parse(localStorage.getItem('calorieRecords')) || [];
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('weightDate').valueAsDate = new Date();
+            // Auto-load token from URL hash: #token=xxx
+            const hash = window.location.hash;
+            if (hash.includes('token=')) {
+                const t = hash.split('token=')[1].split('&')[0];
+                if (t) { localStorage.setItem('ghSyncToken', t); }
+            }
             renderAll();
+            // Auto-sync on page load if token exists
+            const autoToken = localStorage.getItem('ghSyncToken');
+            if (autoToken) {
+                try { await cloudSync(); } catch(e) {}
+            }
         });
 
         function spinDate(id, days) {
