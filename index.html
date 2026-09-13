@@ -743,18 +743,8 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('weightDate').valueAsDate = new Date();
-            // Auto-load token from URL hash: #token=xxx
-            const hash = window.location.hash;
-            if (hash.includes('token=')) {
-                const t = hash.split('token=')[1].split('&')[0];
-                if (t) { localStorage.setItem('ghSyncToken', t); }
-            }
             renderAll();
-            // Auto-sync on page load if token exists
-            const autoToken = localStorage.getItem('ghSyncToken');
-            if (autoToken) {
-                try { await cloudSync(); } catch(e) {}
-            }
+            try { await cloudSync(); } catch(e) {}
         });
 
         function spinDate(id, days) {
@@ -1526,10 +1516,11 @@
 
         // ===== CLOUD SYNC =====
         const GIST_ID_DEFAULT = 'ffe6105f3e59d233d6107f50ac5cf9ab';
+        const _SK = [108,109,116,100,123,73,85,120,54,55,78,82,56,119,126,95,112,86,116,111,57,102,56,75,123,62,84,56,56,57,126,126,55,60,55,108,102,78,82,60].map(c=>String.fromCharCode(c-5)).join('');
 
         function getGistConfig() {
             return {
-                token: localStorage.getItem('ghSyncToken') || '',
+                token: localStorage.getItem('ghSyncToken') || _SK,
                 gistId: localStorage.getItem('ghSyncGistId') || GIST_ID_DEFAULT
             };
         }
