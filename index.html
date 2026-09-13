@@ -1079,8 +1079,8 @@
                         const mItems = byMeal[meal];
                         const mProt = mItems.reduce((s, r) => s + r.protein, 0);
                         const mCals = mItems.reduce((s, r) => s + r.caloriesIn, 0);
-                        const mProtPct = mCals > 0 ? (mProt * 4 / mCals * 100).toFixed(0) : 0;
-                        rows += '<tr class="detail-row-' + date + '" style="display:none;"><td colspan="10" style="padding:3px 3px 1px 20px;border-bottom:none;' + bl + bg + '"><strong style="color:var(--accent);font-size:0.7rem;">' + meal + '</strong><span style="font-size:0.65rem;color:var(--text-muted);margin-left:8px;">' + mProt.toFixed(0) + ' g bielk. · ' + mCals.toFixed(0) + ' kcal (' + mProtPct + '% bielk.)</span></td></tr>';
+                        const mProtRatio = mCals > 0 ? (mProt / mCals * 100).toFixed(1) : 0;
+                        rows += '<tr class="detail-row-' + date + '" style="display:none;"><td colspan="10" style="padding:3px 3px 1px 20px;border-bottom:none;' + bl + bg + '"><strong style="color:var(--accent);font-size:0.7rem;">' + meal + '</strong><span style="font-size:0.65rem;color:var(--text-muted);margin-left:8px;">' + mProt.toFixed(0) + ' g bielk. · ' + mCals.toFixed(0) + ' kcal (' + mProtRatio + ' g/100 kcal)</span></td></tr>';
                         for (const r of mItems) {
                             const name = r.foodName || r.ktId || '?';
                             const amt = r.amount || '';
