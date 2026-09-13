@@ -8,74 +8,90 @@ const today = new Date().toISOString().split('T')[0];
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
   const page = await browser.newPage();
 
-  // Login via direct HTTP, then inject cookies into Puppeteer
-  console.log('Logging in via HTTP POST...');
-  const loginResp = await fetch('https://www.kaloricketabulky.sk/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      email: process.env.KT_EMAIL,
-      password: process.env.KT_PASSWORD,
-      _remember: '1'
-    }),
-    redirect: 'manual'
+  // Intercept network to discover login API
+  const apiCalls = [];
+  page.on('response', resp => {
+    const u = resp.url();
+    if (u.includes('kaloricketabulky') && !u.includes('.css') && !u.includes('.js') && !u.includes('.png') && !u.includes('.jpg')) {
+      apiCalls.push({ url: u, status: resp.status() });
+    }
   });
 
-  console.log('Login status:', loginResp.status);
-  const setCookies = loginResp.headers.getSetCookie ? loginResp.headers.getSetCookie() : [];
-  console.log('Set-Cookie headers:', setCookies.length);
+  // Go to KT main page first, let Angular load
+  console.log('Loading KT...');
+  await page.goto('https://www.kaloricketabulky.sk/', { waitUntil: 'networkidle2', timeout: 30000 });
 
-  if (setCookies.length > 0) {
-    for (const cookieStr of setCookies) {
-      const [nameVal] = cookieStr.split(';');
-      const [name, ...valParts] = nameVal.split('=');
-      const value = valParts.join('=');
-      if (name && value) {
-        await page.setCookie({
-          name: name.trim(),
-          value: value.trim(),
-          domain: '.kaloricketabulky.sk',
-          path: '/'
-        });
-        console.log('Set cookie:', name.trim());
+  // Use Angular's own login service
+  console.log('Attempting Angular login...');
+  const loginResult = await page.evaluate(async (email, password) => {
+    try {
+      if (typeof angular === 'undefined') return { ok: false, err: 'no angular' };
+      const el = document.querySelector('[ng-app]') || document.querySelector('.ng-scope') || document.body;
+      const inj = angular.element(el).injector();
+      if (!inj) return { ok: false, err: 'no injector' };
+
+      // Try to find AuthService or UserService
+      const serviceNames = ['AuthService', 'UserService', 'loginService', 'authService', 'userService', 'auth', 'Auth'];
+      let authSvc = null;
+      for (const name of serviceNames) {
+        try { authSvc = inj.get(name); if (authSvc) break; } catch(e) {}
       }
+
+      // List all registered services for debugging
+      const registeredServices = [];
+      try {
+        const providerInjector = inj.get('$injector');
+        // Angular doesn't expose service list easily, try known patterns
+        const commonNames = ['$http', 'AuthService', 'UserService', 'loginService', 'authService', 'sessionService', 'AccountService', 'userService'];
+        for (const n of commonNames) {
+          try { if (inj.get(n)) registeredServices.push(n); } catch(e) {}
+        }
+      } catch(e) {}
+
+      // Use $http directly to try login endpoints
+      const $http = inj.get('$http');
+      const endpoints = [
+        { url: '/login', data: { email, password } },
+        { url: '/api/login', data: { email, password } },
+        { url: '/api/v1/login', data: { email, password } },
+        { url: '/api/v1/user/login', data: { email, password } },
+        { url: '/user/login', data: { email, password } },
+        { url: '/auth/login', data: { email, password } },
+      ];
+
+      for (const ep of endpoints) {
+        try {
+          const resp = await new Promise((resolve, reject) => {
+            $http.post(ep.url, ep.data).then(
+              r => resolve({ ok: true, status: r.status, data: JSON.stringify(r.data).substring(0, 300), url: ep.url }),
+              e => resolve({ ok: false, status: e.status, data: JSON.stringify(e.data).substring(0, 300), url: ep.url })
+            );
+          });
+          if (resp.ok) return { ...resp, services: registeredServices };
+          registeredServices.push(ep.url + ':' + resp.status);
+        } catch(e) {}
+      }
+
+      return { ok: false, err: 'all endpoints failed', services: registeredServices };
+    } catch(e) {
+      return { ok: false, err: e.message };
     }
+  }, process.env.KT_EMAIL, process.env.KT_PASSWORD);
+
+  console.log('Login result:', JSON.stringify(loginResult));
+
+  // Log API calls we intercepted
+  console.log('API calls:', JSON.stringify(apiCalls.slice(-20)));
+
+  if (loginResult.ok) {
+    await page.reload({ waitUntil: 'networkidle2' });
   }
 
-  // Follow redirect if 302
-  if (loginResp.status === 302) {
-    const location = loginResp.headers.get('location');
-    console.log('Redirect to:', location);
-  }
-
-  // Navigate to main page and check login status
-  await page.goto('https://www.kaloricketabulky.sk/', { waitUntil: 'networkidle2', timeout: 20000 });
   const loggedIn = await page.evaluate(() => {
     const el = document.getElementById('logged');
     return el ? el.value : 'not-found';
   });
   console.log('Logged in:', loggedIn);
-
-  if (loggedIn !== 'true' && loggedIn !== '1') {
-    // Try Angular $http login from within the page context
-    console.log('Trying Angular $http login...');
-    await page.evaluate((email, password) => {
-      if (typeof angular === 'undefined') return;
-      const el = document.querySelector('[ng-app]') || document.querySelector('.ng-scope') || document.body;
-      const inj = angular.element(el).injector();
-      if (!inj) return;
-      const $http = inj.get('$http');
-      $http.post('/login', { email, password });
-    }, process.env.KT_EMAIL, process.env.KT_PASSWORD);
-    await new Promise(r => setTimeout(r, 3000));
-    await page.reload({ waitUntil: 'networkidle2' });
-
-    const loggedIn2 = await page.evaluate(() => {
-      const el = document.getElementById('logged');
-      return el ? el.value : 'not-found';
-    });
-    console.log('Logged in after Angular login:', loggedIn2);
-  }
 
   // Navigate to diary
   console.log('Navigating to diary...');
