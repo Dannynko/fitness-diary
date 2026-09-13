@@ -1572,7 +1572,7 @@
                 }
 
                 const allRecords = [...localData.records, ...(remoteData.records || [])];
-                const mergedRecords = dedup(allRecords, r => r.id || (r.date + (r.foodName||'') + (r.source||'')));
+                const mergedRecords = dedup(allRecords, r => r.ktId || r.id || (r.date + (r.foodName||'') + (r.source||'')));
 
                 const allMeasurements = [...localData.measurements, ...(remoteData.measurements || [])];
                 const mergedMeasurements = dedup(allMeasurements, m => m.date);
