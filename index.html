@@ -750,7 +750,7 @@
         document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('weightDate').valueAsDate = new Date();
             renderAll();
-            try { await cloudSync(); } catch(e) {}
+            try { await cloudSync(); } catch(e) { console.error('sync init err', e); }
         });
 
         function spinDate(id, days) {
@@ -1114,15 +1114,8 @@
 
             let keys, vals, labelFn;
             if (chartPeriod === 'days') {
-                const first = dailyDates[0];
-                const last = dailyDates[dailyDates.length - 1];
-                keys = [];
-                vals = [];
-                for (let d = new Date(first); d <= new Date(last); d.setDate(d.getDate() + 1)) {
-                    const ds = d.toISOString().split('T')[0];
-                    keys.push(ds);
-                    vals.push(byDate[ds] ? byDate[ds].reduce((a, b) => a + b, 0) / byDate[ds].length : 0);
-                }
+                keys = dailyDates;
+                vals = dailyWeights;
                 labelFn = d => shortDate(d);
             } else if (chartPeriod === 'weeks') {
                 const grouped = {};
