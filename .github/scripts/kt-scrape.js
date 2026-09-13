@@ -109,14 +109,28 @@ const today = new Date().toISOString().split('T')[0];
       // List all keys on loginScope for debugging
       const scopeKeys = Object.keys(loginScope).filter(k => k.charAt(0) !== '$').map(k => k + ':' + typeof loginScope[k]);
 
-      // Try to find and call the login submit function
-      // Look for: login, submitLogin, doLogin, loginSubmit on the loginForm scope or its parents
-      const submitNames = ['login', 'submitLogin', 'doLogin', 'loginSubmit', 'signIn', 'userLogin', 'logIn'];
+      // Call login and capture result
+      if (typeof loginScope.login === 'function') {
+        try {
+          const result = loginScope.login();
+          // If it returns a promise, wait for it
+          if (result && typeof result.then === 'function') {
+            const r = await result.then(
+              v => ({ ok: true, val: JSON.stringify(v).substring(0, 300) }),
+              e => ({ ok: false, err: e.data ? JSON.stringify(e.data).substring(0, 300) : e.message || String(e), status: e.status })
+            );
+            return 'login() promise: ' + JSON.stringify(r) + '. Keys: ' + scopeKeys.join(', ');
+          }
+          return 'login() returned: ' + String(result).substring(0, 200) + '. Keys: ' + scopeKeys.join(', ');
+        } catch(e) { return 'login() error: ' + e.message; }
+      }
+
+      const submitNames = ['submitLogin', 'doLogin', 'loginSubmit', 'signIn', 'userLogin', 'logIn'];
       for (const name of submitNames) {
         if (typeof loginScope[name] === 'function') {
           try {
             loginScope[name]();
-            return 'called ' + name + ' on loginForm scope. Keys: ' + scopeKeys.join(', ') + '. All login fns: ' + fnNames.join(', ');
+            return 'called ' + name;
           } catch(e) { return 'error calling ' + name + ': ' + e.message; }
         }
       }
