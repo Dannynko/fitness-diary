@@ -480,19 +480,19 @@
 
             <div id="goalDisplay" style="display:grid; grid-template-columns: 1fr 1fr; gap: 14px 14px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--card-border);">
                 <div>
-                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;"><span data-tip="Hodnoty prijaté zo zdroja (KT import alebo manuálny vstup)">Kalórie <span style="cursor:help;font-size:0.8em;opacity:0.6;">&#9432;</span></span><span><strong id="todayCalsShow">0</strong> / <span id="goalBazalShow">1850</span> kcal <span id="calsPctShow" style="color:var(--text-muted);">(0%)</span></span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;"><span id="calsTip" data-tip="">Kalórie <span style="cursor:help;font-size:0.8em;opacity:0.6;">&#9432;</span></span><span><strong id="todayCalsShow">0</strong> / <span id="goalBazalShow">1850</span> kcal <span id="calsPctShow" style="color:var(--text-muted);">(0%)</span></span></div>
                     <div class="progress-bar"><div class="progress-fill" id="calsPctBar" style="width:0%; background: var(--green);"></div></div>
                 </div>
                 <div>
-                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;"><span data-tip="1 g bielkovín = 4 kcal&#10;Odporúčanie: 1.6–2.2 g/kg pri chudnutí so silou">Bielkoviny <span style="cursor:help;font-size:0.8em;opacity:0.6;">&#9432;</span></span><span><strong id="todayProtShow">0</strong> / <span id="goalProtShow">150</span> g <span id="protPctShow" style="color:var(--text-muted);">(0%)</span></span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;"><span id="protTip" data-tip="">Bielkoviny <span style="cursor:help;font-size:0.8em;opacity:0.6;">&#9432;</span></span><span><strong id="todayProtShow">0</strong> / <span id="goalProtShow">150</span> g <span id="protPctShow" style="color:var(--text-muted);">(0%)</span></span></div>
                     <div class="progress-bar"><div class="progress-fill" id="protPctBar" style="width:0%; background: var(--accent);"></div></div>
                 </div>
                 <div>
-                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;"><span data-tip="1 g sacharidov = 4 kcal&#10;Hlavný zdroj energie pre mozog a svaly">Sacharidy <span style="cursor:help;font-size:0.8em;opacity:0.6;">&#9432;</span></span><span><strong id="todayCarbsShow">0</strong> / <span id="goalCarbsShow">200</span> g <span id="carbsPctShow" style="color:var(--text-muted);">(0%)</span></span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;"><span id="carbsTip" data-tip="">Sacharidy <span style="cursor:help;font-size:0.8em;opacity:0.6;">&#9432;</span></span><span><strong id="todayCarbsShow">0</strong> / <span id="goalCarbsShow">200</span> g <span id="carbsPctShow" style="color:var(--text-muted);">(0%)</span></span></div>
                     <div class="progress-bar"><div class="progress-fill" id="carbsPctBar" style="width:0%; background: var(--orange);"></div></div>
                 </div>
                 <div>
-                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;"><span data-tip="1 g tukov = 9 kcal&#10;Min. 50–60 g/deň pre hormóny a vstrebávanie vitamínov">Tuky <span style="cursor:help;font-size:0.8em;opacity:0.6;">&#9432;</span></span><span><strong id="todayFatShow">0</strong> / <span id="goalFatShow">60</span> g <span id="fatPctShow" style="color:var(--text-muted);">(0%)</span></span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;"><span id="fatTip" data-tip="">Tuky <span style="cursor:help;font-size:0.8em;opacity:0.6;">&#9432;</span></span><span><strong id="todayFatShow">0</strong> / <span id="goalFatShow">60</span> g <span id="fatPctShow" style="color:var(--text-muted);">(0%)</span></span></div>
                     <div class="progress-bar"><div class="progress-fill" id="fatPctBar" style="width:0%; background: var(--red);"></div></div>
                 </div>
             </div>
@@ -1422,8 +1422,33 @@
             document.getElementById('fatPctBar').style.width = Math.min(100, fatPct) + '%';
             document.getElementById('fatPctShow').textContent = '(' + fatPct + '%)';
 
-            const latestW = records.filter(r => r.weight !== null && r.weight > 0).sort((a, b) => b.date.localeCompare(a.date))[0];
-            const curW = latestW ? latestW.weight : null;
+            // dynamic tooltips
+            const curW = (records.filter(r => r.weight != null && r.weight > 0).sort((a, b) => b.date.localeCompare(a.date))[0] || {}).weight || null;
+            const calDiff = tCals - todayExpenditure;
+            document.getElementById('calsTip').dataset.tip =
+                'Cieľ: ' + Math.round(todayExpenditure) + ' kcal (bazál + aktivita)\n'
+                + 'Aktuálne: ' + tCals.toFixed(0) + ' kcal (' + calsPct + '%)\n'
+                + (calDiff > 0 ? '⚠ Prebytok ' + Math.round(calDiff) + ' kcal — priberanie' : calDiff < -500 ? '⚠ Deficit ' + Math.abs(Math.round(calDiff)) + ' kcal — príliš veľký, riziko straty svalov' : '✓ Deficit ' + Math.abs(Math.round(calDiff)) + ' kcal — rozumné chudnutie');
+
+            const protPerKg = curW ? tProt / curW : 0;
+            document.getElementById('protTip').dataset.tip =
+                'Cieľ: ' + goals.protein + ' g (' + (curW ? (goals.protein / curW).toFixed(1) + ' g/kg' : '-') + ')\n'
+                + 'Aktuálne: ' + tProt.toFixed(1) + ' g' + (curW ? ' (' + protPerKg.toFixed(1) + ' g/kg)' : '') + '\n'
+                + 'Min. 1.6 g/kg pri chudnutí so silou\n'
+                + (protPerKg >= 1.6 ? '✓ Dostatočné pre udržanie svalov' : protPerKg > 0 ? '⚠ Málo — riziko straty svalovej hmoty' : '');
+
+            document.getElementById('carbsTip').dataset.tip =
+                'Cieľ: ' + goals.carbs + ' g\n'
+                + 'Aktuálne: ' + tCarbs.toFixed(1) + ' g (' + carbsPct + '%)\n'
+                + 'Min. ~100 g/deň pre funkciu mozgu\n'
+                + (tCarbs >= 100 ? '✓ Dostatok energie pre mozog a svaly' : tCarbs > 0 ? '⚠ Pod 100 g — únava, slabšia koncentrácia' : '');
+
+            document.getElementById('fatTip').dataset.tip =
+                'Cieľ: ' + goals.fat + ' g\n'
+                + 'Aktuálne: ' + tFat.toFixed(1) + ' g (' + fatPct + '%)\n'
+                + 'Min. 50 g/deň pre hormóny a vitamíny\n'
+                + (tFat >= 50 ? '✓ Dostatok pre hormonálnu rovnováhu' : tFat > 0 ? '⚠ Pod 50 g — riziko hormonálneho poklesu' : '');
+
             document.getElementById('goalWeightShow').textContent = goals.weight + ' kg';
             document.getElementById('currentWeightGoal').textContent = curW ? curW + ' kg' : '- kg';
             const kgToLose = curW && curW > goals.weight ? curW - goals.weight : 0;
