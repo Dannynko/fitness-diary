@@ -1533,9 +1533,12 @@
             showToast('Sync nastavenia uložené');
         }
 
+        let _syncing = false;
         async function cloudSync() {
+            if (_syncing) return;
+            _syncing = true;
             const config = getGistConfig();
-            if (!config.token) { showToast('Zadaj GitHub token', true); return; }
+            if (!config.token) { _syncing = false; showToast('Zadaj GitHub token', true); return; }
 
             const btn = document.getElementById('syncBtn');
             btn.textContent = 'Synchronizujem...';
@@ -1558,21 +1561,27 @@
                     lastSync: new Date().toISOString()
                 };
 
-                const localIds = new Set(localData.records.map(r => r.id));
-                const remoteNew = (remoteData.records || []).filter(r => !localIds.has(r.id));
-                const mergedRecords = [...localData.records, ...remoteNew];
+                function dedup(arr, keyFn) {
+                    const seen = new Set();
+                    return arr.filter(item => {
+                        const k = keyFn(item);
+                        if (seen.has(k)) return false;
+                        seen.add(k);
+                        return true;
+                    });
+                }
 
-                const localMDates = new Set(localData.measurements.map(m => m.date));
-                const remoteMNew = (remoteData.measurements || []).filter(m => !localMDates.has(m.date));
-                const mergedMeasurements = [...localData.measurements, ...remoteMNew];
+                const allRecords = [...localData.records, ...(remoteData.records || [])];
+                const mergedRecords = dedup(allRecords, r => r.id || (r.date + (r.foodName||'') + (r.source||'')));
 
-                const localEKeys = new Set(localData.exercises.map(e => e.date + e.name + (e.ts || '')));
-                const remoteENew = (remoteData.exercises || []).filter(e => !localEKeys.has(e.date + e.name + (e.ts || '')));
-                const mergedExercises = [...localData.exercises, ...remoteENew];
+                const allMeasurements = [...localData.measurements, ...(remoteData.measurements || [])];
+                const mergedMeasurements = dedup(allMeasurements, m => m.date);
 
-                const localHKeys = new Set((localData.healthData || []).map(h => h.date + h.type));
-                const remoteHNew = (remoteData.healthData || []).filter(h => !localHKeys.has(h.date + h.type));
-                const mergedHealth = [...(localData.healthData || []), ...remoteHNew];
+                const allExercises = [...localData.exercises, ...(remoteData.exercises || [])];
+                const mergedExercises = dedup(allExercises, e => e.date + e.name + (e.ts || ''));
+
+                const allHealth = [...(localData.healthData || []), ...(remoteData.healthData || [])];
+                const mergedHealth = dedup(allHealth, h => h.date + (h.type || ''));
 
                 const mergedGoals = (remoteData.lastSync && (!localData.lastSync || remoteData.lastSync > localData.lastSync)) ? (remoteData.goals || localData.goals) : localData.goals;
 
@@ -1614,6 +1623,7 @@
             } finally {
                 btn.textContent = 'Synchronizovať';
                 btn.disabled = false;
+                _syncing = false;
             }
         }
 
