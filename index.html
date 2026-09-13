@@ -1058,9 +1058,9 @@
                     <td>${d.carbs.toFixed(1)} g</td>
                     <td>${d.fat.toFixed(1)} g</td>
                     <td></td>
-                    <td>${d.caloriesIn.toFixed(1)}</td>
-                    <td>${d.caloriesOut.toFixed(1)}</td>
-                    <td class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(1)}</td>
+                    <td>${d.caloriesIn.toFixed(0)}</td>
+                    <td>${d.caloriesOut.toFixed(0)}</td>
+                    <td class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(0)}</td>
                     <td><span style="color:var(--red);cursor:pointer;font-size:1.1rem;font-weight:700;" onclick="event.stopPropagation();deleteRecordsByDate('${date}')">&times;</span></td>
                 </tr>`;
                 if (hasItems) {
