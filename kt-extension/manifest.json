@@ -1,19 +1,20 @@
 {
   "manifest_version": 3,
   "name": "KT Sync",
-  "description": "Import z KalorickéTabuľky.sk do Kalórického Trackera",
-  "version": "10.0",
-  "permissions": ["scripting", "tabs", "cookies"],
+  "description": "Automatický import z KalorickéTabuľky.sk do Fitness Diary",
+  "version": "11.0",
+  "permissions": ["scripting", "tabs", "alarms", "storage"],
   "host_permissions": [
     "https://www.kaloricketabulky.sk/*",
     "https://kaloricketabulky.sk/*",
-    "*://*.kaloricketabulky.sk/*"
+    "*://*.kaloricketabulky.sk/*",
+    "https://api.github.com/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [{
-    "matches": ["<all_urls>"],
+    "matches": ["*://*.github.io/*", "http://localhost/*", "file:///*"],
     "js": ["content.js"],
     "run_at": "document_idle"
   }]
