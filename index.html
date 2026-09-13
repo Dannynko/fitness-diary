@@ -1753,7 +1753,6 @@
             const healthData = JSON.parse(localStorage.getItem('healthData') || '[]');
             const today = healthData.find(h => h.date === goalDate);
             if (!today) { el.style.display = 'none'; return; }
-            el.style.display = 'flex';
             let html = '';
             if (today.steps) html += '<span>👟 ' + today.steps.toLocaleString() + ' krokov</span>';
             if (today.vo2max) html += '<span>❤️ VO₂ ' + today.vo2max + '</span>';
@@ -1763,6 +1762,8 @@
                     html += '<span>💪 ' + w.type + ' ' + w.duration + 'min</span>';
                 });
             }
+            if (!html) { el.style.display = 'none'; return; }
+            el.style.display = 'flex';
             el.innerHTML = html;
         }
 
