@@ -11,357 +11,249 @@ const today = new Date().toISOString().split('T')[0];
     defaultViewport: { width: 1280, height: 800 }
   });
   const page = await browser.newPage();
-
-  // Set a real user agent
   await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
-  // Intercept network requests to see what login sends
-  const loginRequests = [];
+  // Log all POST requests to understand login flow
   page.on('request', req => {
-    const url = req.url();
-    if (url.includes('login') || url.includes('prihlasenie') || url.includes('auth') || url.includes('user')) {
-      loginRequests.push({
-        url: url,
-        method: req.method(),
-        postData: req.postData()?.substring(0, 500),
-        headers: Object.fromEntries(Object.entries(req.headers()).filter(([k]) => k !== 'user-agent' && k !== 'accept'))
-      });
+    if (req.method() === 'POST') {
+      console.log(`  >> POST ${req.url()} body=${req.postData()?.substring(0, 200) || 'none'}`);
     }
   });
-
   page.on('response', async res => {
-    const url = res.url();
-    if (url.includes('login') || url.includes('prihlasenie') || url.includes('auth')) {
-      const status = res.status();
-      const location = res.headers()['location'] || '';
-      console.log(`  Response: ${res.request().method()} ${url} -> ${status} ${location}`);
+    if (res.url().includes('login') || res.url().includes('user')) {
+      console.log(`  << ${res.request().method()} ${res.url()} -> ${res.status()} loc=${res.headers()['location'] || ''}`);
     }
   });
 
-  // Step 1: Go to homepage
-  console.log('Loading KT homepage...');
-  await page.goto('https://www.kaloricketabulky.sk/', { waitUntil: 'networkidle2', timeout: 30000 });
-  console.log('Page loaded:', page.url());
+  // Navigate to /login page directly
+  console.log('Step 1: Navigate to /login...');
+  await page.goto('https://www.kaloricketabulky.sk/login', { waitUntil: 'networkidle2', timeout: 30000 });
+  console.log('URL:', page.url());
 
-  // Step 2: Find the login button/link and click it
-  console.log('\nLooking for login button...');
-  const loginButtonInfo = await page.evaluate(() => {
-    // Look for any element that says "Prihlásiť" or similar
-    const allElements = document.querySelectorAll('a, button, span, div, md-button');
-    const candidates = [];
-    for (const el of allElements) {
-      const text = el.textContent?.trim().toLowerCase() || '';
-      const href = el.getAttribute('href') || '';
-      const ngClick = el.getAttribute('ng-click') || '';
-      const uiSref = el.getAttribute('ui-sref') || '';
-      if (text.includes('prihlás') || text.includes('login') || text.includes('prihlás') ||
-          href.includes('prihlasenie') || href.includes('login') ||
-          ngClick.includes('login') || ngClick.includes('prihlasenie') || ngClick.includes('openLogin') ||
-          uiSref.includes('login') || uiSref.includes('prihlasenie')) {
-        candidates.push({
-          tag: el.tagName,
-          text: text.substring(0, 50),
-          href: href,
-          ngClick: ngClick,
-          uiSref: uiSref,
-          classes: el.className?.substring?.(0, 80) || '',
-          id: el.id,
-          visible: el.offsetWidth > 0 && el.offsetHeight > 0
-        });
-      }
+  // Wait for Angular
+  await page.waitForFunction(() => typeof angular !== 'undefined', { timeout: 10000 }).catch(() => {});
+
+  // Show the login form by setting registerIncludeStep = 5
+  console.log('\nStep 2: Show login form (registerIncludeStep = 5)...');
+  const showResult = await page.evaluate(() => {
+    if (typeof angular === 'undefined') return 'no angular';
+    const el = document.querySelector('[ng-app]') || document.querySelector('.ng-scope') || document.body;
+    const inj = angular.element(el).injector();
+    if (!inj) return 'no injector';
+    const rs = inj.get('$rootScope');
+
+    let targetScope = null;
+    function walk(scope, depth) {
+      if (!scope || depth > 20 || targetScope) return;
+      if ('registerIncludeStep' in scope || scope.loginForm) targetScope = scope;
+      let child = scope.$$childHead;
+      while (child) { walk(child, depth + 1); child = child.$$nextSibling; }
     }
-    return candidates;
+    walk(rs, 0);
+    if (!targetScope) return 'no scope with registerIncludeStep';
+
+    targetScope.registerIncludeStep = 5;
+    targetScope.$apply();
+    return 'set to 5, loginForm=' + JSON.stringify(targetScope.loginForm || 'undefined');
   });
-  console.log('Login buttons found:', JSON.stringify(loginButtonInfo, null, 2));
+  console.log('Show result:', showResult);
 
-  // Click the login button
-  let clicked = false;
-  for (const btn of loginButtonInfo) {
-    if (!btn.visible) continue;
-    const selector = btn.id ? '#' + btn.id :
-      btn.ngClick ? `[ng-click="${btn.ngClick}"]` :
-      btn.uiSref ? `[ui-sref="${btn.uiSref}"]` :
-      null;
-    if (selector) {
-      try {
-        await page.click(selector);
-        clicked = true;
-        console.log('Clicked:', selector);
-        break;
-      } catch (e) {
-        console.log('Click failed for', selector, e.message);
-      }
-    }
-  }
+  // Wait for form to render
+  await new Promise(r => setTimeout(r, 1000));
 
-  if (!clicked) {
-    // Try clicking by text content
-    console.log('Trying to click by text...');
-    clicked = await page.evaluate(() => {
-      const all = document.querySelectorAll('a, button, span, md-button');
-      for (const el of all) {
-        const text = el.textContent?.trim().toLowerCase() || '';
-        if ((text.includes('prihlás') || text === 'prihlásenie' || text.includes('prihlásiť sa')) && el.offsetWidth > 0) {
-          el.click();
-          return true;
-        }
-      }
-      return false;
-    });
-    console.log('Text click:', clicked);
-  }
-
-  // Wait for dialog to appear
-  await new Promise(r => setTimeout(r, 2000));
-
-  // Step 3: Find the login form inputs
-  console.log('\nLooking for login form inputs...');
-  const formInfo = await page.evaluate(() => {
+  // Check what inputs are now visible
+  const visibleInputs = await page.evaluate(() => {
     const inputs = document.querySelectorAll('input');
-    const visible = [];
-    for (const inp of inputs) {
-      if (inp.offsetWidth > 0 || inp.offsetHeight > 0 || inp.type === 'hidden') {
-        const ngModel = inp.getAttribute('ng-model') || '';
-        visible.push({
-          type: inp.type,
-          name: inp.name,
-          id: inp.id,
-          placeholder: inp.placeholder,
-          ngModel: ngModel,
-          visible: inp.offsetWidth > 0 && inp.offsetHeight > 0,
-          value: inp.value?.substring(0, 20)
-        });
-      }
-    }
-    // Also look for md-input-container (Angular Material)
-    const mdInputs = document.querySelectorAll('md-input-container input');
-    const mdInfo = [];
-    for (const inp of mdInputs) {
-      mdInfo.push({
-        type: inp.type,
-        ngModel: inp.getAttribute('ng-model') || '',
-        visible: inp.offsetWidth > 0 && inp.offsetHeight > 0
-      });
-    }
-    // Also check for login dialog
-    const dialogs = document.querySelectorAll('md-dialog, .md-dialog-container, [role="dialog"]');
-    return {
-      allInputs: visible,
-      mdInputs: mdInfo,
-      dialogCount: dialogs.length,
-      bodyHTML: document.body.innerHTML.substring(0, 500)
-    };
+    return [...inputs].filter(i => i.offsetWidth > 0 && i.offsetHeight > 0).map(i => ({
+      type: i.type, name: i.name, ngModel: i.getAttribute('ng-model') || '', placeholder: i.placeholder
+    }));
   });
-  console.log('Inputs:', JSON.stringify(formInfo.allInputs, null, 2));
-  console.log('MD inputs:', JSON.stringify(formInfo.mdInputs, null, 2));
-  console.log('Dialogs:', formInfo.dialogCount);
+  console.log('Visible inputs:', JSON.stringify(visibleInputs));
 
-  // Try navigating to #/prihlasenie hash route
-  if (!formInfo.mdInputs.some(i => i.ngModel.includes('loginForm'))) {
-    console.log('\nTrying #/prihlasenie route...');
-    await page.evaluate(() => { window.location.hash = '#/prihlasenie'; });
-    await new Promise(r => setTimeout(r, 3000));
-
-    const formInfo2 = await page.evaluate(() => {
-      const inputs = document.querySelectorAll('input');
-      const visible = [];
-      for (const inp of inputs) {
-        if (inp.offsetWidth > 0 && inp.offsetHeight > 0) {
-          visible.push({
-            type: inp.type,
-            ngModel: inp.getAttribute('ng-model') || '',
-            placeholder: inp.placeholder
-          });
-        }
-      }
-      return visible;
-    });
-    console.log('Inputs after hash nav:', JSON.stringify(formInfo2, null, 2));
-  }
-
-  // Step 4: Type credentials using Puppeteer (like a real user)
-  console.log('\nAttempting to type credentials...');
-
-  // Try to find and type into email field
-  const emailSelectors = [
-    'input[ng-model="loginForm.email"]',
-    'input[type="email"]',
-    'input[name="email"]',
-    'input[placeholder*="mail"]',
-    'input[placeholder*="Mail"]',
-    'md-input-container input[type="email"]'
-  ];
-
+  // Try to type into email field
   let emailTyped = false;
-  for (const sel of emailSelectors) {
+  for (const sel of ['input[ng-model="loginForm.email"]', 'input[type="email"]:not([name="gSearch"])']) {
     try {
       const el = await page.$(sel);
-      if (el) {
-        const box = await el.boundingBox();
-        if (box) {
-          await el.click();
-          await el.type(process.env.KT_EMAIL, { delay: 50 });
-          emailTyped = true;
-          console.log('Typed email into:', sel);
-          break;
-        }
+      if (el && await el.boundingBox()) {
+        await el.click({ clickCount: 3 });
+        await el.type(process.env.KT_EMAIL, { delay: 30 });
+        emailTyped = true;
+        console.log('Typed email into:', sel);
+        break;
       }
-    } catch (e) {}
+    } catch (e) { console.log('Email selector failed:', sel, e.message); }
   }
 
-  if (!emailTyped) {
-    console.log('Could not find email input to type into');
-  }
-
-  // Try to find and type into password field
-  const passSelectors = [
-    'input[ng-model="loginForm.password"]',
-    'input[type="password"]',
-    'input[name="password"]'
-  ];
-
+  // Try password field
   let passTyped = false;
-  for (const sel of passSelectors) {
+  for (const sel of ['input[ng-model="loginForm.password"]', 'input[type="password"]']) {
     try {
       const el = await page.$(sel);
-      if (el) {
-        const box = await el.boundingBox();
-        if (box) {
-          await el.click();
-          await el.type(process.env.KT_PASSWORD, { delay: 50 });
-          passTyped = true;
-          console.log('Typed password into:', sel);
-          break;
-        }
+      if (el && await el.boundingBox()) {
+        await el.click({ clickCount: 3 });
+        await el.type(process.env.KT_PASSWORD, { delay: 30 });
+        passTyped = true;
+        console.log('Typed password into:', sel);
+        break;
       }
-    } catch (e) {}
+    } catch (e) { console.log('Password selector failed:', sel, e.message); }
   }
 
-  if (!passTyped) {
-    console.log('Could not find password input to type into');
-  }
-
-  // Step 5: Click submit button
-  if (emailTyped && passTyped) {
-    console.log('\nLooking for submit button...');
-    const submitted = await page.evaluate(() => {
-      // Look for submit button in dialog
-      const buttons = document.querySelectorAll('button, md-button, [type="submit"]');
-      for (const btn of buttons) {
-        const text = btn.textContent?.trim().toLowerCase() || '';
-        if ((text.includes('prihlás') || text.includes('login') || text.includes('odoslať') || text.includes('potvrdiť')) &&
-            btn.offsetWidth > 0 && btn.offsetHeight > 0) {
-          btn.click();
-          return 'clicked: ' + text;
-        }
-      }
-      // Try form submit
-      const forms = document.querySelectorAll('form');
-      for (const form of forms) {
-        if (form.querySelector('input[type="password"]')) {
-          form.submit();
-          return 'form submitted';
-        }
-      }
-      return 'no submit found';
-    });
-    console.log('Submit result:', submitted);
-
-    // Wait for login to complete
-    await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 10000 }).catch(() => {});
-    await new Promise(r => setTimeout(r, 2000));
-  }
-
-  console.log('\nCurrent URL:', page.url());
-  const loggedIn = await page.evaluate(() => {
-    const el = document.getElementById('logged');
-    return el ? el.value : 'not-found';
-  });
-  console.log('Logged in:', loggedIn);
-
-  console.log('\nAll login-related requests:');
-  for (const req of loginRequests) {
-    console.log('  ', req.method, req.url);
-    if (req.postData) console.log('    POST data:', req.postData);
-  }
-
-  // If still not logged in, try a different approach: use $http directly
-  if (loggedIn !== '1') {
-    console.log('\n--- Direct $http approach ---');
-    const httpResult = await page.evaluate(async (email, password) => {
-      if (typeof angular === 'undefined') return 'no angular';
+  // If couldn't type, try setting through Angular scope
+  if (!emailTyped || !passTyped) {
+    console.log('\nFallback: Set credentials via Angular scope...');
+    const setResult = await page.evaluate((email, password) => {
       const el = document.querySelector('[ng-app]') || document.querySelector('.ng-scope') || document.body;
       const inj = angular.element(el).injector();
-      if (!inj) return 'no injector';
-
-      const $http = inj.get('$http');
-
-      // Try form-encoded POST to /user/login
-      try {
-        const resp = await $http({
-          method: 'POST',
-          url: '/user/login',
-          data: 'email=' + encodeURIComponent(email) + '&password=' + encodeURIComponent(password),
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        });
-        return 'form-encoded: ' + resp.status + ' ' + JSON.stringify(resp.data).substring(0, 200);
-      } catch (e1) {
-        // Try JSON POST
-        try {
-          const resp2 = await $http.post('/user/login', { email: email, password: password });
-          return 'json: ' + resp2.status + ' ' + JSON.stringify(resp2.data).substring(0, 200);
-        } catch (e2) {
-          // Try other endpoints
-          const endpoints = ['/api/user/login', '/api/v1/user/login', '/api/login', '/login'];
-          for (const ep of endpoints) {
-            try {
-              const resp3 = await $http({
-                method: 'POST',
-                url: ep,
-                data: 'email=' + encodeURIComponent(email) + '&password=' + encodeURIComponent(password),
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-              });
-              return ep + ' form: ' + resp3.status;
-            } catch (e3) {
-              try {
-                const resp4 = await $http.post(ep, { email, password });
-                return ep + ' json: ' + resp4.status;
-              } catch (e4) {}
-            }
-          }
-          return 'all failed. e1: ' + e1.status + ' ' + JSON.stringify(e1.data).substring(0, 100) +
-                 ' e2: ' + e2.status + ' ' + JSON.stringify(e2.data).substring(0, 100);
-        }
+      const rs = inj.get('$rootScope');
+      let loginScope = null;
+      function walk(scope, depth) {
+        if (!scope || depth > 20 || loginScope) return;
+        if (scope.loginForm) loginScope = scope;
+        let child = scope.$$childHead;
+        while (child) { walk(child, depth + 1); child = child.$$nextSibling; }
       }
-    }, process.env.KT_EMAIL, process.env.KT_PASSWORD);
-    console.log('$http result:', httpResult);
+      walk(rs, 0);
+      if (!loginScope) return 'no login scope';
 
-    await page.reload({ waitUntil: 'networkidle2' });
-    const loggedIn2 = await page.evaluate(() => {
-      const el = document.getElementById('logged');
-      return el ? el.value : 'not-found';
-    });
-    console.log('Logged in after $http:', loggedIn2);
+      loginScope.loginForm.email = email;
+      loginScope.loginForm.password = password;
+      loginScope.$apply();
+      return 'set via scope, loginForm=' + JSON.stringify(loginScope.loginForm);
+    }, process.env.KT_EMAIL, process.env.KT_PASSWORD);
+    console.log('Scope set result:', setResult);
   }
 
-  // Check if logged in, navigate to diary
-  const finalLoggedIn = await page.evaluate(() => {
-    const el = document.getElementById('logged');
-    return el ? el.value : 'not-found';
-  });
+  // Click the login button
+  console.log('\nStep 3: Click login button...');
 
-  if (finalLoggedIn !== '1') {
-    console.log('\nLogin failed after all attempts. Dumping page state...');
-    const pageState = await page.evaluate(() => {
-      return {
-        title: document.title,
-        url: window.location.href,
-        cookies: document.cookie.substring(0, 200),
-        hiddenInputs: [...document.querySelectorAll('input[type="hidden"]')].map(i => i.name + '=' + i.value?.substring(0, 30)),
-        loggedValue: document.getElementById('logged')?.value
-      };
-    });
-    console.log('Page state:', JSON.stringify(pageState, null, 2));
+  // First try clicking the visible ng-click="login()" button
+  const loginClicked = await page.evaluate(() => {
+    const buttons = document.querySelectorAll('[ng-click="login()"]');
+    for (const btn of buttons) {
+      if (btn.offsetWidth > 0 && btn.offsetHeight > 0) {
+        btn.click();
+        return 'clicked visible button';
+      }
+    }
+    // If none visible, click the first one anyway
+    if (buttons.length > 0) {
+      buttons[0].click();
+      return 'clicked hidden button';
+    }
+    return 'no login button found';
+  });
+  console.log('Login click:', loginClicked);
+
+  // Also try calling login() on scope
+  console.log('\nStep 4: Call login() via scope...');
+  const loginCallResult = await page.evaluate(async () => {
+    const el = document.querySelector('[ng-app]') || document.querySelector('.ng-scope') || document.body;
+    const inj = angular.element(el).injector();
+    const rs = inj.get('$rootScope');
+    let loginScope = null;
+    function walk(scope, depth) {
+      if (!scope || depth > 20 || loginScope) return;
+      if (typeof scope.login === 'function' && scope.loginForm) loginScope = scope;
+      let child = scope.$$childHead;
+      while (child) { walk(child, depth + 1); child = child.$$nextSibling; }
+    }
+    walk(rs, 0);
+    if (!loginScope) return 'no login scope with login()';
+
+    // Check what login function does
+    const fnSource = loginScope.login.toString().substring(0, 500);
+
+    // Verify credentials are set
+    const form = loginScope.loginForm;
+
+    // Call it
+    try {
+      const result = loginScope.login();
+      // Wait for any promises
+      if (result && typeof result.then === 'function') {
+        const r = await result;
+        return 'promise resolved: ' + JSON.stringify(r).substring(0, 200) + ' | fn: ' + fnSource;
+      }
+      await new Promise(r => setTimeout(r, 3000));
+      return 'called (no promise): ' + (typeof result) + ' logged=' + (document.getElementById('logged')?.value) + ' | fn: ' + fnSource;
+    } catch (e) {
+      return 'error: ' + e.message + ' | fn: ' + fnSource;
+    }
+  });
+  console.log('Login call result:', loginCallResult);
+
+  // Wait and check
+  await new Promise(r => setTimeout(r, 3000));
+  await page.reload({ waitUntil: 'networkidle2', timeout: 20000 }).catch(() => {});
+
+  let loggedIn = await page.evaluate(() => document.getElementById('logged')?.value || 'not-found');
+  console.log('\nLogged in:', loggedIn);
+
+  // If still not logged in, try approach 2: direct form POST with Puppeteer request interception
+  if (loggedIn !== '1') {
+    console.log('\n--- Approach 2: Direct POST with cookies ---');
+
+    // Get current cookies
+    const cookies = await page.cookies();
+    const jsessionid = cookies.find(c => c.name === 'JSESSIONID');
+    console.log('JSESSIONID:', jsessionid?.value?.substring(0, 20));
+
+    // Try POST /user/login with different parameter names
+    const paramSets = [
+      { email: process.env.KT_EMAIL, password: process.env.KT_PASSWORD },
+      { username: process.env.KT_EMAIL, password: process.env.KT_PASSWORD },
+      { j_username: process.env.KT_EMAIL, j_password: process.env.KT_PASSWORD },
+      { email: process.env.KT_EMAIL, password: process.env.KT_PASSWORD, _remember: '1' },
+    ];
+
+    const endpoints = ['/user/login', '/j_spring_security_check', '/login'];
+
+    for (const ep of endpoints) {
+      for (const params of paramSets) {
+        const body = Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+        const paramNames = Object.keys(params).join(',');
+
+        try {
+          const result = await page.evaluate(async (endpoint, postBody) => {
+            const resp = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: postBody,
+              redirect: 'follow',
+              credentials: 'same-origin'
+            });
+            return {
+              status: resp.status,
+              url: resp.url,
+              ok: resp.ok,
+              redirected: resp.redirected
+            };
+          }, ep, body);
+
+          console.log(`  ${ep} [${paramNames}]: ${result.status} -> ${result.url} redirected=${result.redirected}`);
+
+          // Check if login succeeded
+          if (!result.url.includes('/login')) {
+            // Might have worked! Reload and check
+            await page.reload({ waitUntil: 'networkidle2' });
+            loggedIn = await page.evaluate(() => document.getElementById('logged')?.value || 'not-found');
+            if (loggedIn === '1') {
+              console.log('LOGIN SUCCESS with', ep, paramNames);
+              break;
+            }
+          }
+        } catch (e) {
+          console.log(`  ${ep} [${paramNames}]: error ${e.message}`);
+        }
+      }
+      if (loggedIn === '1') break;
+    }
+  }
+
+  if (loggedIn !== '1') {
+    console.log('\nAll login attempts failed.');
     await browser.close();
     process.exit(1);
   }
@@ -370,7 +262,6 @@ const today = new Date().toISOString().split('T')[0];
   console.log('\nLogged in! Navigating to diary...');
   await page.goto('https://www.kaloricketabulky.sk/moj-diar', { waitUntil: 'networkidle2', timeout: 20000 });
 
-  // Wait for Angular to load diary data
   console.log('Waiting for Angular diary data...');
   await page.waitForFunction(() => {
     if (typeof angular === 'undefined') return false;
@@ -388,7 +279,6 @@ const today = new Date().toISOString().split('T')[0];
     return !!find(rs, 0);
   }, { timeout: 15000 }).catch(() => console.log('Timeout waiting for diary scope'));
 
-  // Extract diary data
   const items = await page.evaluate((isoDate) => {
     if (typeof angular === 'undefined') return { ok: false, err: 'no angular' };
     const el = document.querySelector('[ng-app]') || document.querySelector('.ng-scope') || document.body;
@@ -489,7 +379,6 @@ const today = new Date().toISOString().split('T')[0];
 
   console.log('Found ' + items.data.length + ' food items');
 
-  // Build records
   const records = items.data.map(item => ({
     id: Date.now() + '_' + Math.random().toString(36).substr(2, 5),
     date: item.date,
@@ -505,7 +394,6 @@ const today = new Date().toISOString().split('T')[0];
     ktId: item.title + '_' + item.date + '_' + item.energy
   }));
 
-  // Fetch Gist
   const gistResp = await fetch('https://api.github.com/gists/' + GIST_ID, {
     headers: { 'Authorization': 'token ' + TOKEN, 'Accept': 'application/vnd.github.v3+json' }
   });
@@ -513,7 +401,6 @@ const today = new Date().toISOString().split('T')[0];
   const data = JSON.parse(gist.files?.['fitness-data.json']?.content || '{}');
   const existing = data.records || [];
 
-  // Replace today's KT records
   const filtered = existing.filter(r => !(r.source === 'kt' && r.date === today));
   const merged = [...filtered, ...records];
   const seen = new Set();
@@ -523,7 +410,6 @@ const today = new Date().toISOString().split('T')[0];
     seen.add(key); return true;
   });
 
-  // Push to Gist
   const pushResp = await fetch('https://api.github.com/gists/' + GIST_ID, {
     method: 'PATCH',
     headers: { 'Authorization': 'token ' + TOKEN, 'Accept': 'application/vnd.github.v3+json' },
