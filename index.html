@@ -251,8 +251,7 @@
         th { background: rgba(79, 195, 247, 0.08); color: var(--accent); font-weight: 600; border-bottom: none; }
         thead tr th:first-child { border-radius: 8px 0 0 8px; }
         thead tr th:last-child { border-radius: 0 8px 8px 0; }
-        th:nth-child(5), td:nth-child(5) { padding-right: 6px; }
-        th:nth-child(6), td:nth-child(6) { padding-left: 6px; }
+        th:nth-child(6), td:nth-child(6) { padding: 0; border-bottom: none; }
         tr:hover { background: rgba(255, 255, 255, 0.05); }
         .positive { color: var(--green); }
         .negative { color: var(--red); }
@@ -522,14 +521,15 @@
             <div id="dailyTab">
                 <table>
                     <colgroup>
-                        <col style="width:30%;">
-                        <col style="width:16%;">
+                        <col style="width:28%;">
+                        <col style="width:15%;">
                         <col style="width:7%;">
                         <col style="width:7%;">
                         <col style="width:7%;">
-                        <col style="width:8%;">
-                        <col style="width:8%;">
-                        <col style="width:8%;">
+                        <col style="width:3%;">
+                        <col style="width:7%;">
+                        <col style="width:7%;">
+                        <col style="width:7%;">
                         <col style="width:2%;">
                     </colgroup>
                     <thead>
@@ -539,6 +539,7 @@
                             <th>Bielk.</th>
                             <th>Sach.</th>
                             <th>Tuky</th>
+                            <th></th>
                             <th>Prij.</th>
                             <th>Spál.</th>
                             <th>Rozd.</th>
@@ -546,7 +547,7 @@
                         </tr>
                     </thead>
                     <tbody id="dailyRecords">
-                        <tr><td colspan="9" class="no-data">Žiadne záznamy</td></tr>
+                        <tr><td colspan="10" class="no-data">Žiadne záznamy</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1028,7 +1029,7 @@
             const tbody = document.getElementById('dailyRecords');
             const dayRecords = records.filter(r => r.date === goalDate && r.source !== 'weight');
             if (dayRecords.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="no-data">Žiadne záznamy pre ' + formatDate(goalDate) + '</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="no-data">Žiadne záznamy pre ' + formatDate(goalDate) + '</td></tr>';
                 return;
             }
 
@@ -1054,6 +1055,7 @@
                     <td>${d.protein.toFixed(1)} g</td>
                     <td>${d.carbs.toFixed(1)} g</td>
                     <td>${d.fat.toFixed(1)} g</td>
+                    <td></td>
                     <td>${d.caloriesIn.toFixed(1)}</td>
                     <td>${d.caloriesOut.toFixed(1)}</td>
                     <td class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(1)}</td>
@@ -1071,7 +1073,7 @@
                     const bl = 'border-left:3px solid var(--accent);';
                     const bb = 'border-bottom:1px solid var(--card-border);';
                     for (const meal of Object.keys(byMeal)) {
-                        rows += '<tr class="detail-row-' + date + '" style="display:none;"><td colspan="9" style="padding:3px 3px 1px 20px;border-bottom:none;' + bl + bg + '"><strong style="color:var(--accent);font-size:0.7rem;">' + meal + '</strong></td></tr>';
+                        rows += '<tr class="detail-row-' + date + '" style="display:none;"><td colspan="10" style="padding:3px 3px 1px 20px;border-bottom:none;' + bl + bg + '"><strong style="color:var(--accent);font-size:0.7rem;">' + meal + '</strong></td></tr>';
                         for (const r of byMeal[meal]) {
                             const name = r.foodName || r.ktId || '?';
                             const amt = r.amount || '';
@@ -1081,6 +1083,7 @@
                             rows += '<td style="padding:1px 3px;' + bb + bg + '">' + r.protein.toFixed(1) + ' g</td>';
                             rows += '<td style="padding:1px 3px;' + bb + bg + '">' + r.carbs.toFixed(1) + ' g</td>';
                             rows += '<td style="padding:1px 3px;' + bb + bg + '">' + r.fat.toFixed(1) + ' g</td>';
+                            rows += '<td style="padding:0;' + bg + 'border-bottom:none;"></td>';
                             rows += '<td style="padding:1px 3px;' + bb + bg + '">' + r.caloriesIn.toFixed(1) + '</td>';
                             rows += '<td colspan="3" style="' + bb + bg + '"></td>';
                             rows += '</tr>';
