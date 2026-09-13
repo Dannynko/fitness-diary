@@ -1713,7 +1713,27 @@
                 }
 
                 const allRecords = [...localData.records, ...(remoteData.records || [])];
-                const mergedRecords = dedup(allRecords, r => r.ktId || r.id || (r.date + (r.foodName||'') + (r.source||'')));
+                let mergedRecords = dedup(allRecords, r => r.ktId || r.id || (r.date + (r.foodName||'') + (r.source||'')));
+
+                const ktDeduped = [];
+                const ktSeen = {};
+                for (const r of mergedRecords) {
+                    if (r.source === 'kt') {
+                        const key = (r.foodName || '') + '|' + (r.meal || '') + '|' + r.date;
+                        if (ktSeen[key]) {
+                            if ((r.caloriesIn || 0) > (ktSeen[key].caloriesIn || 0)) {
+                                ktDeduped[ktDeduped.indexOf(ktSeen[key])] = r;
+                                ktSeen[key] = r;
+                            }
+                        } else {
+                            ktSeen[key] = r;
+                            ktDeduped.push(r);
+                        }
+                    } else {
+                        ktDeduped.push(r);
+                    }
+                }
+                mergedRecords = ktDeduped;
 
                 const allMeasurements = [...localData.measurements, ...(remoteData.measurements || [])];
                 const mergedMeasurements = dedup(allMeasurements, m => m.date);
