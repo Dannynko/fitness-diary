@@ -990,16 +990,19 @@
             const totalProt = filtered.reduce((s, r) => s + r.protein, 0);
             const totalOut = filtered.reduce((s, r) => s + r.caloriesOut, 0);
 
-            document.getElementById('sumCalories').textContent = totalIn.toFixed(0);
+            const filledDays = new Set(filtered.filter(r => r.source !== 'weight').map(r => r.date)).size || 1;
+            const avgIn = totalIn / filledDays;
+            const avgProt = totalProt / filledDays;
+            const avgOut = totalOut / filledDays;
+
+            document.getElementById('sumCalories').textContent = avgIn.toFixed(0);
             const latestW = records.filter(r => r.weight != null && r.weight > 0).sort((a, b) => b.date.localeCompare(a.date))[0];
-            const perKg = latestW ? '<span style="font-size:0.55em;color:var(--text-muted);"> (' + (totalProt / latestW.weight).toFixed(1) + ' g/kg)</span>' : '';
-            document.getElementById('sumProtein').innerHTML = totalProt.toFixed(1) + perKg;
-            const daysInRange = range.days || 1;
-            const totalBazal = goals.bazal * daysInRange;
-            const totalExpenditure = totalBazal + totalOut;
-            document.getElementById('sumOutput').textContent = totalExpenditure.toFixed(0);
-            document.getElementById('outputCard').title = 'Bazál: ' + goals.bazal + ' kcal\nAktivita: ' + totalOut.toFixed(0) + ' kcal';
-            const balance = totalIn - totalExpenditure;
+            const perKg = latestW ? '<span style="font-size:0.55em;color:var(--text-muted);"> (' + (avgProt / latestW.weight).toFixed(1) + ' g/kg)</span>' : '';
+            document.getElementById('sumProtein').innerHTML = avgProt.toFixed(1) + perKg;
+            const avgExpenditure = goals.bazal + avgOut;
+            document.getElementById('sumOutput').textContent = avgExpenditure.toFixed(0);
+            document.getElementById('outputCard').dataset.tip = 'Bazál: ' + goals.bazal + ' kcal\nAktivita: ' + avgOut.toFixed(0) + ' kcal';
+            const balance = avgIn - avgExpenditure;
             const balEl = document.getElementById('sumBalance');
             balEl.textContent = (balance > 0 ? '+' : '') + balance.toFixed(0);
             balEl.style.color = balance > 0 ? 'var(--red)' : 'var(--green)';
