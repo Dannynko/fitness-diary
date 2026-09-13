@@ -8,31 +8,66 @@ const today = new Date().toISOString().split('T')[0];
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
   const page = await browser.newPage();
 
-  // Login via request interception: intercept the first navigation as a POST
-  console.log('Logging in via POST navigation...');
+  // KT is Spring-based — needs CSRF token for login
+  // Step 1: Get CSRF token from login page
+  console.log('Fetching CSRF token...');
+  await page.goto('https://www.kaloricketabulky.sk/', { waitUntil: 'networkidle2', timeout: 30000 });
 
-  await page.setRequestInterception(true);
-  let intercepted = false;
-  page.on('request', req => {
-    if (!intercepted && req.url() === 'https://www.kaloricketabulky.sk/user/login') {
-      intercepted = true;
-      req.continue({
-        method: 'POST',
-        postData: 'email=' + encodeURIComponent(process.env.KT_EMAIL) + '&password=' + encodeURIComponent(process.env.KT_PASSWORD) + '&_remember=1',
-        headers: { ...req.headers(), 'Content-Type': 'application/x-www-form-urlencoded' }
-      });
-    } else {
-      req.continue();
-    }
+  // Get CSRF from meta tag or hidden input (Spring standard)
+  const csrf = await page.evaluate(() => {
+    // Check meta tags
+    const metaToken = document.querySelector('meta[name="_csrf"]');
+    const metaHeader = document.querySelector('meta[name="_csrf_header"]');
+    // Check hidden inputs
+    const hiddenInput = document.querySelector('input[name="_csrf"]');
+    // Check if Spring sets it as a cookie
+    const csrfCookie = document.cookie.split(';').find(c => c.trim().startsWith('XSRF-TOKEN'));
+
+    // Also check all hidden inputs and meta tags for any CSRF-like values
+    const allMeta = [...document.querySelectorAll('meta')].map(m => m.name + '=' + m.content?.substring(0, 30)).filter(m => m.includes('csrf') || m.includes('token'));
+    const allHidden = [...document.querySelectorAll('input[type="hidden"]')].map(i => i.name + '=' + i.value?.substring(0, 30));
+
+    return {
+      token: metaToken?.content || hiddenInput?.value || '',
+      header: metaHeader?.content || 'X-CSRF-TOKEN',
+      cookie: csrfCookie?.trim() || '',
+      allMeta, allHidden
+    };
   });
+  console.log('CSRF:', JSON.stringify(csrf));
 
-  await page.goto('https://www.kaloricketabulky.sk/user/login', { waitUntil: 'networkidle2', timeout: 20000 });
-  await page.setRequestInterception(false);
+  // Step 2: Try login with CSRF and proper Spring form parameters
+  const cookiesNow = await page.cookies();
+  const jsessionid = cookiesNow.find(c => c.name === 'JSESSIONID');
+  console.log('JSESSIONID:', jsessionid?.value?.substring(0, 20) + '...');
 
-  const afterLoginUrl = page.url();
-  console.log('After login URL:', afterLoginUrl);
-  const cookies = await page.cookies();
-  console.log('Cookies:', cookies.map(c => c.name).join(', '));
+  // Try login via form submission in page context with CSRF
+  const loginResult = await page.evaluate(async (email, password, csrfToken) => {
+    // Create a real form and submit it
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/user/login';
+    form.style.display = 'none';
+
+    const fields = { email, password, _remember: '1' };
+    if (csrfToken) fields._csrf = csrfToken;
+
+    for (const [name, value] of Object.entries(fields)) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+    return 'submitted';
+  }, process.env.KT_EMAIL, process.env.KT_PASSWORD, csrf.token);
+
+  // Wait for navigation after form submit
+  await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
+  console.log('After login URL:', page.url());
 
   const loggedIn = await page.evaluate(() => {
     const el = document.getElementById('logged');
