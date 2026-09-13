@@ -10,15 +10,64 @@ const today = new Date().toISOString().split('T')[0];
 
   // Login
   console.log('Navigating to KT login...');
-  await page.goto('https://www.kaloricketabulky.sk/prihlasenie', { waitUntil: 'networkidle2' });
+  await page.goto('https://www.kaloricketabulky.sk/prihlasenie', { waitUntil: 'networkidle2', timeout: 20000 });
 
-  await page.type('input[name="email"], input[type="email"]', process.env.KT_EMAIL);
-  await page.type('input[name="password"], input[type="password"]', process.env.KT_PASSWORD);
+  // Debug: dump all input fields on the page
+  const inputs = await page.evaluate(() => {
+    return [...document.querySelectorAll('input, button[type="submit"]')].map(el => ({
+      tag: el.tagName, type: el.type, name: el.name, id: el.id, placeholder: el.placeholder,
+      cls: el.className.substring(0, 50), text: el.textContent?.substring(0, 30) || ''
+    }));
+  });
+  console.log('Form fields found:', JSON.stringify(inputs, null, 2));
 
-  await Promise.all([
-    page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {}),
-    page.click('button[type="submit"], input[type="submit"], .login-btn, .btn-primary')
-  ]);
+  // Try multiple selectors for email
+  const emailSelectors = ['input[name="email"]', 'input[type="email"]', 'input[name="login"]', 'input[name="username"]', '#email', '#login-email', 'input[placeholder*="mail"]', 'input[placeholder*="Mail"]'];
+  let emailField = null;
+  for (const sel of emailSelectors) {
+    emailField = await page.$(sel);
+    if (emailField) { console.log('Email field:', sel); break; }
+  }
+
+  const pwSelectors = ['input[name="password"]', 'input[type="password"]', '#password', '#login-password'];
+  let pwField = null;
+  for (const sel of pwSelectors) {
+    pwField = await page.$(sel);
+    if (pwField) { console.log('Password field:', sel); break; }
+  }
+
+  if (!emailField || !pwField) {
+    // Maybe it's a single-page with Google OAuth only?
+    const pageContent = await page.content();
+    console.log('Page HTML snippet:', pageContent.substring(0, 2000));
+    console.error('Could not find login form fields');
+    await browser.close();
+    process.exit(1);
+  }
+
+  await emailField.type(process.env.KT_EMAIL);
+  await pwField.type(process.env.KT_PASSWORD);
+
+  // Find and click submit
+  const submitSelectors = ['button[type="submit"]', 'input[type="submit"]', '.login-btn', '.btn-primary', 'button.btn'];
+  let submitted = false;
+  for (const sel of submitSelectors) {
+    const btn = await page.$(sel);
+    if (btn) {
+      console.log('Submit button:', sel);
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {}),
+        btn.click()
+      ]);
+      submitted = true;
+      break;
+    }
+  }
+
+  if (!submitted) {
+    await emailField.press('Enter');
+    await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
+  }
 
   const url = page.url();
   console.log('After login, URL:', url);
