@@ -1425,29 +1425,37 @@
             // dynamic tooltips
             const curW = (records.filter(r => r.weight != null && r.weight > 0).sort((a, b) => b.date.localeCompare(a.date))[0] || {}).weight || null;
             const calDiff = tCals - todayExpenditure;
-            document.getElementById('calsTip').dataset.tip =
-                'Cieľ: ' + Math.round(todayExpenditure) + ' kcal (bazál + aktivita)\n'
-                + 'Aktuálne: ' + tCals.toFixed(0) + ' kcal (' + calsPct + '%)\n'
-                + (calDiff > 0 ? '⚠ Prebytok ' + Math.round(calDiff) + ' kcal — priberanie' : calDiff < -500 ? '⚠ Deficit ' + Math.abs(Math.round(calDiff)) + ' kcal — príliš veľký, riziko straty svalov' : '✓ Deficit ' + Math.abs(Math.round(calDiff)) + ' kcal — rozumné chudnutie');
+            let calTip;
+            if (calDiff > 200) calTip = 'Ješ viac než míňaš. Energia sa ukladá ako tuk a budeš priberať.';
+            else if (calDiff > 0) calTip = 'Mierny prebytok. Ak trénuješ silu, môže podporiť rast svalov. Inak pomalé priberanie.';
+            else if (calDiff > -200) calTip = 'Takmer vyrovnané. Vhodné na udržiavanie váhy pri dostatku bielkovín.';
+            else if (calDiff > -500) calTip = 'Zdravý deficit. Chudneš postupne a minimalizuješ stratu svalov.';
+            else calTip = 'Veľký deficit. Rýchle chudnutie, ale hrozí strata svalov, únava a spomalenie metabolizmu.';
+            document.getElementById('calsTip').dataset.tip = calTip;
 
             const protPerKg = curW ? tProt / curW : 0;
-            document.getElementById('protTip').dataset.tip =
-                'Cieľ: ' + goals.protein + ' g (' + (curW ? (goals.protein / curW).toFixed(1) + ' g/kg' : '-') + ')\n'
-                + 'Aktuálne: ' + tProt.toFixed(1) + ' g' + (curW ? ' (' + protPerKg.toFixed(1) + ' g/kg)' : '') + '\n'
-                + 'Min. 1.6 g/kg pri chudnutí so silou\n'
-                + (protPerKg >= 1.6 ? '✓ Dostatočné pre udržanie svalov' : protPerKg > 0 ? '⚠ Málo — riziko straty svalovej hmoty' : '');
+            let protTip;
+            if (protPerKg === 0) protTip = '';
+            else if (protPerKg >= 2.2) protTip = 'Veľa bielkovín. Nad 2.2 g/kg nemá ďalší benefit pre svaly. Nadbytok zaťažuje obličky.';
+            else if (protPerKg >= 1.6) protTip = 'Ideálne množstvo. Chráni svaly pri chudnutí, podporuje regeneráciu a sýtosť.';
+            else if (protPerKg >= 1.2) protTip = 'Podpriemerné. Svaly nemajú dosť stavebného materiálu — pri deficite ich budeš strácať rýchlejšie.';
+            else protTip = 'Výrazne málo. Telo bude prednostne spaľovať svaly. Slabší výkon, pomalšia regenerácia.';
+            document.getElementById('protTip').dataset.tip = protTip;
 
-            document.getElementById('carbsTip').dataset.tip =
-                'Cieľ: ' + goals.carbs + ' g\n'
-                + 'Aktuálne: ' + tCarbs.toFixed(1) + ' g (' + carbsPct + '%)\n'
-                + 'Min. ~100 g/deň pre funkciu mozgu\n'
-                + (tCarbs >= 100 ? '✓ Dostatok energie pre mozog a svaly' : tCarbs > 0 ? '⚠ Pod 100 g — únava, slabšia koncentrácia' : '');
+            let carbTip;
+            if (tCarbs >= goals.carbs) carbTip = 'Dostatok sacharidov. Plná energia pre tréning aj hlavu. Glykogénové zásoby sa dopĺňajú.';
+            else if (tCarbs >= 100) carbTip = 'Menej než cieľ, ale mozog aj svaly majú dosť paliva. Tréning zvládneš.';
+            else if (tCarbs > 0) carbTip = 'Pod 100 g. Mozog nemá dosť glukózy — únava, hmla, horšia koncentrácia. Tréningy budú slabšie.';
+            else carbTip = '';
+            document.getElementById('carbsTip').dataset.tip = carbTip;
 
-            document.getElementById('fatTip').dataset.tip =
-                'Cieľ: ' + goals.fat + ' g\n'
-                + 'Aktuálne: ' + tFat.toFixed(1) + ' g (' + fatPct + '%)\n'
-                + 'Min. 50 g/deň pre hormóny a vitamíny\n'
-                + (tFat >= 50 ? '✓ Dostatok pre hormonálnu rovnováhu' : tFat > 0 ? '⚠ Pod 50 g — riziko hormonálneho poklesu' : '');
+            let fatTip;
+            if (tFat >= 50 && tFat <= goals.fat * 1.3) fatTip = 'Zdravé množstvo. Hormóny (testosterón, estrogén) sa tvoria správne, vitamíny A/D/E/K sa vstrebávajú.';
+            else if (tFat > goals.fat * 1.3) fatTip = 'Veľa tukov. Tuky sú kaloricky najhustejšie (9 kcal/g) — ľahko sa preješ. Zníž a pridaj bielkoviny.';
+            else if (tFat >= 30) fatTip = 'Menej tukov než treba. Hormonálna produkcia klesá, vitamíny rozpustné v tukoch sa horšie vstrebávajú.';
+            else if (tFat > 0) fatTip = 'Veľmi málo. Pod 30 g hrozí pokles testosterónu, suchá koža, vypadávanie vlasov.';
+            else fatTip = '';
+            document.getElementById('fatTip').dataset.tip = fatTip;
 
             document.getElementById('goalWeightShow').textContent = goals.weight + ' kg';
             document.getElementById('currentWeightGoal').textContent = curW ? curW + ' kg' : '- kg';
