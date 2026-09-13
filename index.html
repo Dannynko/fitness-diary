@@ -1077,13 +1077,13 @@
                         for (const r of byMeal[meal]) {
                             const name = r.foodName || r.ktId || '?';
                             const amt = r.amount || '';
+                            const label = name + (amt ? ' <span style="font-size:0.65rem;color:var(--text-muted);">(' + amt + ')</span>' : '');
                             rows += '<tr class="detail-row-' + date + '" style="display:none;font-size:0.7rem;color:var(--text-muted);line-height:1.2;">';
-                            rows += '<td style="padding:1px 3px 1px 24px;' + bb + bl + bg + 'text-align:left;color:var(--text);">' + name + '</td>';
-                            rows += '<td style="padding:1px 3px;' + bb + bg + 'font-size:0.65rem;">' + (amt || '') + '</td>';
+                            rows += '<td colspan="2" style="padding:1px 3px 1px 24px;' + bb + bl + bg + 'text-align:left;color:var(--text);">' + label + '</td>';
                             rows += '<td style="padding:1px 3px;' + bb + bg + '">' + r.protein.toFixed(1) + ' g</td>';
                             rows += '<td style="padding:1px 3px;' + bb + bg + '">' + r.carbs.toFixed(1) + ' g</td>';
                             rows += '<td style="padding:1px 3px;' + bb + bg + '">' + r.fat.toFixed(1) + ' g</td>';
-                            rows += '<td style="padding:0;' + bg + 'border-bottom:none;"></td>';
+                            rows += '<td style="padding:0;' + bb + bg + '"></td>';
                             rows += '<td style="padding:1px 3px;' + bb + bg + '">' + r.caloriesIn.toFixed(1) + '</td>';
                             rows += '<td colspan="3" style="' + bb + bg + '"></td>';
                             rows += '</tr>';
