@@ -947,7 +947,7 @@
             document.getElementById('sumOutput').textContent = totalOut.toFixed(0);
 
             const latestWeight = records
-                .filter(r => r.weight !== null)
+                .filter(r => r.weight != null && r.weight > 0)
                 .sort((a, b) => b.date.localeCompare(a.date))[0];
             document.getElementById('currentWeight').textContent = latestWeight ? latestWeight.weight : '-';
         }
@@ -1093,7 +1093,7 @@
 
         function renderWeightChart() {
             const container = document.getElementById('weightChart');
-            const weightRecords = records.filter(r => r.weight !== null);
+            const weightRecords = records.filter(r => r.weight != null && r.weight > 0);
             if (weightRecords.length === 0) {
                 container.innerHTML = '<div class="no-data">Žiadne záznamy váhy</div>';
                 return;
@@ -1114,8 +1114,15 @@
 
             let keys, vals, labelFn;
             if (chartPeriod === 'days') {
-                keys = dailyDates;
-                vals = dailyWeights;
+                const first = dailyDates[0];
+                const last = dailyDates[dailyDates.length - 1];
+                keys = [];
+                vals = [];
+                for (let d = new Date(first); d <= new Date(last); d.setDate(d.getDate() + 1)) {
+                    const ds = d.toISOString().split('T')[0];
+                    keys.push(ds);
+                    vals.push(byDate[ds] ? byDate[ds].reduce((a, b) => a + b, 0) / byDate[ds].length : 0);
+                }
                 labelFn = d => shortDate(d);
             } else if (chartPeriod === 'weeks') {
                 const grouped = {};
@@ -1170,16 +1177,12 @@
                 gridSvg += '<text x="' + (padL - 14) + '" y="' + (y + 4) + '" fill="rgba(176,190,197,0.6)" font-size="10" text-anchor="end">' + val + '</text>';
             }
 
-            let linePaths = '';
-            let segment = '';
+            let linePath = '';
             pts.forEach(p => {
-                if (p.y === null) {
-                    if (segment) { linePaths += '<path d="' + segment + '" fill="none" stroke="var(--orange)" stroke-width="1.5" stroke-linejoin="round" />'; segment = ''; }
-                } else {
-                    segment += (segment === '' ? 'M' : 'L') + p.x + ',' + p.y + ' ';
-                }
+                if (p.y === null) return;
+                linePath += (linePath === '' ? 'M' : 'L') + p.x + ',' + p.y + ' ';
             });
-            if (segment) linePaths += '<path d="' + segment + '" fill="none" stroke="var(--orange)" stroke-width="1.5" stroke-linejoin="round" />';
+            const linePaths = linePath ? '<path d="' + linePath + '" fill="none" stroke="var(--orange)" stroke-width="1.5" stroke-linejoin="round" />' : '';
 
             const step = Math.max(1, Math.ceil(n / 10));
             let labels = '';
