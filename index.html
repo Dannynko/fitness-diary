@@ -424,7 +424,7 @@
                 <div class="label">Príjem (kcal)</div>
                 <div class="value" id="sumCalories">0</div>
             </div>
-            <div class="summary-card calories-out">
+            <div class="summary-card calories-out" id="outputCard" title="">
                 <div class="label">Výdaj (kcal)</div>
                 <div class="value" id="sumOutput">0</div>
             </div>
@@ -950,8 +950,10 @@
             const latestW = records.filter(r => r.weight != null && r.weight > 0).sort((a, b) => b.date.localeCompare(a.date))[0];
             const perKg = latestW ? ' (' + (totalProt / latestW.weight).toFixed(2) + ' g/kg)' : '';
             document.getElementById('sumProtein').textContent = totalProt.toFixed(1) + perKg;
-            document.getElementById('sumOutput').textContent = totalOut.toFixed(0);
-            const balance = totalIn - totalOut;
+            const totalExpenditure = goals.bazal + totalOut;
+            document.getElementById('sumOutput').textContent = totalExpenditure.toFixed(0);
+            document.getElementById('outputCard').title = 'Bazál: ' + goals.bazal + ' kcal\nAktivita: ' + totalOut.toFixed(0) + ' kcal';
+            const balance = totalIn - totalExpenditure;
             const balEl = document.getElementById('sumBalance');
             balEl.textContent = (balance > 0 ? '+' : '') + balance.toFixed(0);
             balEl.style.color = balance > 0 ? 'var(--red)' : 'var(--green)';
