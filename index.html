@@ -1329,7 +1329,7 @@
 
             const todayActive = todayRecs.reduce((s, r) => s + r.caloriesOut, 0);
             const todayExpenditure = goals.bazal + todayActive;
-            document.getElementById('goalBazalShow').textContent = todayExpenditure;
+            document.getElementById('goalBazalShow').textContent = Math.round(todayExpenditure);
             document.getElementById('todayCalsShow').textContent = tCals.toFixed(0);
             const calsPct = Math.min(100, Math.round(tCals / todayExpenditure * 100));
             document.getElementById('calsPctShow').textContent = '(' + calsPct + '%)';
