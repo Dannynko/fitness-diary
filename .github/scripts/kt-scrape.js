@@ -17,212 +17,98 @@ const today = new Date().toISOString().split('T')[0];
   const email = process.env.KT_EMAIL;
   const password = process.env.KT_PASSWORD;
   const md5pass = crypto.createHash('md5').update(password).digest('hex');
+  console.log('Password length:', password?.length, 'MD5:', md5pass);
 
-  // Intercept ALL requests to find the real login endpoint
-  page.on('request', req => {
-    if (req.method() === 'POST') {
-      console.log(`  >> POST ${req.url()} body=${req.postData()?.substring(0, 200) || 'none'}`);
-    }
-  });
-  page.on('response', async res => {
-    if (res.request().method() === 'POST') {
-      try {
-        const body = await res.text();
-        console.log(`  << ${res.url()} -> ${res.status()} body=${body.substring(0, 300)}`);
-      } catch(e) {
-        console.log(`  << ${res.url()} -> ${res.status()} (no body: ${e.message})`);
-      }
-    }
-  });
-
-  // APPROACH A: Homepage login flow (loginForm scope)
-  console.log('=== APPROACH A: Homepage login with loginForm scope ===');
-  await page.goto('https://www.kaloricketabulky.sk/', { waitUntil: 'networkidle2', timeout: 30000 });
+  // Navigate to /login page
+  console.log('Navigating to /login...');
+  await page.goto('https://www.kaloricketabulky.sk/login', { waitUntil: 'networkidle2', timeout: 30000 });
   await page.waitForFunction(() => typeof angular !== 'undefined', { timeout: 10000 }).catch(() => {});
+  await new Promise(r => setTimeout(r, 1000));
 
-  const homepageResult = await page.evaluate(async (email, password, md5pass) => {
-    if (typeof angular === 'undefined') return 'no angular';
-    const el = document.querySelector('[ng-app]') || document.querySelector('.ng-scope') || document.body;
-    const inj = angular.element(el).injector();
-    if (!inj) return 'no injector';
-    const rs = inj.get('$rootScope');
-
-    // Find ALL scopes with any login-related data
-    const loginScopes = [];
-    function walk(scope, depth) {
-      if (!scope || depth > 20) return;
-      const keys = Object.keys(scope).filter(k => k.charAt(0) !== '$');
-      const hasLogin = keys.some(k => k.toLowerCase().includes('login'));
-      const hasFn = typeof scope.login === 'function';
-      if (hasLogin || hasFn) {
-        loginScopes.push({
-          depth,
-          keys: keys.filter(k => typeof scope[k] !== 'function').slice(0, 20),
-          funcs: keys.filter(k => typeof scope[k] === 'function'),
-          loginFn: hasFn ? scope.login.toString().substring(0, 800) : 'none',
-          loginForm: scope.loginForm ? JSON.stringify(scope.loginForm) : 'none'
-        });
-      }
-      let child = scope.$$childHead;
-      while (child) { walk(child, depth + 1); child = child.$$nextSibling; }
-    }
-    walk(rs, 0);
-
-    return JSON.stringify(loginScopes);
-  }, email, password, md5pass);
-  console.log('\nHomepage login scopes:', homepageResult);
-
-  // Now try to call login with the correct loginForm
-  const loginCallResult = await page.evaluate(async (email, password, md5pass) => {
-    const el = document.querySelector('[ng-app]') || document.querySelector('.ng-scope') || document.body;
-    const inj = angular.element(el).injector();
-    const rs = inj.get('$rootScope');
-
-    let loginScope = null;
-    function walk(scope, depth) {
-      if (!scope || depth > 20 || loginScope) return;
-      if (scope.loginForm && typeof scope.login === 'function') loginScope = scope;
-      let child = scope.$$childHead;
-      while (child) { walk(child, depth + 1); child = child.$$nextSibling; }
-    }
-    walk(rs, 0);
-    if (!loginScope) return 'no loginForm scope';
-
-    // Set credentials
-    loginScope.loginForm.email = email;
-    loginScope.loginForm.password = password;
-    loginScope.$apply();
-
-    // Get login function source
-    const fnSrc = loginScope.login.toString();
-
-    // Call login
-    try {
-      const result = loginScope.login();
-      if (result && typeof result.then === 'function') {
-        const r = await result;
-        return 'promise: ' + JSON.stringify(r).substring(0, 300) + ' | fn: ' + fnSrc.substring(0, 500);
-      }
-      await new Promise(r => setTimeout(r, 3000));
-      return 'result: ' + (typeof result) + '=' + JSON.stringify(result).substring(0, 100) + ' | fn: ' + fnSrc.substring(0, 500);
-    } catch (e) {
-      return 'error: ' + e.message + ' | fn: ' + fnSrc.substring(0, 500);
-    }
-  }, email, password, md5pass);
-  console.log('\nLogin call:', loginCallResult);
-
-  await new Promise(r => setTimeout(r, 3000));
-  await page.reload({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
-
-  let loggedIn = await page.evaluate(() => document.getElementById('logged')?.value || 'not-found');
-  console.log('Logged in (A):', loggedIn);
-
-  // APPROACH B: /login page — find the bundled JS login code
-  if (loggedIn !== '1') {
-    console.log('\n=== APPROACH B: Analyze bundledJs.js login code ===');
-    await page.goto('https://www.kaloricketabulky.sk/login', { waitUntil: 'networkidle2', timeout: 30000 });
-
-    // Get the login function from the /login page controller
-    const loginPageFn = await page.evaluate(() => {
-      if (typeof angular === 'undefined') return 'no angular';
-      const el = document.querySelector('[ng-app]') || document.querySelector('.ng-scope') || document.body;
-      const inj = angular.element(el).injector();
-      const rs = inj.get('$rootScope');
-
-      const results = [];
-      function walk(scope, depth) {
-        if (!scope || depth > 20) return;
-        if (typeof scope.login === 'function') {
-          results.push({
-            depth,
-            loginFn: scope.login.toString().substring(0, 1000),
-            userData: scope.user ? JSON.stringify(scope.user) : 'none',
-            loginFormData: scope.loginForm ? JSON.stringify(scope.loginForm) : 'none'
-          });
-        }
-        let child = scope.$$childHead;
-        while (child) { walk(child, depth + 1); child = child.$$nextSibling; }
-      }
-      walk(rs, 0);
-      return JSON.stringify(results);
-    });
-    console.log('\n/login page login functions:', loginPageFn);
-
-    // Also fetch and analyze bundledJs.js for the login endpoint
-    const bundleAnalysis = await page.evaluate(async () => {
-      const resp = await fetch('/wro/bundledJs.js?v=05bed406b8f7f589e69bc8ba3fa44e3b');
-      const text = await resp.text();
-
-      // Search for different URL patterns
-      const patterns = ['login/create', 'user/login', 'user/signin', 'user/auth', '/login', '/auth', 'loginUser', 'authenticat'];
-      const found = {};
-      for (const pat of patterns) {
-        let idx = text.indexOf(pat);
-        if (idx !== -1) {
-          found[pat] = text.substring(Math.max(0, idx - 200), idx + 200);
-        }
-      }
-
-      // Also find hex_md5 or any MD5 function
-      const md5idx = text.indexOf('hex_md5');
-      if (md5idx !== -1) {
-        found['hex_md5'] = text.substring(Math.max(0, md5idx - 100), md5idx + 200);
-      }
-
-      // Search for the string "create" near "login"
-      let searchIdx = 0;
-      const createNearLogin = [];
-      while ((searchIdx = text.indexOf('login', searchIdx)) !== -1 && createNearLogin.length < 5) {
-        const context = text.substring(Math.max(0, searchIdx - 50), searchIdx + 50);
-        if (context.includes('create') || context.includes('Create')) {
-          createNearLogin.push(context);
-        }
-        searchIdx += 5;
-      }
-      found['create_near_login'] = createNearLogin;
-
-      return found;
-    });
-    console.log('\nBundle analysis:');
-    for (const [key, val] of Object.entries(bundleAnalysis)) {
-      console.log(`  ${key}:`, typeof val === 'string' ? val.substring(0, 300) : JSON.stringify(val).substring(0, 300));
-    }
+  // Type email
+  const emailField = await page.$('input[type="email"]');
+  if (emailField && await emailField.boundingBox()) {
+    await emailField.click({ clickCount: 3 });
+    await emailField.type(email, { delay: 30 });
+    console.log('Typed email');
+  } else {
+    console.log('No email field found');
   }
 
-  // APPROACH C: Try the user/login endpoint with MD5 password
-  if (loggedIn !== '1') {
-    console.log('\n=== APPROACH C: user/login with MD5 ===');
-    await page.goto('https://www.kaloricketabulky.sk/', { waitUntil: 'networkidle2', timeout: 30000 });
+  // Type password
+  const passField = await page.$('input[type="password"]');
+  if (passField && await passField.boundingBox()) {
+    await passField.click({ clickCount: 3 });
+    await passField.type(password, { delay: 30 });
+    console.log('Typed password');
+  } else {
+    console.log('No password field found');
+  }
 
-    const userLoginResult = await page.evaluate(async (email, md5pass) => {
+  await new Promise(r => setTimeout(r, 500));
+
+  // Intercept the login POST response
+  const loginResponsePromise = page.waitForResponse(
+    res => res.url().includes('/login/create'),
+    { timeout: 10000 }
+  ).catch(() => null);
+
+  // Click login button
+  await page.click('button[ng-click="login()"]').catch(e => console.log('Click failed:', e.message));
+  console.log('Clicked login');
+
+  const loginRes = await loginResponsePromise;
+  if (loginRes) {
+    try {
+      const body = await loginRes.text();
+      console.log('Login response:', loginRes.status(), body.substring(0, 300));
+    } catch(e) {
+      console.log('Login response:', loginRes.status(), '(body read failed)');
+    }
+  } else {
+    console.log('No /login/create response captured');
+  }
+
+  await new Promise(r => setTimeout(r, 2000));
+
+  let loggedIn = await page.evaluate(() => document.getElementById('logged')?.value || 'not-found');
+  console.log('Logged in:', loggedIn);
+
+  // If not logged in, try direct POST with MD5 password
+  if (loggedIn !== '1') {
+    console.log('\nTrying direct POST to /login/create...');
+    const directResult = await page.evaluate(async (email, md5pass) => {
       try {
-        const resp = await fetch('/user/login', {
+        const resp = await fetch('/login/create?format=json&voucher=false', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password: md5pass }),
           credentials: 'same-origin'
         });
-        const text = await resp.text();
-        return '/user/login JSON: ' + resp.status + ' ' + resp.url + ' body=' + text.substring(0, 200);
+        const data = await resp.json();
+        return JSON.stringify(data);
       } catch (e) {
-        return '/user/login error: ' + e.message;
+        return 'error: ' + e.message;
       }
     }, email, md5pass);
-    console.log(userLoginResult);
+    console.log('Direct POST result:', directResult);
 
-    await page.reload({ waitUntil: 'networkidle2' });
-    loggedIn = await page.evaluate(() => document.getElementById('logged')?.value || 'not-found');
-    console.log('Logged in (C):', loggedIn);
+    // Check if it worked
+    if (directResult.includes('"code":0') || directResult.includes('"code":1')) {
+      await page.reload({ waitUntil: 'networkidle2' });
+      loggedIn = await page.evaluate(() => document.getElementById('logged')?.value || 'not-found');
+      console.log('Logged in after direct POST:', loggedIn);
+    }
   }
 
   if (loggedIn !== '1') {
-    console.log('\nAll approaches failed.');
+    console.log('\nLogin failed.');
     await browser.close();
     process.exit(1);
   }
 
   // Navigate to diary
-  console.log('\nNavigating to diary...');
+  console.log('\nLogged in! Navigating to diary...');
   await page.goto('https://www.kaloricketabulky.sk/moj-diar', { waitUntil: 'networkidle2', timeout: 20000 });
 
   console.log('Waiting for diary data...');
@@ -268,8 +154,8 @@ const today = new Date().toISOString().split('T')[0];
         for (const k of timeKeys) { if (Array.isArray(time[k]) && time[k].length > 0) { foodArray = time[k]; break; } }
         if (!foodArray) continue;
         for (const food of foodArray) {
-          function findVal(o, p) { for (const x of p) { for (const k in o) { if (k.charAt(0)==='$') continue; if (k.toLowerCase().includes(x)) { const v=o[k]; if (typeof v==='number') return v; if (typeof v==='string') { const n=parseFloat(v.replace(',','.')); if (!isNaN(n)) return n; } } } } for (const k in o) { if (k.charAt(0)==='$') continue; const v=o[k]; if (v&&typeof v==='object'&&!Array.isArray(v)) { const s=findVal(v,p); if (s!==0) return s; } } return 0; }
-          function findStr(o, p) { for (const x of p) { for (const k in o) { if (k.charAt(0)==='$') continue; if (k.toLowerCase().includes(x)&&typeof o[k]==='string'&&o[k].length>0) return o[k]; } } for (const k in o) { if (k.charAt(0)==='$') continue; const v=o[k]; if (v&&typeof v==='object'&&!Array.isArray(v)) { const s=findStr(v,p); if (s) return s; } } return ''; }
+          function findVal(o, p) { for (const x of p) for (const k in o) { if (k.charAt(0)==='$') continue; if (k.toLowerCase().includes(x)) { const v=o[k]; if (typeof v==='number') return v; if (typeof v==='string') { const n=parseFloat(v.replace(',','.')); if (!isNaN(n)) return n; } } } for (const k in o) { if (k.charAt(0)==='$') continue; const v=o[k]; if (v&&typeof v==='object'&&!Array.isArray(v)) { const s=findVal(v,p); if (s!==0) return s; } } return 0; }
+          function findStr(o, p) { for (const x of p) for (const k in o) { if (k.charAt(0)==='$') continue; if (k.toLowerCase().includes(x)&&typeof o[k]==='string'&&o[k].length>0) return o[k]; } for (const k in o) { if (k.charAt(0)==='$') continue; const v=o[k]; if (v&&typeof v==='object'&&!Array.isArray(v)) { const s=findStr(v,p); if (s) return s; } } return ''; }
           result.push({
             title: String(findStr(food, ['title','name','nazov','nazev','food']) || food[Object.keys(food).filter(k=>k.charAt(0)!=='$')[0]] || ''),
             amount: findVal(food, ['amount','quantity','mnozstvo','weight','hmotnost','grams']),
