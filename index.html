@@ -594,13 +594,19 @@
                 <div class="measure-item"><label>Pás (cm)</label><input type="number" id="mWaist" step="0.5" placeholder="0"></div>
                 <div class="measure-item"><label>Boky (cm)</label><input type="number" id="mHips" step="0.5" placeholder="0"></div>
                 <div class="measure-item"><label>Ramená (cm)</label><input type="number" id="mShoulders" step="0.5" placeholder="0"></div>
-                <div class="measure-item"><label>Stehno (cm)</label><input type="number" id="mThigh" step="0.5" placeholder="0"></div>
-                <div class="measure-item"><label>Biceps (cm)</label><input type="number" id="mBicep" step="0.5" placeholder="0"></div>
+                <div class="measure-item"><label>Stehno L (cm)</label><input type="number" id="mThighL" step="0.5" placeholder="0"></div>
+                <div class="measure-item"><label>Stehno P (cm)</label><input type="number" id="mThighR" step="0.5" placeholder="0"></div>
+                <div class="measure-item"><label>Biceps L (cm)</label><input type="number" id="mBicepL" step="0.5" placeholder="0"></div>
+                <div class="measure-item"><label>Biceps P (cm)</label><input type="number" id="mBicepR" step="0.5" placeholder="0"></div>
+                <div class="measure-item"><label>Predlaktie L (cm)</label><input type="number" id="mForearmL" step="0.5" placeholder="0"></div>
+                <div class="measure-item"><label>Predlaktie P (cm)</label><input type="number" id="mForearmR" step="0.5" placeholder="0"></div>
+                <div class="measure-item"><label>Lýtko L (cm)</label><input type="number" id="mCalfL" step="0.5" placeholder="0"></div>
+                <div class="measure-item"><label>Lýtko P (cm)</label><input type="number" id="mCalfR" step="0.5" placeholder="0"></div>
             </div>
             <div class="ratio-grid" id="ratioCards"></div>
             <div style="margin-top: 10px;">
                 <table class="exercise-log-table">
-                    <thead><tr><th>Dátum</th><th>Hrudník</th><th>Pás</th><th>Boky</th><th>Ramená</th><th>Stehno</th><th>Biceps</th><th></th></tr></thead>
+                    <thead><tr><th>Dátum</th><th>Hrudník</th><th>Pás</th><th>Boky</th><th>Ramená</th><th>Stehno L/P</th><th>Biceps L/P</th><th>Predl. L/P</th><th>Lýtko L/P</th><th></th></tr></thead>
                     <tbody id="measureHistory"></tbody>
                 </table>
             </div>
@@ -1414,8 +1420,14 @@
                 waist: parseFloat(document.getElementById('mWaist').value) || 0,
                 hips: parseFloat(document.getElementById('mHips').value) || 0,
                 shoulders: parseFloat(document.getElementById('mShoulders').value) || 0,
-                thigh: parseFloat(document.getElementById('mThigh').value) || 0,
-                bicep: parseFloat(document.getElementById('mBicep').value) || 0
+                thighL: parseFloat(document.getElementById('mThighL').value) || 0,
+                thighR: parseFloat(document.getElementById('mThighR').value) || 0,
+                bicepL: parseFloat(document.getElementById('mBicepL').value) || 0,
+                bicepR: parseFloat(document.getElementById('mBicepR').value) || 0,
+                forearmL: parseFloat(document.getElementById('mForearmL').value) || 0,
+                forearmR: parseFloat(document.getElementById('mForearmR').value) || 0,
+                calfL: parseFloat(document.getElementById('mCalfL').value) || 0,
+                calfR: parseFloat(document.getElementById('mCalfR').value) || 0
             };
             const existing = measurements.findIndex(x => x.date === date);
             if (existing >= 0) measurements[existing] = m; else measurements.push(m);
@@ -1434,12 +1446,13 @@
         function renderMeasurements() {
             const tbody = document.getElementById('measureHistory');
             if (measurements.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="no-data" style="padding:15px;">Žiadne záznamy</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="no-data" style="padding:15px;">Žiadne záznamy</td></tr>';
                 document.getElementById('ratioCards').innerHTML = '';
                 return;
             }
+            const fmt = (l, r) => (l || '-') + ' / ' + (r || '-');
             tbody.innerHTML = measurements.map(m =>
-                '<tr><td>' + formatDate(m.date) + '</td><td>' + (m.chest || '-') + '</td><td>' + (m.waist || '-') + '</td><td>' + (m.hips || '-') + '</td><td>' + (m.shoulders || '-') + '</td><td>' + (m.thigh || '-') + '</td><td>' + (m.bicep || '-') + '</td><td><span style="color:var(--red);cursor:pointer;" onclick="deleteMeasurement(\'' + m.date + '\')">&times;</span></td></tr>'
+                '<tr><td>' + formatDate(m.date) + '</td><td>' + (m.chest || '-') + '</td><td>' + (m.waist || '-') + '</td><td>' + (m.hips || '-') + '</td><td>' + (m.shoulders || '-') + '</td><td>' + fmt(m.thighL || m.thigh, m.thighR) + '</td><td>' + fmt(m.bicepL || m.bicep, m.bicepR) + '</td><td>' + fmt(m.forearmL, m.forearmR) + '</td><td>' + fmt(m.calfL, m.calfR) + '</td><td><span style="color:var(--red);cursor:pointer;" onclick="deleteMeasurement(\'' + m.date + '\')">&times;</span></td></tr>'
             ).join('');
 
             const latest = measurements[0];
