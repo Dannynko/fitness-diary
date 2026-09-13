@@ -1769,26 +1769,37 @@
                 localStorage.setItem('fitnessGoals', JSON.stringify(goals));
                 renderAll();
 
-                const pushData = {
-                    records: mergedRecords,
-                    measurements: mergedMeasurements,
-                    exercises: mergedExercises,
-                    goals: mergedGoals,
-                    healthData: mergedHealth,
-                    lastSync: new Date().toISOString()
-                };
+                const hasChanges = mergedRecords.length !== (remoteData.records || []).length
+                    || mergedMeasurements.length !== (remoteData.measurements || []).length
+                    || mergedExercises.length !== (remoteData.exercises || []).length
+                    || mergedHealth.length !== (remoteData.healthData || []).length
+                    || JSON.stringify(mergedGoals) !== JSON.stringify(remoteData.goals);
 
-                const pushResp = await fetch('https://api.github.com/gists/' + config.gistId, {
-                    method: 'PATCH',
-                    headers: {
-                        'Authorization': 'token ' + config.token,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        files: { 'fitness-data.json': { content: JSON.stringify(pushData) } }
-                    })
-                });
-                if (!pushResp.ok) throw new Error('Push failed: ' + pushResp.status);
+                if (hasChanges) {
+                    const pushData = {
+                        records: mergedRecords,
+                        measurements: mergedMeasurements,
+                        exercises: mergedExercises,
+                        goals: mergedGoals,
+                        healthData: mergedHealth,
+                        lastSync: new Date().toISOString()
+                    };
+
+                    const pushResp = await fetch('https://api.github.com/gists/' + config.gistId, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': 'token ' + config.token,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            files: { 'fitness-data.json': { content: JSON.stringify(pushData) } }
+                        })
+                    });
+                    if (!pushResp.ok) {
+                        if (pushResp.status === 403) showToast('GitHub limit — skús znova o minútu', true);
+                        else throw new Error('Push failed: ' + pushResp.status);
+                    }
+                }
 
                 localStorage.setItem('lastSyncTime', new Date().toISOString());
                 updateSyncStatus();
