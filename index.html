@@ -1426,34 +1426,40 @@
             const curW = (records.filter(r => r.weight != null && r.weight > 0).sort((a, b) => b.date.localeCompare(a.date))[0] || {}).weight || null;
             const calDiff = tCals - todayExpenditure;
             let calTip;
-            if (calDiff > 200) calTip = 'Ješ viac než míňaš. Energia sa ukladá ako tuk a budeš priberať.';
-            else if (calDiff > 0) calTip = 'Mierny prebytok. Ak trénuješ silu, môže podporiť rast svalov. Inak pomalé priberanie.';
-            else if (calDiff > -200) calTip = 'Takmer vyrovnané. Vhodné na udržiavanie váhy pri dostatku bielkovín.';
-            else if (calDiff > -500) calTip = 'Zdravý deficit. Chudneš postupne a minimalizuješ stratu svalov.';
-            else calTip = 'Veľký deficit. Rýchle chudnutie, ale hrozí strata svalov, únava a spomalenie metabolizmu.';
+            if (calDiff > 500) calTip = 'Výrazný prebytok. Väčšina sa uloží ako tuk. Zníž porcie alebo pridaj aktivitu.';
+            else if (calDiff > 200) calTip = 'Mierny prebytok. Pri silovom tréningu podporí rast svalov, inak pomalé priberanie. Bez tréningu zníž o 200–300 kcal.';
+            else if (calDiff > 0) calTip = 'Ľahký prebytok. Ideálne na budovanie svalov pri tréningu. Bez tréningu udržiavaš váhu.';
+            else if (calDiff > -200) calTip = 'Takmer vyrovnané. Udržíš váhu a pri dostatku bielkovín aj svaly. Viac zhodiť nebudeš.';
+            else if (calDiff > -500) calTip = 'Zdravý deficit. Chudneš ~0.5 kg/týždeň. Pri dostatku bielkovín si udržíš svaly. Zvýšenie deficitu by urýchlilo chudnutie, ale hrozí strata svalov.';
+            else if (calDiff > -800) calTip = 'Veľký deficit. Chudneš rýchlo, ale telo začína šetriť energiu — spomaľuje metabolizmus. Pridaj aspoň 200 kcal, inak riskuješ prejedanie po diéte.';
+            else calTip = 'Extrémny deficit. Telo spaľuje svaly na energiu, klesá výkon aj imunita. Dlhodobo neudržateľné — zvýš príjem aspoň na -500 kcal.';
             document.getElementById('calsTip').dataset.tip = calTip;
 
             const protPerKg = curW ? tProt / curW : 0;
             let protTip;
             if (protPerKg === 0) protTip = '';
-            else if (protPerKg >= 2.2) protTip = 'Veľa bielkovín. Nad 2.2 g/kg nemá ďalší benefit pre svaly. Nadbytok zaťažuje obličky.';
-            else if (protPerKg >= 1.6) protTip = 'Ideálne množstvo. Chráni svaly pri chudnutí, podporuje regeneráciu a sýtosť.';
-            else if (protPerKg >= 1.2) protTip = 'Podpriemerné. Svaly nemajú dosť stavebného materiálu — pri deficite ich budeš strácať rýchlejšie.';
-            else protTip = 'Výrazne málo. Telo bude prednostne spaľovať svaly. Slabší výkon, pomalšia regenerácia.';
+            else if (protPerKg >= 2.5) protTip = 'Zbytočne veľa. Nad 2.2 g/kg telo nevyužije na svaly — premieňa sa na energiu. Šetríš peniaze aj obličky, ak znížiš na 2.0 g/kg.';
+            else if (protPerKg >= 2.0) protTip = 'Výborne. Dosť na rast svalov aj pri silovom tréningu. Zvyšovanie už nepridá benefit.';
+            else if (protPerKg >= 1.6) protTip = 'Dostatočné na zachovanie svalov pri chudnutí. Na rast svalov by pomohlo zvýšiť na 2.0 g/kg — pridaj porciu mäsa, tvarohu alebo proteínového nápoja.';
+            else if (protPerKg >= 1.2) protTip = 'Málo. Svaly nemajú dosť materiálu na opravu po tréningu — strácaš ich rýchlejšie. Pridaj 30–40 g denne (napr. 200 g tvarohu alebo 150 g kuracích pŕs).';
+            else protTip = 'Kriticky málo. Telo rozkladá svaly na aminokyseliny. Slabší výkon, pomalšia regenerácia, väčší hlad. Minimum je 1.6 g/kg.';
             document.getElementById('protTip').dataset.tip = protTip;
 
             let carbTip;
-            if (tCarbs >= goals.carbs) carbTip = 'Dostatok sacharidov. Plná energia pre tréning aj hlavu. Glykogénové zásoby sa dopĺňajú.';
-            else if (tCarbs >= 100) carbTip = 'Menej než cieľ, ale mozog aj svaly majú dosť paliva. Tréning zvládneš.';
-            else if (tCarbs > 0) carbTip = 'Pod 100 g. Mozog nemá dosť glukózy — únava, hmla, horšia koncentrácia. Tréningy budú slabšie.';
+            if (tCarbs >= goals.carbs * 1.3) carbTip = 'Veľa sacharidov. Nadbytok sa ukladá ako tuk. Ak necvičíš intenzívne, zníž a nahraď bielkovinami.';
+            else if (tCarbs >= goals.carbs) carbTip = 'Plné glykogénové zásoby. Mozog aj svaly majú dostatok paliva. Tréning bude na plný výkon.';
+            else if (tCarbs >= 150) carbTip = 'Mierne pod cieľom, ale stačí na bežný deň. Pri intenzívnom tréningu pocítiš slabší výkon — pridaj ovocie, ryžu alebo zemiaky.';
+            else if (tCarbs >= 100) carbTip = 'Nízke. Mozog spotrebuje ~120 g glukózy denne. Môžeš cítiť únavu a horšiu koncentráciu. Na chudnutie ešte OK, ale nie dlhodobo.';
+            else if (tCarbs > 0) carbTip = 'Veľmi nízke. Telo prechádza na ketózu — spaľuje tuky, ale aj svaly. Bolesti hlavy, podráždenosť. Ak to nie je zámer, pridaj aspoň na 100 g.';
             else carbTip = '';
             document.getElementById('carbsTip').dataset.tip = carbTip;
 
             let fatTip;
-            if (tFat >= 50 && tFat <= goals.fat * 1.3) fatTip = 'Zdravé množstvo. Hormóny (testosterón, estrogén) sa tvoria správne, vitamíny A/D/E/K sa vstrebávajú.';
-            else if (tFat > goals.fat * 1.3) fatTip = 'Veľa tukov. Tuky sú kaloricky najhustejšie (9 kcal/g) — ľahko sa preješ. Zníž a pridaj bielkoviny.';
-            else if (tFat >= 30) fatTip = 'Menej tukov než treba. Hormonálna produkcia klesá, vitamíny rozpustné v tukoch sa horšie vstrebávajú.';
-            else if (tFat > 0) fatTip = 'Veľmi málo. Pod 30 g hrozí pokles testosterónu, suchá koža, vypadávanie vlasov.';
+            if (tFat > goals.fat * 1.5) fatTip = 'Výrazne veľa. Tuky majú 9 kcal/g — rýchlo vyčerpáš kalorický limit. Zníž vyprážané, orechy a oleje. Presmeruj kalórie na bielkoviny.';
+            else if (tFat > goals.fat * 1.2) fatTip = 'Mierne nad cieľom. Ešte v poriadku, ale tuky sú kaloricky husté. Ak potrebuješ znížiť kalórie, tu je najľahšie ušetriť.';
+            else if (tFat >= 50) fatTip = 'Ideálne. Testosterón a estrogén sa tvoria správne, vitamíny A/D/E/K sa vstrebávajú. Koža a kĺby sú vyživené.';
+            else if (tFat >= 30) fatTip = 'Pod minimom. Hormonálna produkcia klesá, vitamíny rozpustné v tukoch sa horšie vstrebávajú. Pridaj orechy, avokádo alebo olivový olej.';
+            else if (tFat > 0) fatTip = 'Kriticky málo. Hrozí pokles testosterónu, suchá koža, lámavé vlasy. Telo nevie vyrobiť dostatok hormónov. Pridaj aspoň na 50 g.';
             else fatTip = '';
             document.getElementById('fatTip').dataset.tip = fatTip;
 
