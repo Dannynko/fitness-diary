@@ -1,0 +1,1499 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fitness Diary</title>
+    <meta name="description" content="Sledovanie kalórií, makroživín a váhy po dňoch a týždňoch">
+    <meta name="theme-color" content="#4fc3f7">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="KalTracker">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --accent: #4fc3f7;
+            --accent-hover: #29b6f6;
+            --text: #e0e0e0;
+            --text-muted: #b0bec5;
+            --green: #66bb6a;
+            --orange: #ffa726;
+            --red: #ef5350;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --radius: 15px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            min-height: 100vh;
+            color: var(--text);
+            padding: 10px;
+            font-size: 12px;
+        }
+
+        .container { max-width: 1000px; margin: 0 auto; }
+
+        header {
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        header h1 {
+            color: var(--accent);
+            font-size: 1.8rem;
+            margin-bottom: 0;
+        }
+
+        h2 {
+            color: #81d4fa;
+            margin-bottom: 8px;
+            font-size: 1rem;
+            border-bottom: 1px solid var(--accent);
+            padding-bottom: 5px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--card-border);
+        }
+
+        /* Summary cards */
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .summary-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--card-border);
+        }
+
+        .summary-card .value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin: 3px 0;
+        }
+
+        .summary-card .label { color: var(--text-muted); font-size: 0.8rem; }
+        .summary-card.calories-in .value { color: var(--green); }
+        .summary-card.calories-out .value { color: var(--red); }
+        .summary-card.balance .value { color: var(--accent); }
+        .summary-card.weight .value { color: var(--orange); }
+
+        /* Form */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .form-group { display: flex; flex-direction: column; }
+
+        label { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 5px; }
+
+        input[type="number"],
+        input[type="date"] {
+            padding: 6px 8px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 0 2px var(--accent);
+        }
+
+        input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+        input[type="number"] { -moz-appearance: textfield; }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .date-input-wrap {
+            display: flex; align-items: center; border-radius: 8px;
+            background: rgba(255,255,255,0.1); overflow: hidden;
+        }
+        .date-input-wrap input { box-shadow: none !important; outline: none !important; }
+        .date-input-wrap input::-webkit-calendar-picker-indicator { filter: invert(1); }
+        .weight-input-wrap {
+            display: flex; align-items: center; border-radius: 8px;
+            background: rgba(255,255,255,0.1); overflow: hidden;
+        }
+        .weight-input-wrap input {
+            background: transparent !important; border-radius: 0 !important; width: 60px !important;
+            box-shadow: none !important; outline: none !important;
+        }
+        .spin-btns { display: flex; flex-direction: column; padding: 0 6px; }
+        .spin-btns span {
+            cursor: pointer; color: var(--text-muted); font-size: 8px; line-height: 1.2;
+            user-select: none;
+        }
+        .spin-btns span:hover { color: var(--text); }
+
+        /* Buttons */
+        button {
+            padding: 6px 14px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+            color: var(--bg-primary);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(79, 195, 247, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text);
+            padding: 5px 12px;
+            font-size: 0.8rem;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--red) 0%, #e53935 100%);
+            color: #fff;
+            padding: 8px 15px;
+            font-size: 0.85rem;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(239, 83, 80, 0.4);
+        }
+
+        /* Macro preview */
+        .macro-preview {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--card-border);
+        }
+
+        .macro-item { display: flex; align-items: center; gap: 8px; }
+        .macro-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .macro-dot.protein { background: var(--green); }
+        .macro-dot.carbs { background: var(--orange); }
+        .macro-dot.fat { background: var(--red); }
+
+        /* Tabs */
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+
+        .tab {
+            padding: 5px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: none;
+            border-radius: 6px;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.8rem;
+        }
+
+        .tab.active { background: var(--accent); color: var(--bg-primary); }
+        .tab:hover:not(.active) { background: rgba(255, 255, 255, 0.1); }
+
+        /* Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; table-layout: fixed; }
+        th, td { padding: 8px 10px; text-align: center; border-bottom: 1px solid var(--card-border); font-size: 0.85rem; }
+        th:first-child, td:first-child { text-align: left; }
+        th { background: rgba(79, 195, 247, 0.2); color: var(--accent); font-weight: 600; }
+        tr:hover { background: rgba(255, 255, 255, 0.05); }
+        .positive { color: var(--green); }
+        .negative { color: var(--red); }
+        .neutral { color: var(--orange); }
+
+        /* Weight chart */
+        .chart-container {
+            height: 220px;
+            padding: 6px 0;
+        }
+        .chart-container svg { width: 100%; height: 100%; }
+
+        .no-data {
+            text-align: center;
+            color: #78909c;
+            padding: 40px;
+            font-style: italic;
+        }
+
+        .progress-bar { background: rgba(255,255,255,0.08); border-radius: 5px; height: 10px; overflow: hidden; margin-top: 5px; }
+        .progress-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+
+        .goal-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--card-border); }
+        .goal-row:last-child { border: none; }
+        .goal-label { color: var(--text-muted); font-size: 0.85rem; }
+        .goal-value { font-weight: 600; font-size: 0.85rem; }
+
+        .measure-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+        .measure-item { background: rgba(255,255,255,0.03); border-radius: 8px; padding: 8px 10px; }
+        .measure-item label { font-size: 0.75rem; margin-bottom: 3px; }
+        .measure-item input { width: 100%; padding: 4px 6px; font-size: 0.8rem; }
+
+        .ratio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 10px; }
+        .ratio-card { background: rgba(255,255,255,0.03); border-radius: 8px; padding: 10px; text-align: center; }
+        .ratio-val { font-size: 1.2rem; font-weight: 700; margin: 4px 0; }
+        .ratio-status { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; display: inline-block; }
+        .ratio-ok { background: rgba(102,187,106,0.2); color: var(--green); }
+        .ratio-warn { background: rgba(255,167,38,0.2); color: var(--orange); }
+        .ratio-bad { background: rgba(239,83,80,0.2); color: var(--red); }
+
+        .exercise-entry { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+        .exercise-entry select, .exercise-entry input { padding: 4px 6px; font-size: 0.8rem; border: none; border-radius: 6px; background: rgba(255,255,255,0.1); color: #fff; }
+        .exercise-entry select { width: 160px; }
+        .exercise-entry input { width: 60px; }
+        .exercise-log-table { font-size: 0.8rem; }
+        .exercise-log-table th, .exercise-log-table td { padding: 5px 8px; }
+
+        .actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--green);
+            color: var(--bg-primary);
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+            opacity: 0;
+            transition: all 0.4s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Help modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-overlay.open { display: flex; }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 1px solid var(--card-border);
+        }
+
+        .modal h2 { margin-bottom: 20px; }
+
+        .modal h3 {
+            color: var(--accent);
+            margin: 20px 0 10px;
+            font-size: 1.1rem;
+        }
+
+        .modal p, .modal li {
+            color: var(--text-muted);
+            line-height: 1.7;
+            margin-bottom: 8px;
+        }
+
+        .modal ul { padding-left: 20px; }
+
+        .modal .close-btn {
+            float: right;
+            background: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            padding: 0;
+            cursor: pointer;
+        }
+
+        .modal .close-btn:hover { color: var(--text); }
+
+        .modal kbd {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        .color-legend {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+
+        .color-legend span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .color-swatch {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .form-grid { grid-template-columns: 1fr 1fr; }
+            header h1 { font-size: 1.8rem; }
+            table { font-size: 0.85rem; }
+            th, td { padding: 8px 5px; }
+            .summary-cards { grid-template-columns: 1fr 1fr; }
+        }
+
+        @media (max-width: 480px) {
+            body { padding: 10px; }
+            .card { padding: 15px; }
+            .form-grid { grid-template-columns: 1fr; }
+            .summary-cards { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div style="position: relative;">
+                <h1>Fitness Diary</h1>
+                <div style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); display: flex; gap: 6px;">
+                    <button class="tab active" id="periodWeek" onclick="setPeriod('week')">Týždeň</button>
+                    <button class="tab" id="periodMonth" onclick="setPeriod('month')">Mesiac</button>
+                </div>
+            </div>
+        </header>
+        <div id="ktImportStatus"></div>
+        <div class="summary-cards" style="grid-template-columns: repeat(4, 1fr);">
+            <div class="summary-card calories-in">
+                <div class="label">Kalórie (kcal)</div>
+                <div class="value" id="sumCalories">0</div>
+            </div>
+            <div class="summary-card balance">
+                <div class="label">Bielkoviny (g)</div>
+                <div class="value" id="sumProtein">0</div>
+            </div>
+            <div class="summary-card calories-out">
+                <div class="label">Výdaj (kcal)</div>
+                <div class="value" id="sumOutput">0</div>
+            </div>
+            <div class="summary-card weight">
+                <div class="label">Váha (kg)</div>
+                <div class="value" id="currentWeight">-</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <h2 style="margin: 0; border: none; padding: 0;">Záznamy</h2>
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="cursor:pointer; color:var(--accent); font-size:1rem; user-select:none;" onclick="shiftGoalDate(-1)">&#9664;</span>
+                    <span id="goalDateLabel" style="font-size:0.85rem; font-weight:600; min-width:100px; text-align:center;"></span>
+                    <span style="cursor:pointer; color:var(--accent); font-size:1rem; user-select:none;" onclick="shiftGoalDate(1)">&#9654;</span>
+                </div>
+                <button class="btn-secondary" onclick="importFromKt()" id="ktImportBtn">Import dát</button>
+            </div>
+            <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importData(event)">
+
+            <div id="goalDisplay" style="display:grid; grid-template-columns: 1fr 1fr; gap: 14px 14px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--card-border);">
+                <div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;"><span>Kalórie</span><span><strong id="todayCalsShow">0</strong> / <span id="goalBazalShow">1850</span> <span id="calsPctShow" style="color:var(--text-muted);">(0%)</span></span></div>
+                    <div class="progress-bar"><div class="progress-fill" id="calsPctBar" style="width:0%; background: var(--green);"></div></div>
+                </div>
+                <div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;"><span>Bielkoviny</span><span><strong id="todayProtShow">0</strong> / <span id="goalProtShow">150</span> g <span id="protPctShow" style="color:var(--text-muted);">(0%)</span></span></div>
+                    <div class="progress-bar"><div class="progress-fill" id="protPctBar" style="width:0%; background: var(--accent);"></div></div>
+                </div>
+                <div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;"><span>Sacharidy</span><span><strong id="todayCarbsShow">0</strong> / <span id="goalCarbsShow">200</span> g <span id="carbsPctShow" style="color:var(--text-muted);">(0%)</span></span></div>
+                    <div class="progress-bar"><div class="progress-fill" id="carbsPctBar" style="width:0%; background: var(--orange);"></div></div>
+                </div>
+                <div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;"><span>Tuky</span><span><strong id="todayFatShow">0</strong> / <span id="goalFatShow">60</span> g <span id="fatPctShow" style="color:var(--text-muted);">(0%)</span></span></div>
+                    <div class="progress-bar"><div class="progress-fill" id="fatPctBar" style="width:0%; background: var(--red);"></div></div>
+                </div>
+            </div>
+            <div style="margin-bottom:10px; padding:10px 12px; background:rgba(255,255,255,0.03); border-radius:8px; font-size:0.8rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                    <div style="display:flex; gap:20px; flex-wrap:wrap;">
+                        <div style="text-align:center;"><div style="color:var(--text-muted); font-size:0.7rem; margin-bottom:2px;">Cieľ</div><strong id="goalWeightShow">-</strong></div>
+                        <div style="text-align:center;"><div style="color:var(--text-muted); font-size:0.7rem; margin-bottom:2px;">Teraz</div><strong id="currentWeightGoal">-</strong></div>
+                        <div style="text-align:center;"><div style="color:var(--text-muted); font-size:0.7rem; margin-bottom:2px;">Zostáva</div><strong id="weightToLose">-</strong></div>
+                        <div style="text-align:center;"><div style="color:var(--text-muted); font-size:0.7rem; margin-bottom:2px;">Deficit/deň</div><strong id="avgDeficit">-</strong></div>
+                        <div style="text-align:center;"><div style="color:var(--text-muted); font-size:0.7rem; margin-bottom:2px;">Tempo</div><strong id="weeklyLossRate">-</strong></div>
+                        <div style="text-align:center;"><div style="color:var(--text-muted); font-size:0.7rem; margin-bottom:2px;">Odhad</div><strong id="estWeeks">-</strong></div>
+                    </div>
+                    <span style="cursor:pointer;color:var(--accent);font-size:0.75rem;" onclick="toggleGoalEdit()" id="goalEditBtn">Upraviť ciele</span>
+                </div>
+                <div id="goalAdvice" style="font-size:0.75rem; color:var(--text-muted); padding-top:6px; border-top:1px solid var(--card-border); line-height:1.5;"></div>
+            </div>
+            <div id="goalEdit" style="display:none; margin-bottom:10px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px;">
+                    <div class="form-group"><label>Bazál (kcal)</label><input type="number" id="goalBazal" value="1900"></div>
+                    <div class="form-group"><label>TDEE (kcal)</label><input type="number" id="goalTdee" value="2350"></div>
+                    <div class="form-group"><label>Bielkoviny (g)</label><input type="number" id="goalProt" value="155"></div>
+                    <div class="form-group"><label>Sacharidy (g)</label><input type="number" id="goalCarbs" value="175"></div>
+                    <div class="form-group"><label>Tuky (g)</label><input type="number" id="goalFat" value="65"></div>
+                    <div class="form-group"><label>Cieľ. váha (kg)</label><input type="number" id="goalWeight" value="80" step="0.1"></div>
+                </div>
+                <button class="btn-primary" onclick="saveGoals()" style="margin-top: 6px;">Uložiť</button>
+            </div>
+
+
+            <div id="dailyTab">
+                <table>
+                    <colgroup>
+                        <col style="width:37%;">
+                        <col style="width:9%;">
+                        <col style="width:9%;">
+                        <col style="width:9%;">
+                        <col style="width:9%;">
+                        <col style="width:9%;">
+                        <col style="width:9%;">
+                        <col style="width:9%;">
+                        <col style="width:24px;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>Dátum</th>
+                            <th>Gramáž</th>
+                            <th>Bielk.</th>
+                            <th>Sach.</th>
+                            <th>Tuky</th>
+                            <th>Prijaté</th>
+                            <th>Spálené</th>
+                            <th>Rozdiel</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="dailyRecords">
+                        <tr><td colspan="9" class="no-data">Žiadne záznamy</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="weeklyTab" style="display: none;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Týždeň</th>
+                            <th>Bielkoviny</th>
+                            <th>Sacharidy</th>
+                            <th>Tuky</th>
+                            <th>Prijaté</th>
+                            <th>Spálené</th>
+                            <th>Rozdiel</th>
+                            <th>Priem. váha</th>
+                        </tr>
+                    </thead>
+                    <tbody id="weeklyRecords">
+                        <tr><td colspan="8" class="no-data">Žiadne záznamy</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;">
+                <h2 style="margin: 0; border: none; padding: 0;">Vývoj váhy</h2>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <div class="date-input-wrap">
+                        <div class="spin-btns">
+                            <span onclick="spinDate('weightDate', 1)">&#9650;</span>
+                            <span onclick="spinDate('weightDate', -1)">&#9660;</span>
+                        </div>
+                        <input type="date" id="weightDate" style="padding: 4px 8px; border: none; color: #fff; font-size: 0.8rem; background: transparent; outline: none; box-shadow: none;">
+                    </div>
+                    <div class="weight-input-wrap">
+                        <input type="number" id="weightInput" min="0" step="0.1" placeholder="kg" style="padding: 4px 8px; border: none; color: #fff; font-size: 0.8rem;">
+                        <div class="spin-btns">
+                            <span onclick="spinWeight(0.1)">&#9650;</span>
+                            <span onclick="spinWeight(-0.1)">&#9660;</span>
+                        </div>
+                    </div>
+                    <button class="btn-secondary" onclick="addWeight()">Uložiť</button>
+                </div>
+            </div>
+            <div class="chart-container" id="weightChart">
+                <div class="no-data">Žiadne záznamy váhy</div>
+            </div>
+        </div>
+
+
+        <!-- Telesné miery -->
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h2 style="margin: 0; border: none; padding: 0;">Telesné miery</h2>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                    <input type="date" id="measureDate" style="padding: 4px 8px; border: none; border-radius: 6px; background: rgba(255,255,255,0.1); color: #fff; font-size: 0.8rem;">
+                    <button class="btn-secondary" onclick="saveMeasurements()">Uložiť</button>
+                </div>
+            </div>
+            <div class="measure-grid">
+                <div class="measure-item"><label>Hrudník (cm)</label><input type="number" id="mChest" step="0.5" placeholder="0"></div>
+                <div class="measure-item"><label>Pás (cm)</label><input type="number" id="mWaist" step="0.5" placeholder="0"></div>
+                <div class="measure-item"><label>Boky (cm)</label><input type="number" id="mHips" step="0.5" placeholder="0"></div>
+                <div class="measure-item"><label>Ramená (cm)</label><input type="number" id="mShoulders" step="0.5" placeholder="0"></div>
+                <div class="measure-item"><label>Stehno (cm)</label><input type="number" id="mThigh" step="0.5" placeholder="0"></div>
+                <div class="measure-item"><label>Biceps (cm)</label><input type="number" id="mBicep" step="0.5" placeholder="0"></div>
+            </div>
+            <div class="ratio-grid" id="ratioCards"></div>
+            <div style="margin-top: 10px;">
+                <table class="exercise-log-table">
+                    <thead><tr><th>Dátum</th><th>Hrudník</th><th>Pás</th><th>Boky</th><th>Ramená</th><th>Stehno</th><th>Biceps</th><th></th></tr></thead>
+                    <tbody id="measureHistory"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Výkon v cvikoch -->
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h2 style="margin: 0; border: none; padding: 0;">Výkon v cvikoch</h2>
+            </div>
+            <div class="exercise-entry">
+                <input type="date" id="exDate" style="width: 130px;">
+                <select id="exName">
+                    <option value="Drep">Drep</option>
+                    <option value="Bench press">Bench press</option>
+                    <option value="Mŕtvy ťah">Mŕtvy ťah</option>
+                    <option value="OHP">OHP</option>
+                    <option value="Dips">Dips</option>
+                    <option value="Lateral raises">Lateral raises</option>
+                    <option value="Biceps curl">Biceps curl</option>
+                    <option value="Zhyby">Zhyby</option>
+                    <option value="Iné">Iné</option>
+                </select>
+                <input type="number" id="exSets" placeholder="Série" style="width: 55px;" min="1">
+                <span style="color: var(--text-muted);">×</span>
+                <input type="number" id="exReps" placeholder="Opakovania" style="width: 55px;" min="1">
+                <span style="color: var(--text-muted);">×</span>
+                <input type="number" id="exWeight" placeholder="kg" style="width: 55px;" step="0.5" min="0">
+                <button class="btn-secondary" onclick="addExercise()">Pridať</button>
+            </div>
+            <div id="exerciseLog"></div>
+        </div>
+
+        <div style="text-align: center; padding: 10px 0; margin-top: 10px;">
+            <button class="btn-secondary" onclick="openHelp()" style="font-size: 0.8rem; padding: 6px 14px;">Dokumentácia</button>
+            <button class="btn-secondary" onclick="exportData()" style="font-size: 0.8rem; padding: 6px 14px;">Export JSON</button>
+            <button class="btn-secondary" onclick="document.getElementById('importFile').click()" style="font-size: 0.8rem; padding: 6px 14px;">Import JSON</button>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Help modal -->
+    <div class="modal-overlay" id="helpModal" onclick="if(event.target===this)closeHelp()">
+        <div class="modal">
+            <button class="close-btn" onclick="closeHelp()">&times;</button>
+            <h2>Dokumentácia</h2>
+
+            <h3>Ako to funguje</h3>
+            <p>Kalórický Tracker je offline webová aplikácia na sledovanie denného príjmu makroživín (bielkoviny, sacharidy, tuky), kalórií a telesnej váhy. Všetky dáta sa ukladajú lokálne v prehliadači (localStorage).</p>
+
+            <h3>Pridávanie záznamu</h3>
+            <ul>
+                <li><strong>Dátum</strong> &mdash; automaticky nastavený na dnešok, dá sa zmeniť</li>
+                <li><strong>Bielkoviny (g)</strong> &mdash; prepočet: 1 g = 4 kcal</li>
+                <li><strong>Sacharidy (g)</strong> &mdash; prepočet: 1 g = 4 kcal</li>
+                <li><strong>Tuky (g)</strong> &mdash; prepočet: 1 g = 9 kcal</li>
+                <li><strong>Prijaté kalórie</strong> &mdash; manuálne zadané kalórie (pripočítajú sa k makrám)</li>
+                <li><strong>Spálené kalórie</strong> &mdash; energie spotrebované cvičením</li>
+                <li><strong>Váha (kg)</strong> &mdash; voliteľné, zobrazí sa v grafe</li>
+            </ul>
+            <p>Na jeden deň môžeš pridať viacero záznamov &mdash; automaticky sa sčítajú.</p>
+
+            <h3>Kalórie z makroživín</h3>
+            <p>Prijaté kalórie = (bielkoviny &times; 4) + (sacharidy &times; 4) + (tuky &times; 9) + manuálne zadané kalórie. Náhľad sa aktualizuje počas písania.</p>
+
+            <h3>Farby rozdielu</h3>
+            <div class="color-legend">
+                <span><span class="color-swatch" style="background: var(--red);"></span> Prebytok (prijaté &gt; spálené)</span>
+                <span><span class="color-swatch" style="background: var(--green);"></span> Deficit (prijaté &lt; spálené)</span>
+                <span><span class="color-swatch" style="background: var(--orange);"></span> Nula</span>
+            </div>
+
+            <h3>Zobrazenia</h3>
+            <ul>
+                <li><strong>Denné</strong> &mdash; záznamy zoskupené po dňoch, zoradené od najnovšieho</li>
+                <li><strong>Týždenné</strong> &mdash; agregácia po týždňoch (pondelok&ndash;nedeľa), s priemernou váhou</li>
+            </ul>
+
+            <h3>Graf váhy</h3>
+            <p>Stĺpcový graf zobrazuje vývoj váhy v čase. Prejdením myšou nad stĺpec sa ukáže dátum a presná hodnota.</p>
+
+            <h3>Export / Import</h3>
+            <ul>
+                <li><strong>Exportovať</strong> &mdash; stiahne všetky záznamy ako JSON súbor</li>
+                <li><strong>Importovať</strong> &mdash; načíta záznamy z JSON súboru (pridá sa k existujúcim, duplicity sa preskočia)</li>
+            </ul>
+            <p>Takto si môžeš zálohovať dáta alebo ich preniesť medzi zariadeniami.</p>
+
+            <h3>Uloženie dát</h3>
+            <p>Dáta sú uložené v <kbd>localStorage</kbd> prehliadača pod kľúčom <kbd>calorieRecords</kbd>. Zostanú aj po zatvorení prehliadača. Vymazanie dát prehliadača alebo režim inkognito ich zmaže &mdash; preto je dobré pravidelne exportovať.</p>
+
+            <h3>Import z KalorickéTabuľky.sk</h3>
+            <p>Jedno tlačidlo <strong>Importovať z KT</strong> stiahne dnešný denník priamo z tvojho KT konta. Vyžaduje rozšírenie KT Sync.</p>
+            <p><strong>Inštalácia (raz):</strong></p>
+            <ol>
+                <li>Otvor <kbd>chrome://extensions</kbd></li>
+                <li>Zapni <strong>Režim pre vývojárov</strong></li>
+                <li>Klikni <strong>Načítať rozbalené</strong> &rarr; vyber priečinok <kbd>kt-extension</kbd></li>
+                <li>Na rozšírení klikni Podrobnosti &rarr; zapni <strong>Povoliť prístup k URL súborov</strong></li>
+                <li>Obnov tracker (F5)</li>
+            </ol>
+            <p>Musíš byť prihlásený na kaloricketabulky.sk v rovnakom prehliadači (cez Google alebo inak).</p>
+
+            <h3>Pridanie do záložiek</h3>
+            <p>Otvor <kbd>index.html</kbd> v prehliadači a pridaj do záložiek (<kbd>Ctrl+D</kbd>).</p>
+        </div>
+    </div>
+
+    <script>
+        let records = JSON.parse(localStorage.getItem('calorieRecords')) || [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('weightDate').valueAsDate = new Date();
+            renderAll();
+        });
+
+        function spinDate(id, days) {
+            const el = document.getElementById(id);
+            const d = el.value ? new Date(el.value) : new Date();
+            d.setDate(d.getDate() + days);
+            el.value = d.toISOString().split('T')[0];
+        }
+
+        function spinWeight(delta) {
+            const el = document.getElementById('weightInput');
+            const cur = parseFloat(el.value) || 0;
+            el.value = Math.max(0, cur + delta).toFixed(1);
+        }
+
+        function addWeight() {
+            const date = document.getElementById('weightDate').value;
+            const weight = parseFloat(document.getElementById('weightInput').value);
+            if (!date || isNaN(weight) || weight <= 0) { showToast('Zadaj dátum a váhu', true); return; }
+            const existing = records.find(r => r.date === date && r.source === 'weight');
+            if (existing) {
+                existing.weight = weight;
+            } else {
+                records.push({ id: Date.now(), date, protein: 0, carbs: 0, fat: 0, caloriesIn: 0, caloriesOut: 0, weight, source: 'weight' });
+            }
+            saveRecords();
+            renderAll();
+            document.getElementById('weightInput').value = '';
+            showToast('Váha uložená');
+        }
+
+        function importFromKt() {
+            if (!document.documentElement.hasAttribute('data-kt-extension')) {
+                document.getElementById('ktImportStatus').innerHTML = `<div style="background: rgba(239,83,80,0.1); border: 1px solid var(--red); border-radius: 8px; padding: 15px; margin-top: 5px;">
+                    <p style="color: var(--red); font-weight: 600; margin-bottom: 8px;">Rozšírenie KT Sync nie je nainštalované</p>
+                    <ol style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.8; padding-left: 20px;">
+                        <li>Otvor <strong>chrome://extensions</strong> v prehliadači</li>
+                        <li>Zapni <strong>Režim pre vývojárov</strong> (vpravo hore)</li>
+                        <li>Klikni <strong>Načítať rozbalené</strong></li>
+                        <li>Vyber priečinok <strong>kt-extension</strong> (v priečinku Calorie_Tracker)</li>
+                        <li>Zapni <strong>Povoliť prístup k URL súborov</strong> (klikni Podrobnosti na rozšírení)</li>
+                        <li>Obnov túto stránku (F5)</li>
+                    </ol>
+                </div>`;
+                return;
+            }
+
+            const btn = document.getElementById('ktImportBtn');
+            btn.textContent = 'Sťahujem...';
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+            document.getElementById('ktImportStatus').innerHTML = '';
+
+            window.dispatchEvent(new CustomEvent('kt-sync-request'));
+        }
+
+        window.addEventListener('kt-sync-response', function(e) {
+            const btn = document.getElementById('ktImportBtn');
+            btn.textContent = 'KT Import';
+            btn.disabled = false;
+            btn.style.opacity = '1';
+
+            const response = e.detail;
+            if (!response) {
+                showToast('Žiadna odpoveď z rozšírenia', true);
+                return;
+            }
+
+            if (!response.success) {
+                showToast(response.error || 'Chyba importu', true);
+                if (response.debug) {
+                    document.getElementById('ktImportStatus').innerHTML =
+                        '<p style="color: var(--orange); font-size: 0.8rem; margin-top: 5px; word-break: break-all;">DEBUG: ' + response.debug + '</p>';
+                }
+                return;
+            }
+
+            if (!response.items || response.items.length === 0) {
+                showToast('Denník je prázdny', true);
+                return;
+            }
+
+            console.log('KT import debug:', {foodSample: response.foodSample, matched: response.matchedKeys, numbers: response.allNumbers});
+
+            importKtJson(response.items);
+        });
+
+        function importKtJson(items) {
+            if (!Array.isArray(items) || items.length === 0) return;
+
+            const dates = new Set(items.map(i => i.d || new Date().toISOString().split('T')[0]));
+            const before = records.length;
+            records = records.filter(r => !(r.source === 'kt' && dates.has(r.date)));
+            const removed = before - records.length;
+
+            let imported = 0;
+            for (const item of items) {
+                const date = item.d || new Date().toISOString().split('T')[0];
+                const protein = pn(item.p);
+                const carbs = pn(item.c);
+                const fat = pn(item.f);
+                const energy = pn(item.e);
+                const caloriesIn = energy || (protein * 4 + carbs * 4 + fat * 9);
+                if (caloriesIn === 0 && protein === 0) continue;
+                const foodName = item.t || '';
+                const amount = item.a || '';
+                const meal = item.m || '';
+                const title = foodName + (amount ? ' (' + amount + ')' : '');
+                records.push({
+                    id: Date.now() + Math.random(),
+                    date, protein, carbs, fat, caloriesIn,
+                    caloriesOut: 0, weight: null,
+                    source: 'kt', ktId: title + '_' + date + '_' + energy,
+                    foodName, amount, meal
+                });
+                imported++;
+            }
+            if (imported > 0) {
+                saveRecords();
+                renderAll();
+                showToast('Importovaných ' + imported + ' položiek z KT' + (removed > 0 ? ' (nahradených ' + removed + ')' : ''));
+            } else {
+                showToast('Žiadne jedlá na import', true);
+            }
+        }
+
+        function pn(str) {
+            if (!str) return 0;
+            return parseFloat(String(str).replace(',', '.')) || 0;
+        }
+
+
+        function deleteRecordsByDate(date) {
+            if (!confirm('Naozaj zmazať všetky záznamy pre ' + formatDate(date) + '?')) return;
+            records = records.filter(r => r.date !== date);
+            saveRecords();
+            renderAll();
+            showToast('Záznamy zmazané');
+        }
+
+        function saveRecords() {
+            localStorage.setItem('calorieRecords', JSON.stringify(records));
+        }
+
+        function renderAll() {
+            renderDailyRecords();
+            renderWeeklyRecords();
+            renderWeightChart();
+            updateTodaySummary();
+        }
+
+        let summaryPeriod = 'week';
+
+        function setPeriod(p) {
+            summaryPeriod = p;
+            document.getElementById('periodWeek').className = 'tab' + (p === 'week' ? ' active' : '');
+            document.getElementById('periodMonth').className = 'tab' + (p === 'month' ? ' active' : '');
+            document.getElementById('dailyTab').style.display = p === 'week' ? 'block' : 'none';
+            document.getElementById('weeklyTab').style.display = p === 'month' ? 'block' : 'none';
+            chartPeriod = p === 'week' ? 'days' : 'weeks';
+            updateSummary();
+            renderWeightChart();
+        }
+
+        function getDateRange(period) {
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+            let startDate;
+            if (period === 'week') {
+                const day = today.getDay();
+                const diff = day === 0 ? 6 : day - 1;
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - diff);
+            } else {
+                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+            }
+            const startStr = startDate.toISOString().split('T')[0];
+            const days = Math.max(1, Math.floor((today - startDate) / 86400000) + 1);
+            return {start: startStr, end: todayStr, days: days};
+        }
+
+        function updateTodaySummary() { updateSummary(); }
+
+        function updateSummary() {
+            const range = getDateRange(summaryPeriod);
+            const filtered = records.filter(r => r.date >= range.start && r.date <= range.end);
+
+            const totalIn = filtered.reduce((s, r) => s + r.caloriesIn, 0);
+            const totalProt = filtered.reduce((s, r) => s + r.protein, 0);
+            const totalOut = filtered.reduce((s, r) => s + r.caloriesOut, 0);
+
+            document.getElementById('sumCalories').textContent = totalIn.toFixed(0);
+            document.getElementById('sumProtein').textContent = totalProt.toFixed(1);
+            document.getElementById('sumOutput').textContent = totalOut.toFixed(0);
+
+            const latestWeight = records
+                .filter(r => r.weight !== null)
+                .sort((a, b) => b.date.localeCompare(a.date))[0];
+            document.getElementById('currentWeight').textContent = latestWeight ? latestWeight.weight : '-';
+        }
+
+        function renderDailyRecords() {
+            const tbody = document.getElementById('dailyRecords');
+            const foodRecords = records.filter(r => r.source !== 'weight');
+            if (foodRecords.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="no-data">Žiadne záznamy</td></tr>';
+                return;
+            }
+
+            const grouped = {};
+            records.filter(r => r.source !== 'weight').forEach(r => {
+                if (!grouped[r.date]) grouped[r.date] = { protein: 0, carbs: 0, fat: 0, caloriesIn: 0, caloriesOut: 0, items: [] };
+                const g = grouped[r.date];
+                g.protein += r.protein;
+                g.carbs += r.carbs;
+                g.fat += r.fat;
+                g.caloriesIn += r.caloriesIn;
+                g.caloriesOut += r.caloriesOut;
+                if (r.foodName || r.source === 'kt') g.items.push(r);
+            });
+
+            let html = '';
+            for (const date of Object.keys(grouped).sort((a, b) => b.localeCompare(a))) {
+                const d = grouped[date];
+                const diff = d.caloriesIn - d.caloriesOut;
+                const cls = diff > 0 ? 'negative' : diff < 0 ? 'positive' : 'neutral';
+                const hasItems = d.items.length > 0;
+                html += `<tr${hasItems ? ' style="cursor:pointer" onclick="toggleDetail(\'' + date + '\')"' : ''}>
+                    <td>${hasItems ? '<span id="arrow-' + date + '" style="display:inline-block;font-size:0.7rem;margin-right:4px;transition:transform 0.2s;">&#9654;</span>' : ''}${formatDate(date)} ${hasItems ? '<span style="font-size:0.7rem;color:var(--text-muted);">(' + d.items.length + ')</span>' : ''}</td>
+                    <td></td>
+                    <td>${d.protein.toFixed(1)} g</td>
+                    <td>${d.carbs.toFixed(1)} g</td>
+                    <td>${d.fat.toFixed(1)} g</td>
+                    <td>${d.caloriesIn.toFixed(1)}</td>
+                    <td>${d.caloriesOut.toFixed(1)}</td>
+                    <td class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(1)}</td>
+                    <td><span style="color:var(--red);cursor:pointer;font-size:1.1rem;font-weight:700;" onclick="event.stopPropagation();deleteRecordsByDate('${date}')">&times;</span></td>
+                </tr>`;
+                if (hasItems) {
+                    const byMeal = {};
+                    d.items.forEach(r => {
+                        const m = r.meal || 'Ostatné';
+                        if (!byMeal[m]) byMeal[m] = [];
+                        byMeal[m].push(r);
+                    });
+                    let rows = '';
+                    const bg = 'background:rgba(255,255,255,0.02);';
+                    const bl = 'border-left:3px solid var(--accent);';
+                    const bb = 'border-bottom:1px solid var(--card-border);';
+                    for (const meal of Object.keys(byMeal)) {
+                        rows += '<tr class="detail-row-' + date + '" style="display:none;"><td colspan="9" style="padding:5px 10px 2px 24px;border-bottom:none;' + bl + bg + '"><strong style="color:var(--accent);font-size:0.75rem;">' + meal + '</strong></td></tr>';
+                        for (const r of byMeal[meal]) {
+                            const name = r.foodName || r.ktId || '?';
+                            const amt = r.amount || '';
+                            rows += '<tr class="detail-row-' + date + '" style="display:none;font-size:0.75rem;color:var(--text-muted);line-height:1.3;">';
+                            rows += '<td style="padding:2px 10px 2px 34px;' + bb + bl + bg + 'text-align:left;color:var(--text);">' + name + '</td>';
+                            rows += '<td style="padding:2px 10px;' + bb + bg + '">' + (amt || '') + '</td>';
+                            rows += '<td style="padding:2px 10px;' + bb + bg + '">' + r.protein.toFixed(1) + ' g</td>';
+                            rows += '<td style="padding:2px 10px;' + bb + bg + '">' + r.carbs.toFixed(1) + ' g</td>';
+                            rows += '<td style="padding:2px 10px;' + bb + bg + '">' + r.fat.toFixed(1) + ' g</td>';
+                            rows += '<td style="padding:2px 10px;' + bb + bg + '">' + r.caloriesIn.toFixed(1) + '</td>';
+                            rows += '<td colspan="3" style="' + bb + bg + '"></td>';
+                            rows += '</tr>';
+                        }
+                    }
+                    html += rows;
+                }
+            }
+            tbody.innerHTML = html;
+        }
+
+        function toggleDetail(date) {
+            const rows = document.querySelectorAll('.detail-row-' + date);
+            if (rows.length === 0) return;
+            const open = rows[0].style.display === 'none';
+            rows.forEach(r => r.style.display = open ? '' : 'none');
+            const arrow = document.getElementById('arrow-' + date);
+            if (arrow) arrow.style.transform = open ? 'rotate(90deg)' : '';
+        }
+
+        function renderWeeklyRecords() {
+            const tbody = document.getElementById('weeklyRecords');
+            if (records.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="no-data">Žiadne záznamy</td></tr>';
+                return;
+            }
+
+            const grouped = {};
+            records.forEach(r => {
+                const ws = getWeekStart(new Date(r.date));
+                const key = ws.toISOString().split('T')[0];
+                if (!grouped[key]) grouped[key] = { protein: 0, carbs: 0, fat: 0, caloriesIn: 0, caloriesOut: 0, weights: [] };
+                const g = grouped[key];
+                g.protein += r.protein;
+                g.carbs += r.carbs;
+                g.fat += r.fat;
+                g.caloriesIn += r.caloriesIn;
+                g.caloriesOut += r.caloriesOut;
+                if (r.weight) g.weights.push(r.weight);
+            });
+
+            tbody.innerHTML = Object.keys(grouped).sort((a, b) => b.localeCompare(a)).map(weekStart => {
+                const w = grouped[weekStart];
+                const end = new Date(weekStart);
+                end.setDate(end.getDate() + 6);
+                const diff = w.caloriesIn - w.caloriesOut;
+                const avgWeight = w.weights.length > 0
+                    ? (w.weights.reduce((a, b) => a + b, 0) / w.weights.length).toFixed(1) : '-';
+                const cls = diff > 0 ? 'negative' : diff < 0 ? 'positive' : 'neutral';
+                const wn = getWeekNumber(weekStart);
+                return `<tr>
+                    <td>${formatDate(weekStart)} &ndash; ${formatDate(end.toISOString().split('T')[0])} (T${wn})</td>
+                    <td>${w.protein.toFixed(1)}</td>
+                    <td>${w.carbs.toFixed(1)}</td>
+                    <td>${w.fat.toFixed(1)}</td>
+                    <td>${w.caloriesIn.toFixed(1)}</td>
+                    <td>${w.caloriesOut.toFixed(1)}</td>
+                    <td class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(1)}</td>
+                    <td>${avgWeight}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        let chartPeriod = 'days';
+
+        function getWeekKey(dateStr) {
+            const d = new Date(dateStr);
+            const day = d.getDay();
+            const diff = day === 0 ? 6 : day - 1;
+            const mon = new Date(d);
+            mon.setDate(d.getDate() - diff);
+            return mon.toISOString().split('T')[0];
+        }
+
+        function getWeekNumber(dateStr) {
+            const d = new Date(dateStr);
+            d.setHours(0, 0, 0, 0);
+            d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
+            const yearStart = new Date(d.getFullYear(), 0, 4);
+            return Math.round(((d - yearStart) / 86400000 + yearStart.getDay() + 6) / 7);
+        }
+
+        function renderWeightChart() {
+            const container = document.getElementById('weightChart');
+            const weightRecords = records.filter(r => r.weight !== null);
+            if (weightRecords.length === 0) {
+                container.innerHTML = '<div class="no-data">Žiadne záznamy váhy</div>';
+                return;
+            }
+
+            const byDate = {};
+            weightRecords.forEach(r => {
+                if (!byDate[r.date]) byDate[r.date] = [];
+                byDate[r.date].push(r.weight);
+            });
+
+            const dailyDates = Object.keys(byDate).sort();
+            const dailyWeights = dailyDates.map(d => byDate[d].reduce((a, b) => a + b, 0) / byDate[d].length);
+
+            function shortDate(d) {
+                return new Date(d).toLocaleDateString('sk-SK', {day: 'numeric', month: 'short'});
+            }
+
+            let keys, vals, labelFn;
+            if (chartPeriod === 'days') {
+                const first = dailyDates[0];
+                const last = dailyDates[dailyDates.length - 1];
+                keys = [];
+                vals = [];
+                for (let d = new Date(first); d <= new Date(last); d.setDate(d.getDate() + 1)) {
+                    const ds = d.toISOString().split('T')[0];
+                    keys.push(ds);
+                    vals.push(byDate[ds] ? byDate[ds].reduce((a, b) => a + b, 0) / byDate[ds].length : 0);
+                }
+                labelFn = d => shortDate(d);
+            } else if (chartPeriod === 'weeks') {
+                const grouped = {};
+                dailyDates.forEach((d, i) => {
+                    const wk = getWeekKey(d);
+                    if (!grouped[wk]) grouped[wk] = [];
+                    grouped[wk].push(dailyWeights[i]);
+                });
+                keys = Object.keys(grouped).sort();
+                vals = keys.map(k => grouped[k].reduce((a, b) => a + b, 0) / grouped[k].length);
+                labelFn = d => {
+                    const end = new Date(d);
+                    end.setDate(end.getDate() + 6);
+                    return shortDate(d) + '–' + shortDate(end.toISOString().split('T')[0]) + ' (T' + getWeekNumber(d) + ')';
+                };
+            } else {
+                const grouped = {};
+                dailyDates.forEach((d, i) => {
+                    const mk = d.slice(0, 7);
+                    if (!grouped[mk]) grouped[mk] = [];
+                    grouped[mk].push(dailyWeights[i]);
+                });
+                keys = Object.keys(grouped).sort();
+                vals = keys.map(k => grouped[k].reduce((a, b) => a + b, 0) / grouped[k].length);
+                labelFn = d => new Date(d + '-01').toLocaleDateString('sk-SK', {month: 'long', year: 'numeric'});
+            }
+
+            const realVals = vals.filter(v => v > 0);
+            const min = realVals.length ? Math.min(...realVals) - 0.5 : 0;
+            const max = realVals.length ? Math.max(...realVals) + 0.5 : 1;
+            const range = max - min || 1;
+            const n = keys.length;
+
+            const W = 800, H = 200;
+            const padL = 55, padR = 20, padT = 15, padB = 35;
+            const plotW = W - padL - padR;
+            const plotH = H - padT - padB;
+
+            const pts = vals.map((w, i) => ({
+                x: padL + (n > 1 ? (i / (n - 1)) * plotW : plotW / 2),
+                y: w > 0 ? padT + plotH - ((w - min) / range) * plotH : null,
+                w: w,
+                label: labelFn(keys[i])
+            }));
+
+            const gridLines = 4;
+            let gridSvg = '';
+            for (let i = 0; i <= gridLines; i++) {
+                const y = padT + (i / gridLines) * plotH;
+                const val = (max - (i / gridLines) * range).toFixed(1);
+                gridSvg += '<line x1="' + padL + '" y1="' + y + '" x2="' + (W - padR) + '" y2="' + y + '" stroke="rgba(255,255,255,0.04)" stroke-dasharray="4 4" />';
+                gridSvg += '<text x="' + (padL - 14) + '" y="' + (y + 4) + '" fill="rgba(176,190,197,0.6)" font-size="10" text-anchor="end">' + val + '</text>';
+            }
+
+            let linePaths = '';
+            let segment = '';
+            pts.forEach(p => {
+                if (p.y === null) {
+                    if (segment) { linePaths += '<path d="' + segment + '" fill="none" stroke="var(--orange)" stroke-width="1.5" stroke-linejoin="round" />'; segment = ''; }
+                } else {
+                    segment += (segment === '' ? 'M' : 'L') + p.x + ',' + p.y + ' ';
+                }
+            });
+            if (segment) linePaths += '<path d="' + segment + '" fill="none" stroke="var(--orange)" stroke-width="1.5" stroke-linejoin="round" />';
+
+            const step = Math.max(1, Math.ceil(n / 10));
+            let labels = '';
+            for (let i = 0; i < n; i += step) {
+                labels += '<text x="' + pts[i].x + '" y="' + (H - 6) + '" fill="rgba(176,190,197,0.7)" font-size="9" text-anchor="middle">' + pts[i].label + '</text>';
+            }
+
+            let circles = '';
+            pts.forEach(p => {
+                if (p.y === null) return;
+                circles += '<circle cx="' + p.x + '" cy="' + p.y + '" r="3.5" fill="var(--orange)" stroke="var(--bg-primary)" stroke-width="1.5">';
+                circles += '<title>' + p.w.toFixed(1) + ' kg</title></circle>';
+            });
+
+            container.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '">'
+                + gridSvg + labels + linePaths + circles + '</svg>';
+        }
+
+        // Export / Import
+        function exportData() {
+            if (records.length === 0) { showToast('Žiadne dáta na export', true); return; }
+            const blob = new Blob([JSON.stringify(records, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'kaloricke-zaznamy_' + new Date().toISOString().split('T')[0] + '.json';
+            a.click();
+            URL.revokeObjectURL(a.href);
+            showToast('Dáta exportované');
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (!Array.isArray(imported)) throw new Error('Neplatný formát');
+                    const existingIds = new Set(records.map(r => r.id));
+                    let added = 0;
+                    imported.forEach(r => {
+                        if (r.date && !existingIds.has(r.id)) {
+                            records.push(r);
+                            added++;
+                        }
+                    });
+                    saveRecords();
+                    renderAll();
+                    showToast('Importovaných ' + added + ' záznamov');
+                } catch {
+                    showToast('Chyba pri importe', true);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        // Utilities
+        function getWeekStart(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            d.setDate(d.getDate() - day + (day === 0 ? -6 : 1));
+            return d;
+        }
+
+        function formatDate(dateStr) {
+            return new Date(dateStr).toLocaleDateString('sk-SK', { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+
+
+        function showToast(msg, isError) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.style.background = isError ? 'var(--red)' : 'var(--green)';
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        function openHelp() { document.getElementById('helpModal').classList.add('open'); }
+        function closeHelp() { document.getElementById('helpModal').classList.remove('open'); }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') closeHelp();
+        });
+
+        // ===== GOALS =====
+        let goals = JSON.parse(localStorage.getItem('fitnessGoals')) || { bazal: 1900, tdee: 2350, protein: 155, carbs: 175, fat: 65, weight: 80 };
+        if (!goals.tdee) goals.tdee = Math.round(goals.bazal * 1.24);
+
+        function toggleGoalEdit() {
+            const edit = document.getElementById('goalEdit');
+            const show = edit.style.display === 'none';
+            edit.style.display = show ? 'block' : 'none';
+            document.getElementById('goalEditBtn').textContent = show ? 'Zavrieť ciele' : 'Upraviť ciele';
+            if (show) {
+                document.getElementById('goalBazal').value = goals.bazal;
+                document.getElementById('goalTdee').value = goals.tdee;
+                document.getElementById('goalProt').value = goals.protein;
+                document.getElementById('goalCarbs').value = goals.carbs;
+                document.getElementById('goalFat').value = goals.fat;
+                document.getElementById('goalWeight').value = goals.weight;
+            }
+        }
+
+        function saveGoals() {
+            goals.bazal = parseFloat(document.getElementById('goalBazal').value) || 1850;
+            goals.tdee = parseFloat(document.getElementById('goalTdee').value) || 2300;
+            goals.protein = parseFloat(document.getElementById('goalProt').value) || 150;
+            goals.carbs = parseFloat(document.getElementById('goalCarbs').value) || 200;
+            goals.fat = parseFloat(document.getElementById('goalFat').value) || 60;
+            goals.weight = parseFloat(document.getElementById('goalWeight').value) || 80;
+            localStorage.setItem('fitnessGoals', JSON.stringify(goals));
+            toggleGoalEdit();
+            updateGoals();
+            showToast('Ciele uložené');
+        }
+
+        let goalDate = new Date().toISOString().split('T')[0];
+
+        function shiftGoalDate(delta) {
+            const d = new Date(goalDate);
+            d.setDate(d.getDate() + delta);
+            goalDate = d.toISOString().split('T')[0];
+            updateGoals();
+        }
+
+        function updateGoals() {
+            document.getElementById('goalDateLabel').textContent = formatDate(goalDate);
+            const todayRecs = records.filter(r => r.date === goalDate && r.source !== 'weight');
+            const tCals = todayRecs.reduce((s, r) => s + r.caloriesIn, 0);
+            const tProt = todayRecs.reduce((s, r) => s + r.protein, 0);
+            const tCarbs = todayRecs.reduce((s, r) => s + r.carbs, 0);
+            const tFat = todayRecs.reduce((s, r) => s + r.fat, 0);
+
+            document.getElementById('goalBazalShow').textContent = goals.bazal + ' kcal';
+            document.getElementById('todayCalsShow').textContent = tCals.toFixed(0) + ' kcal';
+            const calsPct = Math.min(100, Math.round(tCals / goals.bazal * 100));
+            document.getElementById('calsPctShow').textContent = calsPct + '%';
+            document.getElementById('calsPctBar').style.width = calsPct + '%';
+            document.getElementById('calsPctBar').style.background = calsPct > 100 ? 'var(--red)' : 'var(--green)';
+
+            const protPct = Math.round(tProt / goals.protein * 100);
+            document.getElementById('todayProtShow').textContent = tProt.toFixed(1);
+            document.getElementById('goalProtShow').textContent = goals.protein;
+            document.getElementById('protPctBar').style.width = Math.min(100, protPct) + '%';
+            document.getElementById('protPctShow').textContent = '(' + protPct + '%)';
+
+            const carbsPct = Math.round(tCarbs / goals.carbs * 100);
+            document.getElementById('todayCarbsShow').textContent = tCarbs.toFixed(1);
+            document.getElementById('goalCarbsShow').textContent = goals.carbs;
+            document.getElementById('carbsPctBar').style.width = Math.min(100, carbsPct) + '%';
+            document.getElementById('carbsPctShow').textContent = '(' + carbsPct + '%)';
+
+            const fatPct = Math.round(tFat / goals.fat * 100);
+            document.getElementById('todayFatShow').textContent = tFat.toFixed(1);
+            document.getElementById('goalFatShow').textContent = goals.fat;
+            document.getElementById('fatPctBar').style.width = Math.min(100, fatPct) + '%';
+            document.getElementById('fatPctShow').textContent = '(' + fatPct + '%)';
+
+            const latestW = records.filter(r => r.weight !== null && r.weight > 0).sort((a, b) => b.date.localeCompare(a.date))[0];
+            const curW = latestW ? latestW.weight : null;
+            document.getElementById('goalWeightShow').textContent = goals.weight + ' kg';
+            document.getElementById('currentWeightGoal').textContent = curW ? curW + ' kg' : '- kg';
+            const kgToLose = curW && curW > goals.weight ? curW - goals.weight : 0;
+            document.getElementById('weightToLose').textContent = kgToLose > 0 ? kgToLose.toFixed(1) + ' kg' : '0 kg';
+
+            const weekRange = getDateRange('week');
+            const weekRecs = records.filter(r => r.date >= weekRange.start && r.date <= weekRange.end && r.source !== 'weight');
+            const weekIn = weekRecs.reduce((s, r) => s + r.caloriesIn, 0);
+            const daysWithData = new Set(weekRecs.map(r => r.date)).size || 1;
+            const avgDailyIn = weekIn / daysWithData;
+            const dailyDeficit = goals.tdee - avgDailyIn;
+            document.getElementById('avgDeficit').textContent = dailyDeficit > 0 ? Math.round(dailyDeficit) + ' kcal' : 'Žiadny';
+
+            const weeklyLossKg = dailyDeficit > 0 ? (dailyDeficit * 7 / 7700) : 0;
+            document.getElementById('weeklyLossRate').textContent = weeklyLossKg > 0 ? weeklyLossKg.toFixed(2) + ' kg/týž' : '-';
+
+            if (curW && kgToLose > 0 && dailyDeficit > 0) {
+                const daysNeeded = Math.ceil(kgToLose * 7700 / dailyDeficit);
+                const weeksNeeded = Math.ceil(daysNeeded / 7);
+                const targetDate = new Date();
+                targetDate.setDate(targetDate.getDate() + daysNeeded);
+                const targetStr = targetDate.toLocaleDateString('sk-SK', { day: 'numeric', month: 'short', year: 'numeric' });
+                document.getElementById('estWeeks').textContent = '~' + weeksNeeded + ' týž (' + targetStr + ')';
+            } else {
+                document.getElementById('estWeeks').textContent = '-';
+            }
+
+            let advice = [];
+            if (daysWithData > 0 && weekRecs.length > 0) {
+                if (dailyDeficit < 0) {
+                    advice.push('<span style="color:var(--red);">⚠ Ješ viac ako TDEE — pri tomto tempe budeš priberať ~' + (Math.abs(weeklyLossKg)).toFixed(2) + ' kg/týždeň.</span>');
+                } else if (dailyDeficit > 0 && dailyDeficit < 200) {
+                    advice.push('<span style="color:var(--orange);">Deficit je príliš malý. Výsledky budú veľmi pomalé. Odporúčaný deficit: 300–500 kcal/deň.</span>');
+                } else if (dailyDeficit >= 200 && dailyDeficit <= 500) {
+                    advice.push('<span style="color:var(--green);">✓ Zdravý deficit. Tempo ' + weeklyLossKg.toFixed(2) + ' kg/týždeň je udržateľné a bezpečné.</span>');
+                } else if (dailyDeficit > 500 && dailyDeficit <= 800) {
+                    advice.push('<span style="color:var(--orange);">Agresívny deficit. Rýchlejšie výsledky, ale hrozí strata svalovej hmoty. Zvýš bielkoviny.</span>');
+                } else if (dailyDeficit > 800) {
+                    advice.push('<span style="color:var(--red);">⚠ Extrémny deficit! Riziko spomalenia metabolizmu, straty svalov a yo-yo efektu. Max 500–700 kcal/deň.</span>');
+                }
+
+                const protPerKg = curW ? tProt / curW : 0;
+                if (protPerKg > 0 && protPerKg < 1.6) {
+                    advice.push('Bielkoviny: ' + protPerKg.toFixed(1) + ' g/kg — odporúčaných je 1.6–2.2 g/kg pri chudnutí so silou.');
+                } else if (protPerKg >= 1.6) {
+                    advice.push('<span style="color:var(--green);">Bielkoviny: ' + protPerKg.toFixed(1) + ' g/kg — výborné pre udržanie svalov.</span>');
+                }
+
+                if (tFat > 0 && tFat < 40) {
+                    advice.push('<span style="color:var(--orange);">Tuky pod 40 g/deň — príliš nízko. Hormóny a vstrebávanie vitamínov potrebujú min. 50–60 g.</span>');
+                }
+            } else {
+                advice.push('Zatiaľ nemáš dosť dát. Importuj jedlá z KT alebo pridaj záznamy váhy.');
+            }
+            document.getElementById('goalAdvice').innerHTML = advice.join('<br>');
+        }
+
+        // ===== MEASUREMENTS =====
+        let measurements = JSON.parse(localStorage.getItem('bodyMeasurements')) || [];
+
+        function saveMeasurements() {
+            const date = document.getElementById('measureDate').value;
+            if (!date) { showToast('Zadaj dátum', true); return; }
+            const m = {
+                date,
+                chest: parseFloat(document.getElementById('mChest').value) || 0,
+                waist: parseFloat(document.getElementById('mWaist').value) || 0,
+                hips: parseFloat(document.getElementById('mHips').value) || 0,
+                shoulders: parseFloat(document.getElementById('mShoulders').value) || 0,
+                thigh: parseFloat(document.getElementById('mThigh').value) || 0,
+                bicep: parseFloat(document.getElementById('mBicep').value) || 0
+            };
+            const existing = measurements.findIndex(x => x.date === date);
+            if (existing >= 0) measurements[existing] = m; else measurements.push(m);
+            measurements.sort((a, b) => b.date.localeCompare(a.date));
+            localStorage.setItem('bodyMeasurements', JSON.stringify(measurements));
+            renderMeasurements();
+            showToast('Miery uložené');
+        }
+
+        function deleteMeasurement(date) {
+            measurements = measurements.filter(m => m.date !== date);
+            localStorage.setItem('bodyMeasurements', JSON.stringify(measurements));
+            renderMeasurements();
+        }
+
+        function renderMeasurements() {
+            const tbody = document.getElementById('measureHistory');
+            if (measurements.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="no-data" style="padding:15px;">Žiadne záznamy</td></tr>';
+                document.getElementById('ratioCards').innerHTML = '';
+                return;
+            }
+            tbody.innerHTML = measurements.map(m =>
+                '<tr><td>' + formatDate(m.date) + '</td><td>' + (m.chest || '-') + '</td><td>' + (m.waist || '-') + '</td><td>' + (m.hips || '-') + '</td><td>' + (m.shoulders || '-') + '</td><td>' + (m.thigh || '-') + '</td><td>' + (m.bicep || '-') + '</td><td><span style="color:var(--red);cursor:pointer;" onclick="deleteMeasurement(\'' + m.date + '\')">&times;</span></td></tr>'
+            ).join('');
+
+            const latest = measurements[0];
+            let ratios = '';
+            if (latest.waist && latest.hips) {
+                const whr = (latest.waist / latest.hips).toFixed(2);
+                const whrOk = whr < 0.90;
+                ratios += '<div class="ratio-card"><div class="goal-label">Pás / Boky</div><div class="ratio-val">' + whr + '</div><div class="ratio-status ' + (whrOk ? 'ratio-ok' : whr < 0.95 ? 'ratio-warn' : 'ratio-bad') + '">' + (whrOk ? 'OK (< 0.90)' : whr < 0.95 ? 'Hraničný' : 'Vysoký (> 0.95)') + '</div></div>';
+            }
+            if (latest.waist && latest.chest) {
+                const wcr = (latest.waist / latest.chest).toFixed(2);
+                const wcrOk = wcr < 0.80;
+                ratios += '<div class="ratio-card"><div class="goal-label">Pás / Hrudník</div><div class="ratio-val">' + wcr + '</div><div class="ratio-status ' + (wcrOk ? 'ratio-ok' : wcr < 0.85 ? 'ratio-warn' : 'ratio-bad') + '">' + (wcrOk ? 'OK (< 0.80)' : wcr < 0.85 ? 'Hraničný' : 'Vysoký (> 0.85)') + '</div></div>';
+            }
+            if (latest.shoulders && latest.waist) {
+                const swr = (latest.shoulders / latest.waist).toFixed(2);
+                const swrOk = swr > 1.60;
+                ratios += '<div class="ratio-card"><div class="goal-label">Ramená / Pás</div><div class="ratio-val">' + swr + '</div><div class="ratio-status ' + (swrOk ? 'ratio-ok' : swr > 1.45 ? 'ratio-warn' : 'ratio-bad') + '">' + (swrOk ? 'Výborne (> 1.6)' : swr > 1.45 ? 'Priemerný' : 'Nízky (< 1.45)') + '</div></div>';
+            }
+            if (latest.chest && latest.waist) {
+                const cwr = (latest.chest / latest.waist).toFixed(2);
+                ratios += '<div class="ratio-card"><div class="goal-label">Hrudník / Pás</div><div class="ratio-val">' + cwr + '</div><div class="ratio-status ' + (cwr > 1.15 ? 'ratio-ok' : cwr > 1.05 ? 'ratio-warn' : 'ratio-bad') + '">' + (cwr > 1.15 ? 'Atletický' : cwr > 1.05 ? 'Priemerný' : 'Zamerať sa') + '</div></div>';
+            }
+            document.getElementById('ratioCards').innerHTML = ratios;
+        }
+
+        // ===== EXERCISES =====
+        let exercises = JSON.parse(localStorage.getItem('exerciseLog')) || [];
+
+        function addExercise() {
+            const date = document.getElementById('exDate').value;
+            const name = document.getElementById('exName').value;
+            const sets = parseInt(document.getElementById('exSets').value) || 0;
+            const reps = parseInt(document.getElementById('exReps').value) || 0;
+            const weight = parseFloat(document.getElementById('exWeight').value) || 0;
+            if (!date || !sets || !reps) { showToast('Vyplň dátum, série a opakovania', true); return; }
+            exercises.push({ id: Date.now(), date, name, sets, reps, weight });
+            exercises.sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+            localStorage.setItem('exerciseLog', JSON.stringify(exercises));
+            document.getElementById('exSets').value = '';
+            document.getElementById('exReps').value = '';
+            document.getElementById('exWeight').value = '';
+            renderExercises();
+            showToast('Cvik pridaný');
+        }
+
+        function deleteExercise(id) {
+            exercises = exercises.filter(e => e.id !== id);
+            localStorage.setItem('exerciseLog', JSON.stringify(exercises));
+            renderExercises();
+        }
+
+        function renderExercises() {
+            const container = document.getElementById('exerciseLog');
+            if (exercises.length === 0) {
+                container.innerHTML = '<div class="no-data" style="padding:15px;">Žiadne záznamy</div>';
+                return;
+            }
+            const byDate = {};
+            exercises.forEach(e => {
+                if (!byDate[e.date]) byDate[e.date] = [];
+                byDate[e.date].push(e);
+            });
+            let html = '<table class="exercise-log-table" style="width:100%;"><thead><tr><th style="text-align:left;">Dátum / Cvik</th><th>Série</th><th>Opakovania</th><th>Váha</th><th style="width:30px;"></th></tr></thead><tbody>';
+            for (const date of Object.keys(byDate).sort((a, b) => b.localeCompare(a))) {
+                html += '<tr style="background:rgba(79,195,247,0.08);"><td colspan="5" style="text-align:left;font-weight:600;">' + formatDate(date) + '</td></tr>';
+                byDate[date].forEach(e => {
+                    html += '<tr><td style="text-align:left;padding-left:20px;color:var(--text-muted);">' + e.name + '</td><td>' + e.sets + '</td><td>' + e.reps + '</td><td>' + (e.weight > 0 ? e.weight + ' kg' : 'BW') + '</td><td><span style="color:var(--red);cursor:pointer;" onclick="deleteExercise(' + e.id + ')">&times;</span></td></tr>';
+                });
+            }
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        // Init new sections
+        const origRenderAll = renderAll;
+        renderAll = function() {
+            origRenderAll();
+            updateGoals();
+            renderMeasurements();
+            renderExercises();
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('measureDate').valueAsDate = new Date();
+            document.getElementById('exDate').valueAsDate = new Date();
+        });
+    </script>
+</body>
+</html>
