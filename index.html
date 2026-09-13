@@ -439,14 +439,14 @@
         </div>
 
         <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-                <h2 style="margin: 0; border: none; padding: 0;">Záznamy</h2>
-                <div style="display:flex; align-items:center; gap:10px;">
+            <div style="display:grid; grid-template-columns:1fr auto 1fr; align-items:center; margin-bottom:14px;">
+                <h2 style="margin:0; border:none; padding:0; justify-self:start;">Záznamy</h2>
+                <div style="display:flex; align-items:center; gap:10px; justify-self:center;">
                     <span style="cursor:pointer; color:var(--accent); font-size:1rem; user-select:none;" onclick="shiftGoalDate(-1)">&#9664;</span>
                     <span id="goalDateLabel" style="font-size:0.85rem; font-weight:600; min-width:100px; text-align:center;"></span>
                     <span style="cursor:pointer; color:var(--accent); font-size:1rem; user-select:none;" onclick="shiftGoalDate(1)">&#9654;</span>
                 </div>
-                <div style="display:flex; gap:6px;">
+                <div style="display:flex; gap:6px; justify-self:end;">
                     <button class="btn-secondary" onclick="importAppleHealth()">Import Health</button>
                     <button class="btn-secondary" onclick="importFromKt()" id="ktImportBtn">Import dát</button>
                 </div>
@@ -948,27 +948,25 @@
 
         function renderDailyRecords() {
             const tbody = document.getElementById('dailyRecords');
-            const foodRecords = records.filter(r => r.source !== 'weight');
-            if (foodRecords.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="no-data">Žiadne záznamy</td></tr>';
+            const dayRecords = records.filter(r => r.date === goalDate && r.source !== 'weight');
+            if (dayRecords.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" class="no-data">Žiadne záznamy pre ' + formatDate(goalDate) + '</td></tr>';
                 return;
             }
 
-            const grouped = {};
-            records.filter(r => r.source !== 'weight').forEach(r => {
-                if (!grouped[r.date]) grouped[r.date] = { protein: 0, carbs: 0, fat: 0, caloriesIn: 0, caloriesOut: 0, items: [] };
-                const g = grouped[r.date];
-                g.protein += r.protein;
-                g.carbs += r.carbs;
-                g.fat += r.fat;
-                g.caloriesIn += r.caloriesIn;
-                g.caloriesOut += r.caloriesOut;
-                if (r.foodName || r.source === 'kt') g.items.push(r);
+            const d = { protein: 0, carbs: 0, fat: 0, caloriesIn: 0, caloriesOut: 0, items: [] };
+            dayRecords.forEach(r => {
+                d.protein += r.protein;
+                d.carbs += r.carbs;
+                d.fat += r.fat;
+                d.caloriesIn += r.caloriesIn;
+                d.caloriesOut += r.caloriesOut;
+                if (r.foodName || r.source === 'kt') d.items.push(r);
             });
 
             let html = '';
-            for (const date of Object.keys(grouped).sort((a, b) => b.localeCompare(a))) {
-                const d = grouped[date];
+            {
+                const date = goalDate;
                 const diff = d.caloriesIn - d.caloriesOut;
                 const cls = diff > 0 ? 'negative' : diff < 0 ? 'positive' : 'neutral';
                 const hasItems = d.items.length > 0;
@@ -1014,6 +1012,7 @@
                 }
             }
             tbody.innerHTML = html;
+            if (d.items.length > 0) toggleDetail(goalDate);
         }
 
         function toggleDetail(date) {
@@ -1307,6 +1306,8 @@
             d.setDate(d.getDate() + delta);
             goalDate = d.toISOString().split('T')[0];
             updateGoals();
+            renderDailyRecords();
+            renderHealthInfo();
         }
 
         function updateGoals() {
