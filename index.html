@@ -85,26 +85,21 @@
             border: 1px solid var(--card-border);
             position: relative;
         }
-        .summary-card .tip-bubble {
-            display: none;
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #1a1a2e;
-            border: 1px solid var(--card-border);
+        .tip-popup {
+            position: fixed;
+            background: #1e1e3a;
+            border: 1px solid var(--accent);
             border-radius: 8px;
-            padding: 8px 12px;
-            font-size: 0.7rem;
-            color: var(--text-muted);
+            padding: 10px 14px;
+            font-size: 0.75rem;
+            color: #ccc;
             white-space: pre-line;
             text-align: left;
-            z-index: 100;
-            min-width: 180px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            z-index: 1000;
+            max-width: 280px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.6);
             pointer-events: none;
         }
-        .summary-card:hover .tip-bubble:not(:empty) { display: block; }
 
         .summary-card .value {
             font-size: 1.3rem;
@@ -449,19 +444,17 @@
                 <div class="label">Výdaj (kcal)</div>
                 <div class="value" id="sumOutput">0</div>
             </div>
-            <div class="summary-card" id="balanceCard">
+            <div class="summary-card" id="balanceCard" data-tip="">
                 <div class="label">Rozdiel (kcal) <span style="cursor:help;font-size:0.8em;opacity:0.6;">&#9432;</span></div>
                 <div class="value" id="sumBalance">0</div>
-                <div class="tip-bubble" id="balanceTip"></div>
             </div>
             <div class="summary-card balance">
                 <div class="label">Bielkoviny (g)</div>
                 <div class="value" id="sumProtein">0</div>
             </div>
-            <div class="summary-card weight" id="weightCard" style="cursor:pointer;" onclick="toggleGoalEdit()">
+            <div class="summary-card weight" id="weightCard" style="cursor:pointer;" onclick="toggleGoalEdit()" data-tip="">
                 <div class="label">Váha (kg) <span style="cursor:help;font-size:0.8em;opacity:0.6;">&#9432;</span></div>
                 <div class="value" id="currentWeight">-</div>
-                <div class="tip-bubble" id="weightTip"></div>
             </div>
         </div>
 
@@ -766,6 +759,23 @@
 
     <script>
         let records = JSON.parse(localStorage.getItem('calorieRecords')) || [];
+
+        let _tipEl = null;
+        document.addEventListener('mouseover', e => {
+            const card = e.target.closest('[data-tip]');
+            if (card && card.dataset.tip) {
+                if (!_tipEl) { _tipEl = document.createElement('div'); _tipEl.className = 'tip-popup'; document.body.appendChild(_tipEl); }
+                _tipEl.textContent = card.dataset.tip;
+                const r = card.getBoundingClientRect();
+                _tipEl.style.top = (r.bottom + 6) + 'px';
+                _tipEl.style.left = (r.left + r.width / 2 - 140) + 'px';
+                _tipEl.style.display = 'block';
+            }
+        });
+        document.addEventListener('mouseout', e => {
+            const card = e.target.closest('[data-tip]');
+            if (card && _tipEl) _tipEl.style.display = 'none';
+        });
 
         document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('weightDate').valueAsDate = new Date();
@@ -1443,11 +1453,11 @@
                 + 'Zostáva: ' + (kgToLose > 0 ? kgToLose.toFixed(1) : '0') + ' kg\n'
                 + 'Tempo: ' + (weeklyLossKg > 0 ? weeklyLossKg.toFixed(2) + ' kg/týž' : '-') + '\n'
                 + 'Odhad: ' + document.getElementById('estWeeks').textContent;
-            document.getElementById('weightTip').textContent = weightTip;
+            document.getElementById('weightCard').dataset.tip = weightTip;
 
             const plainAdvice = advice.map(a => a.replace(/<[^>]*>/g, '')).join('\n');
             const balText = 'Deficit/deň: ' + (dailyDeficit > 0 ? Math.round(dailyDeficit) + ' kcal' : 'Žiadny') + '\n' + plainAdvice;
-            document.getElementById('balanceTip').textContent = balText;
+            document.getElementById('balanceCard').dataset.tip = balText;
 
             renderHealthInfo();
         }
