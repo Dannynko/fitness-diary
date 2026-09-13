@@ -457,7 +457,7 @@
 
             <div id="goalDisplay" style="display:grid; grid-template-columns: 1fr 1fr; gap: 14px 14px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--card-border);">
                 <div>
-                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;"><span>Kalórie</span><span><strong id="todayCalsShow">0</strong> / <span id="goalBazalShow">1850</span> <span id="calsPctShow" style="color:var(--text-muted);">(0%)</span></span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;"><span>Kalórie</span><span><strong id="todayCalsShow">0</strong> / <span id="goalBazalShow">1850</span> kcal <span id="calsPctShow" style="color:var(--text-muted);font-size:0.75em;">(0%)</span></span></div>
                     <div class="progress-bar"><div class="progress-fill" id="calsPctBar" style="width:0%; background: var(--green);"></div></div>
                 </div>
                 <div>
@@ -1327,10 +1327,12 @@
             const tCarbs = todayRecs.reduce((s, r) => s + r.carbs, 0);
             const tFat = todayRecs.reduce((s, r) => s + r.fat, 0);
 
-            document.getElementById('goalBazalShow').textContent = goals.bazal + ' kcal';
-            document.getElementById('todayCalsShow').textContent = tCals.toFixed(0) + ' kcal';
-            const calsPct = Math.min(100, Math.round(tCals / goals.bazal * 100));
-            document.getElementById('calsPctShow').textContent = calsPct + '%';
+            const todayActive = todayRecs.reduce((s, r) => s + r.caloriesOut, 0);
+            const todayExpenditure = goals.bazal + todayActive;
+            document.getElementById('goalBazalShow').textContent = todayExpenditure;
+            document.getElementById('todayCalsShow').textContent = tCals.toFixed(0);
+            const calsPct = Math.min(100, Math.round(tCals / todayExpenditure * 100));
+            document.getElementById('calsPctShow').textContent = '(' + calsPct + '%)';
             document.getElementById('calsPctBar').style.width = calsPct + '%';
             document.getElementById('calsPctBar').style.background = calsPct > 100 ? 'var(--red)' : 'var(--green)';
 
