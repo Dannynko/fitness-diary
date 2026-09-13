@@ -520,14 +520,14 @@
             <div id="dailyTab">
                 <table>
                     <colgroup>
-                        <col style="width:30%;">
-                        <col style="width:10%;">
-                        <col style="width:10%;">
-                        <col style="width:10%;">
-                        <col style="width:8%;">
-                        <col style="width:10%;">
-                        <col style="width:10%;">
-                        <col style="width:10%;">
+                        <col style="width:28%;">
+                        <col style="width:14%;">
+                        <col style="width:7%;">
+                        <col style="width:7%;">
+                        <col style="width:7%;">
+                        <col style="width:12%;">
+                        <col style="width:11%;">
+                        <col style="width:12%;">
                         <col style="width:2%;">
                     </colgroup>
                     <thead>
@@ -1712,7 +1712,7 @@
                     });
                 }
 
-                const allRecords = [...localData.records, ...(remoteData.records || [])];
+                const allRecords = [...(remoteData.records || []), ...localData.records];
                 let mergedRecords = dedup(allRecords, r => r.ktId || r.id || (r.date + (r.foodName||'') + (r.source||'')));
 
                 const ktDeduped = [];
@@ -1721,7 +1721,9 @@
                     if (r.source === 'kt') {
                         const key = (r.foodName || '') + '|' + (r.meal || '') + '|' + r.date;
                         if (ktSeen[key]) {
-                            if ((r.caloriesIn || 0) > (ktSeen[key].caloriesIn || 0)) {
+                            const better = (r.caloriesIn || 0) > (ktSeen[key].caloriesIn || 0)
+                                || ((r.caloriesIn || 0) === (ktSeen[key].caloriesIn || 0) && r.amount && !ktSeen[key].amount);
+                            if (better) {
                                 ktDeduped[ktDeduped.indexOf(ktSeen[key])] = r;
                                 ktSeen[key] = r;
                             }
