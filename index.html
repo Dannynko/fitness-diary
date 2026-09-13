@@ -976,7 +976,9 @@
             const latestW = records.filter(r => r.weight != null && r.weight > 0).sort((a, b) => b.date.localeCompare(a.date))[0];
             const perKg = latestW ? '<span style="font-size:0.55em;color:var(--text-muted);"> (' + (totalProt / latestW.weight).toFixed(1) + ' g/kg)</span>' : '';
             document.getElementById('sumProtein').innerHTML = totalProt.toFixed(1) + perKg;
-            const totalExpenditure = goals.bazal + totalOut;
+            const daysInRange = range.days || 1;
+            const totalBazal = goals.bazal * daysInRange;
+            const totalExpenditure = totalBazal + totalOut;
             document.getElementById('sumOutput').textContent = totalExpenditure.toFixed(0);
             document.getElementById('outputCard').title = 'Bazál: ' + goals.bazal + ' kcal\nAktivita: ' + totalOut.toFixed(0) + ' kcal';
             const balance = totalIn - totalExpenditure;
@@ -1456,8 +1458,7 @@
             document.getElementById('weightCard').dataset.tip = weightTip;
 
             const plainAdvice = advice.map(a => a.replace(/<[^>]*>/g, '')).join('\n');
-            const balText = 'Deficit/deň: ' + (dailyDeficit > 0 ? Math.round(dailyDeficit) + ' kcal' : 'Žiadny') + '\n' + plainAdvice;
-            document.getElementById('balanceCard').dataset.tip = balText;
+            document.getElementById('balanceCard').dataset.tip = plainAdvice;
 
             renderHealthInfo();
         }
