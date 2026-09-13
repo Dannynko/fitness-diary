@@ -1516,7 +1516,7 @@
 
         // ===== CLOUD SYNC =====
         const GIST_ID_DEFAULT = 'ffe6105f3e59d233d6107f50ac5cf9ab';
-        const _SK = [108,109,116,100,123,73,85,120,54,55,78,82,56,119,126,95,112,86,116,111,57,102,56,75,123,62,84,56,56,57,126,126,55,60,55,108,102,78,82,60].map(c=>String.fromCharCode(c-5)).join('');
+        const _SK = [108,109,116,100,72,104,86,122,111,116,79,118,54,113,80,75,60,74,83,82,84,116,79,113,86,88,91,58,107,62,62,78,61,72,54,53,106,53,115,109].map(c=>String.fromCharCode(c-5)).join('');
 
         function getGistConfig() {
             return {
@@ -1534,9 +1534,13 @@
         }
 
         let _syncing = false;
-        async function cloudSync() {
+        let _lastSyncAt = 0;
+        async function cloudSync(force) {
             if (_syncing) return;
+            const now = Date.now();
+            if (!force && now - _lastSyncAt < 30000) return;
             _syncing = true;
+            _lastSyncAt = now;
             const config = getGistConfig();
             if (!config.token) { _syncing = false; showToast('Zadaj GitHub token', true); return; }
 
