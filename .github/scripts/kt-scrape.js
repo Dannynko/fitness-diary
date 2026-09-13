@@ -8,7 +8,7 @@ const today = new Date().toISOString().split('T')[0];
 (async () => {
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled'],
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
     defaultViewport: { width: 1280, height: 800 }
   });
   const page = await browser.newPage();
@@ -16,34 +16,103 @@ const today = new Date().toISOString().split('T')[0];
 
   const email = process.env.KT_EMAIL;
   const password = process.env.KT_PASSWORD;
-  const md5pass = crypto.createHash('md5').update(password).digest('hex');
-  console.log('MD5 of password:', md5pass);
 
-  // Intercept responses to capture login response body
-  const responseData = {};
-  page.on('response', async res => {
-    const url = res.url();
-    if (url.includes('/login/create') || url.includes('/user/login') || url.includes('/user/signin')) {
-      try {
-        const body = await res.text();
-        responseData[url] = { status: res.status(), body: body.substring(0, 500) };
-        console.log(`  << ${res.request().method()} ${url} -> ${res.status()}`);
-        console.log(`     body: ${body.substring(0, 300)}`);
-      } catch (e) {
-        console.log(`  << ${url} -> ${res.status()} (no body)`);
+  // Debug: print credential lengths (not values) to check for issues
+  console.log('Email length:', email?.length, 'Password length:', password?.length);
+  console.log('Email starts with:', email?.substring(0, 3), 'ends with:', email?.substring(email.length - 4));
+
+  // Step 1: Fetch bundledJs.js to find the exact login function implementation
+  console.log('\nStep 1: Analyzing KT login function...');
+  await page.goto('https://www.kaloricketabulky.sk/login', { waitUntil: 'networkidle2', timeout: 30000 });
+
+  const loginFnAnalysis = await page.evaluate(async () => {
+    // Fetch the bundled JS
+    const resp = await fetch('/wro/bundledJs.js?v=05bed406b8f7f589e69bc8ba3fa44e3b');
+    const text = await resp.text();
+
+    // Search for login function that posts to /login/create
+    const results = [];
+
+    // Find the section around "login/create"
+    const createIdx = text.indexOf('login/create');
+    if (createIdx !== -1) {
+      results.push('login/create context: ' + text.substring(Math.max(0, createIdx - 300), createIdx + 200));
+    }
+
+    // Find password hashing
+    const md5Patterns = ['md5', 'MD5', 'hex_md5', 'CryptoJS', 'digest', 'hashCode', 'sha1', 'sha256'];
+    for (const pat of md5Patterns) {
+      let idx = 0;
+      while ((idx = text.indexOf(pat, idx)) !== -1 && results.length < 20) {
+        const context = text.substring(Math.max(0, idx - 100), idx + 100);
+        if (context.includes('password') || context.includes('pass') || context.includes('heslo')) {
+          results.push(pat + ' near password: ' + context);
+        }
+        idx += pat.length;
       }
+    }
+
+    // Find "login" function definition
+    const loginFnPatterns = [
+      /\.login\s*=\s*function\s*\([^)]*\)\s*\{[^}]{0,1000}\}/g,
+      /function\s+login\s*\([^)]*\)\s*\{[^}]{0,1000}\}/g,
+      /login\s*:\s*function\s*\([^)]*\)\s*\{[^}]{0,1000}\}/g,
+    ];
+    for (const pat of loginFnPatterns) {
+      let match;
+      while ((match = pat.exec(text)) !== null && results.length < 30) {
+        const fn = match[0];
+        if (fn.includes('$http') || fn.includes('create') || fn.includes('password') || fn.includes('email')) {
+          results.push('login fn: ' + fn.substring(0, 500));
+        }
+      }
+    }
+
+    // Also look for the scope's login function by searching for "loginForm" or "user.password"
+    const userPassIdx = text.indexOf('.password');
+    const nearPasswords = [];
+    let searchIdx = 0;
+    while ((searchIdx = text.indexOf('.password', searchIdx)) !== -1 && nearPasswords.length < 10) {
+      const context = text.substring(Math.max(0, searchIdx - 200), searchIdx + 200);
+      if (context.includes('md5') || context.includes('MD5') || context.includes('hex') || context.includes('hash') || context.includes('login') || context.includes('create')) {
+        nearPasswords.push(context.substring(0, 300));
+      }
+      searchIdx += 10;
+    }
+    results.push('password contexts: ' + JSON.stringify(nearPasswords));
+
+    return results;
+  });
+
+  for (const line of loginFnAnalysis) {
+    console.log(line.substring(0, 500));
+  }
+
+  // Step 2: Check if the password field gets transformed before sending
+  console.log('\n\nStep 2: Type credentials and intercept the actual POST...');
+
+  // Intercept the POST to see exact payload
+  let capturedBody = null;
+  page.on('request', req => {
+    if (req.url().includes('/login/create') && req.method() === 'POST') {
+      capturedBody = req.postData();
+      console.log('CAPTURED POST body:', capturedBody?.substring(0, 300));
     }
   });
 
-  // Step 1: Go to /login and interact like a real user
-  console.log('Step 1: Navigate to /login...');
-  await page.goto('https://www.kaloricketabulky.sk/login', { waitUntil: 'networkidle2', timeout: 30000 });
+  page.on('response', async res => {
+    if (res.url().includes('/login/create')) {
+      try {
+        const body = await res.text();
+        console.log('CAPTURED response:', body.substring(0, 300));
+      } catch(e) {}
+    }
+  });
 
-  // Wait for Angular
+  // Type credentials
   await page.waitForFunction(() => typeof angular !== 'undefined', { timeout: 10000 }).catch(() => {});
   await new Promise(r => setTimeout(r, 1000));
 
-  // Type email
   const emailField = await page.$('input[type="email"]');
   if (emailField && await emailField.boundingBox()) {
     await emailField.click({ clickCount: 3 });
@@ -51,7 +120,6 @@ const today = new Date().toISOString().split('T')[0];
     console.log('Typed email');
   }
 
-  // Type password
   const passField = await page.$('input[type="password"]');
   if (passField && await passField.boundingBox()) {
     await passField.click({ clickCount: 3 });
@@ -59,235 +127,63 @@ const today = new Date().toISOString().split('T')[0];
     console.log('Typed password');
   }
 
-  // Wait a bit for Angular digest
   await new Promise(r => setTimeout(r, 500));
 
-  // Dump ALL scope data to understand the login/registration context
-  const scopeInfo = await page.evaluate(() => {
-    if (typeof angular === 'undefined') return 'no angular';
-    const el = document.querySelector('[ng-app]') || document.querySelector('.ng-scope') || document.body;
-    const inj = angular.element(el).injector();
-    if (!inj) return 'no injector';
-    const rs = inj.get('$rootScope');
-
-    const scopes = [];
-    function walk(scope, depth) {
-      if (!scope || depth > 15) return;
-      const keys = Object.keys(scope).filter(k => k.charAt(0) !== '$' && typeof scope[k] !== 'function');
-      const funcs = Object.keys(scope).filter(k => k.charAt(0) !== '$' && typeof scope[k] === 'function');
-      if (keys.length > 0 || funcs.length > 0) {
-        const data = {};
-        for (const k of keys) {
-          try {
-            const v = scope[k];
-            if (v === null || v === undefined) continue;
-            if (typeof v === 'object') data[k] = JSON.stringify(v).substring(0, 100);
-            else data[k] = v;
-          } catch(e) {}
-        }
-        scopes.push({ depth, keys: data, funcs: funcs });
-      }
-      let child = scope.$$childHead;
-      while (child) { walk(child, depth + 1); child = child.$$nextSibling; }
-    }
-    walk(rs, 0);
-    return JSON.stringify(scopes.slice(0, 10));
-  });
-  console.log('\nScope data:', scopeInfo);
-
-  // Find and click the login/submit button
-  console.log('\nStep 2: Click submit...');
-  const buttons = await page.evaluate(() => {
-    const all = document.querySelectorAll('[ng-click], button, [type="submit"]');
-    return [...all].filter(e => e.offsetWidth > 0 && e.offsetHeight > 0).map(e => ({
-      tag: e.tagName,
-      text: e.textContent?.trim().substring(0, 50),
-      ngClick: e.getAttribute('ng-click') || '',
-      type: e.getAttribute('type') || ''
-    }));
-  });
-  console.log('Visible clickable elements:', JSON.stringify(buttons));
-
-  // Click the actual login button (not create/register)
-  const clicked = await page.evaluate(() => {
-    // Look for button that does login/signin (not create/register)
-    const candidates = document.querySelectorAll('[ng-click]');
-    for (const el of candidates) {
-      const ngClick = el.getAttribute('ng-click') || '';
-      const text = el.textContent?.trim().toLowerCase() || '';
-      if (el.offsetWidth > 0 && el.offsetHeight > 0 &&
-          (ngClick.includes('login') || ngClick.includes('signin') || ngClick.includes('prihlás')) &&
-          !ngClick.includes('create') && !ngClick.includes('register')) {
-        return 'found: ' + ngClick + ' text=' + text + ' (not clicking yet)';
-      }
-    }
-    return 'no login-specific button';
-  });
-  console.log('Login button search:', clicked);
-
-  // Click the visible login() button
-  await page.evaluate(() => {
-    const candidates = document.querySelectorAll('[ng-click]');
-    for (const el of candidates) {
-      const ngClick = el.getAttribute('ng-click') || '';
-      if (el.offsetWidth > 0 && el.offsetHeight > 0 && ngClick.includes('login')) {
-        el.click();
-        return;
-      }
-    }
-  });
+  // Click login button
+  await page.click('button[ng-click="login()"]');
+  console.log('Clicked login button');
 
   // Wait for response
   await new Promise(r => setTimeout(r, 3000));
-  await page.waitForNetworkIdle({ timeout: 5000 }).catch(() => {});
 
-  // Check logged in
   let loggedIn = await page.evaluate(() => document.getElementById('logged')?.value || 'not-found');
-  console.log('\nLogged in after click:', loggedIn);
+  console.log('\nLogged in:', loggedIn);
 
-  // Step 3: Try direct POST approaches with MD5 password
+  // Step 3: If the password hash doesn't match, try different hashing approaches
   if (loggedIn !== '1') {
-    console.log('\n--- Direct POST with MD5 password ---');
+    console.log('\n--- Trying different password formats ---');
 
-    // The Angular app sends to /login/create - but that might be registration
-    // Try /user/login with MD5 password
-    const attempts = [
-      { url: '/user/login', type: 'form', params: { email, password: md5pass } },
-      { url: '/user/login', type: 'form', params: { email, password } },
-      { url: '/user/login', type: 'json', params: { email, password: md5pass } },
-      { url: '/user/login', type: 'json', params: { email, password } },
-      { url: '/login/auth', type: 'json', params: { email, password: md5pass } },
-      { url: '/user/signin', type: 'json', params: { email, password: md5pass } },
-      { url: '/api/login', type: 'json', params: { email, password: md5pass } },
+    const hashVariants = [
+      { name: 'md5(pass)', hash: crypto.createHash('md5').update(password).digest('hex') },
+      { name: 'md5(pass.lower)', hash: crypto.createHash('md5').update(password.toLowerCase()).digest('hex') },
+      { name: 'sha1(pass)', hash: crypto.createHash('sha1').update(password).digest('hex') },
+      { name: 'sha256(pass)', hash: crypto.createHash('sha256').update(password).digest('hex') },
+      { name: 'plain', hash: password },
+      { name: 'md5(email+pass)', hash: crypto.createHash('md5').update(email + password).digest('hex') },
     ];
 
-    for (const attempt of attempts) {
-      const result = await page.evaluate(async (url, type, params) => {
+    for (const variant of hashVariants) {
+      const result = await page.evaluate(async (email, passHash, variantName) => {
         try {
-          const opts = {
+          const resp = await fetch('/login/create?format=json&voucher=false', {
             method: 'POST',
-            credentials: 'same-origin',
-            redirect: 'follow'
-          };
-          if (type === 'form') {
-            opts.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
-            opts.body = Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
-          } else {
-            opts.headers = { 'Content-Type': 'application/json' };
-            opts.body = JSON.stringify(params);
-          }
-          const resp = await fetch(url, opts);
-          const text = await resp.text();
-          return { status: resp.status, url: resp.url, redirected: resp.redirected, body: text.substring(0, 200) };
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password: passHash }),
+            credentials: 'same-origin'
+          });
+          const data = await resp.json();
+          return variantName + ': code=' + data.code + ' msg=' + (data.message || 'none');
         } catch (e) {
-          return { error: e.message };
+          return variantName + ': error ' + e.message;
         }
-      }, attempt.url, attempt.type, attempt.params);
+      }, email, variant.hash, variant.name);
+      console.log('  ' + result);
 
-      const paramDesc = attempt.type + ' ' + Object.keys(attempt.params).join(',');
-      console.log(`  ${attempt.url} [${paramDesc}]: ${result.status || result.error} -> ${result.url || ''}`);
-      if (result.body && !result.url?.includes('/login')) {
-        console.log(`    body: ${result.body}`);
-      }
-
-      if (result.url && !result.url.includes('/login')) {
+      if (result.includes('code=0') || result.includes('code=1') || result.includes('code=2')) {
+        // Success!
         await page.reload({ waitUntil: 'networkidle2' });
         loggedIn = await page.evaluate(() => document.getElementById('logged')?.value || 'not-found');
         if (loggedIn === '1') {
-          console.log('LOGIN SUCCESS!');
+          console.log('LOGIN SUCCESS with ' + variant.name);
           break;
         }
       }
     }
   }
 
-  // Step 4: Try the homepage login flow (registerIncludeStep=5 with loginForm)
   if (loggedIn !== '1') {
-    console.log('\n--- Homepage login flow ---');
-    await page.goto('https://www.kaloricketabulky.sk/', { waitUntil: 'networkidle2', timeout: 30000 });
-    await page.waitForFunction(() => typeof angular !== 'undefined', { timeout: 10000 }).catch(() => {});
-
-    const homepageLogin = await page.evaluate(async (email, password, md5pass) => {
-      const el = document.querySelector('[ng-app]') || document.querySelector('.ng-scope') || document.body;
-      const inj = angular.element(el).injector();
-      if (!inj) return 'no injector';
-      const rs = inj.get('$rootScope');
-      const $http = inj.get('$http');
-
-      // Try posting to /login/create (same as what the Angular app does from /login page)
-      try {
-        const resp = await $http.post('/login/create?format=json&voucher=false', {
-          email: email,
-          password: md5pass
-        });
-        return 'create: ' + resp.status + ' ' + JSON.stringify(resp.data).substring(0, 300);
-      } catch (e) {
-        return 'create failed: ' + e.status + ' ' + JSON.stringify(e.data).substring(0, 300);
-      }
-    }, email, password, md5pass);
-    console.log('Homepage login:', homepageLogin);
-
-    await page.reload({ waitUntil: 'networkidle2' });
-    loggedIn = await page.evaluate(() => document.getElementById('logged')?.value || 'not-found');
-    console.log('Logged in after homepage login:', loggedIn);
-  }
-
-  // Step 5: Try finding the REAL login endpoint by looking at /login page source
-  if (loggedIn !== '1') {
-    console.log('\n--- Searching for login endpoint in JS ---');
-    await page.goto('https://www.kaloricketabulky.sk/login', { waitUntil: 'networkidle2', timeout: 30000 });
-
-    const jsSearch = await page.evaluate(() => {
-      // Find all scripts and search for login-related endpoints
-      const scripts = document.querySelectorAll('script');
-      const matches = [];
-      for (const s of scripts) {
-        const text = s.textContent || '';
-        // Search for URLs containing login, auth, signin
-        const urlMatches = text.match(/['"][^'"]*(?:login|auth|signin|prihlasenie)[^'"]*['"]/gi);
-        if (urlMatches) {
-          matches.push(...urlMatches.map(m => m.substring(0, 100)));
-        }
-      }
-      // Also check external script sources
-      const srcs = [...scripts].filter(s => s.src).map(s => s.src);
-      return { matches: matches.slice(0, 20), scriptSrcs: srcs.filter(s => s.includes('app') || s.includes('main') || s.includes('bundle')) };
-    });
-    console.log('JS login URLs:', JSON.stringify(jsSearch.matches));
-    console.log('App scripts:', JSON.stringify(jsSearch.scriptSrcs));
-
-    // Try to find login function in external scripts
-    if (jsSearch.scriptSrcs.length > 0) {
-      for (const src of jsSearch.scriptSrcs.slice(0, 2)) {
-        console.log('\nFetching:', src);
-        const scriptContent = await page.evaluate(async (url) => {
-          const resp = await fetch(url);
-          const text = await resp.text();
-          // Find login-related code
-          const lines = text.split('\n');
-          const loginLines = [];
-          for (let i = 0; i < lines.length; i++) {
-            if (lines[i].match(/login|signin|prihlás/i) && lines[i].match(/\$http|fetch|post|url|endpoint/i)) {
-              loginLines.push(lines[i].trim().substring(0, 200));
-            }
-          }
-          // Also find the login function
-          const loginFnMatch = text.match(/function\s+login\s*\([^)]*\)\s*\{[^}]{0,500}\}/);
-          const loginFnMatch2 = text.match(/\.login\s*=\s*function\s*\([^)]*\)\s*\{[^}]{0,500}\}/);
-          const loginFnMatch3 = text.match(/login\s*:\s*function\s*\([^)]*\)\s*\{[^}]{0,500}\}/);
-          return {
-            loginLines: loginLines.slice(0, 10),
-            loginFn: (loginFnMatch || loginFnMatch2 || loginFnMatch3 || ['not found'])[0].substring(0, 500)
-          };
-        }, src);
-        console.log('Login lines:', JSON.stringify(scriptContent.loginLines));
-        console.log('Login fn:', scriptContent.loginFn);
-      }
-    }
-  }
-
-  if (loggedIn !== '1') {
-    console.log('\nAll login attempts failed.');
+    console.log('\nLogin failed. All attempts returned "incorrect password or email".');
+    console.log('Please verify GitHub Secrets KT_EMAIL and KT_PASSWORD are correct.');
     await browser.close();
     process.exit(1);
   }
