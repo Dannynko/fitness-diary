@@ -74,30 +74,44 @@ const today = new Date().toISOString().split('T')[0];
   let loggedIn = await page.evaluate(() => document.getElementById('logged')?.value || 'not-found');
   console.log('Logged in:', loggedIn);
 
-  // If not logged in, try direct POST with MD5 password
+  // Try multiple endpoints and formats
   if (loggedIn !== '1') {
-    console.log('\nTrying direct POST to /login/create...');
-    const directResult = await page.evaluate(async (email, md5pass) => {
-      try {
-        const resp = await fetch('/login/create?format=json&voucher=false', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password: md5pass }),
-          credentials: 'same-origin'
-        });
-        const data = await resp.json();
-        return JSON.stringify(data);
-      } catch (e) {
-        return 'error: ' + e.message;
-      }
-    }, email, md5pass);
-    console.log('Direct POST result:', directResult);
+    console.log('\nTrying multiple login approaches...');
+    const attempts = [
+      { url: '/login/create?format=json&voucher=false', type: 'json', data: { email, password: md5pass }, label: '/login/create JSON md5' },
+      { url: '/user/login', type: 'form', data: `email=${encodeURIComponent(email)}&password=${encodeURIComponent(md5pass)}`, label: '/user/login form md5' },
+      { url: '/user/login', type: 'form', data: `email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`, label: '/user/login form plain' },
+      { url: '/user/login', type: 'json', data: { email, password: md5pass }, label: '/user/login JSON md5' },
+      { url: '/user/login', type: 'json', data: { email, password }, label: '/user/login JSON plain' },
+      { url: '/login/auth?format=json', type: 'json', data: { email, password: md5pass }, label: '/login/auth JSON md5' },
+      { url: '/login/login?format=json', type: 'json', data: { email, password: md5pass }, label: '/login/login JSON md5' },
+    ];
 
-    // Check if it worked
-    if (directResult.includes('"code":0') || directResult.includes('"code":1')) {
-      await page.reload({ waitUntil: 'networkidle2' });
-      loggedIn = await page.evaluate(() => document.getElementById('logged')?.value || 'not-found');
-      console.log('Logged in after direct POST:', loggedIn);
+    for (const a of attempts) {
+      const result = await page.evaluate(async (url, type, data) => {
+        try {
+          const opts = { method: 'POST', credentials: 'same-origin', redirect: 'follow' };
+          if (type === 'json') {
+            opts.headers = { 'Content-Type': 'application/json' };
+            opts.body = JSON.stringify(data);
+          } else {
+            opts.headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+            opts.body = data;
+          }
+          const resp = await fetch(url, opts);
+          const text = await resp.text();
+          return `${resp.status} redir=${resp.redirected} url=${resp.url} body=${text.substring(0, 150)}`;
+        } catch (e) {
+          return 'error: ' + e.message;
+        }
+      }, a.url, a.type, a.data);
+      console.log(`  ${a.label}: ${result}`);
+
+      if (!result.includes('/login') || result.includes('"code":0')) {
+        await page.reload({ waitUntil: 'networkidle2' });
+        loggedIn = await page.evaluate(() => document.getElementById('logged')?.value || 'not-found');
+        if (loggedIn === '1') { console.log('SUCCESS with ' + a.label); break; }
+      }
     }
   }
 
