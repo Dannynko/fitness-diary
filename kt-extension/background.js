@@ -1,11 +1,18 @@
 const GIST_ID = 'ffe6105f3e59d233d6107f50ac5cf9ab';
 const TOKEN = [108,109,116,100,72,104,86,122,111,116,79,118,54,113,80,75,60,74,83,82,84,116,79,113,86,88,91,58,107,62,62,78,61,72,54,53,106,53,115,109].map(c=>String.fromCharCode(c-5)).join('');
 
-chrome.alarms.create('kt-auto-sync', { periodInMinutes: 120 });
+function scheduleAt20() {
+  const now = new Date();
+  const target = new Date(now);
+  target.setHours(20, 0, 0, 0);
+  if (now >= target) target.setDate(target.getDate() + 1);
+  chrome.alarms.create('kt-auto-sync', { when: target.getTime(), periodInMinutes: 1440 });
+}
+
+scheduleAt20();
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.alarms.create('kt-auto-sync', { periodInMinutes: 120 });
-  autoSync();
+  scheduleAt20();
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
