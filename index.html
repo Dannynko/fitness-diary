@@ -410,15 +410,15 @@
 <body>
     <div class="container">
         <header>
-            <div style="position: relative;">
-                <h1>Fitness Diary</h1>
-                <div style="position: absolute; right: 0; top: 50%; transform: translateY(-50%); display: flex; gap: 6px;">
-                    <button class="tab active" id="periodWeek" onclick="setPeriod('week')">Týždeň</button>
-                    <button class="tab" id="periodMonth" onclick="setPeriod('month')">Mesiac</button>
-                </div>
-            </div>
+            <h1>Fitness Diary</h1>
         </header>
         <div id="ktImportStatus"></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="display:flex; gap:6px;">
+                <button class="tab active" id="periodWeek" onclick="setPeriod('week')">Týždeň</button>
+                <button class="tab" id="periodMonth" onclick="setPeriod('month')">Mesiac</button>
+            </div>
+        </div>
         <div class="summary-cards" style="grid-template-columns: repeat(5, 1fr);">
             <div class="summary-card calories-in">
                 <div class="label">Príjem (kcal)</div>
