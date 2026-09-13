@@ -948,8 +948,8 @@
 
             document.getElementById('sumCalories').textContent = totalIn.toFixed(0);
             const latestW = records.filter(r => r.weight != null && r.weight > 0).sort((a, b) => b.date.localeCompare(a.date))[0];
-            const perKg = latestW ? ' (' + (totalProt / latestW.weight).toFixed(2) + ' g/kg)' : '';
-            document.getElementById('sumProtein').textContent = totalProt.toFixed(1) + perKg;
+            const perKg = latestW ? '<span style="font-size:0.7em;color:var(--text-muted);"> (' + (totalProt / latestW.weight).toFixed(1) + ' g/kg)</span>' : '';
+            document.getElementById('sumProtein').innerHTML = totalProt.toFixed(1) + perKg;
             const totalExpenditure = goals.bazal + totalOut;
             document.getElementById('sumOutput').textContent = totalExpenditure.toFixed(0);
             document.getElementById('outputCard').title = 'Bazál: ' + goals.bazal + ' kcal\nAktivita: ' + totalOut.toFixed(0) + ' kcal';
