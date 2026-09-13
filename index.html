@@ -1596,6 +1596,7 @@
                 localStorage.setItem('healthData', JSON.stringify(mergedHealth));
                 goals = mergedGoals;
                 localStorage.setItem('fitnessGoals', JSON.stringify(goals));
+                renderAll();
 
                 const pushData = {
                     records: mergedRecords,
@@ -1620,7 +1621,6 @@
 
                 localStorage.setItem('lastSyncTime', new Date().toISOString());
                 updateSyncStatus();
-                renderAll();
                 showToast('Synchronizované (' + mergedRecords.length + ' záznamov)');
             } catch (e) {
                 showToast('Sync chyba: ' + e.message, true);
