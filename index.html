@@ -1082,11 +1082,12 @@
                             const label = name + (amt ? ' <span style="font-size:0.65rem;color:var(--text-muted);margin-left:6px;">(' + amt + ')</span>' : '');
                             rows += '<tr class="detail-row-' + date + '" style="display:none;font-size:0.7rem;color:var(--text-muted);line-height:1.2;">';
                             rows += '<td colspan="2" style="padding:4px 3px 4px 24px;' + sb + bl + bg + 'text-align:left;color:var(--text);">' + label + '</td>';
-                            rows += '<td style="padding:4px 3px;' + sb + bg + '">' + r.protein.toFixed(1) + ' g</td>';
-                            rows += '<td style="padding:4px 3px;' + sb + bg + '">' + r.carbs.toFixed(1) + ' g</td>';
-                            rows += '<td style="padding:4px 3px;' + sb + bg + '">' + r.fat.toFixed(1) + ' g</td>';
+                            const ra = 'text-align:right;';
+                            rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.protein.toFixed(1) + ' g</td>';
+                            rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.carbs.toFixed(1) + ' g</td>';
+                            rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.fat.toFixed(1) + ' g</td>';
                             rows += '<td style="padding:0;' + sb + bg + '"></td>';
-                            rows += '<td style="padding:4px 3px;' + sb + bg + '">' + r.caloriesIn.toFixed(1) + '</td>';
+                            rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.caloriesIn.toFixed(1) + '</td>';
                             rows += '<td colspan="3" style="' + sb + bg + '"></td>';
                             rows += '</tr>';
                         }
