@@ -79,12 +79,11 @@
         .summary-card {
             background: var(--card-bg);
             border-radius: 10px;
-            padding: 8px 6px;
+            padding: 10px;
             text-align: center;
             backdrop-filter: blur(10px);
             border: 1px solid var(--card-border);
             position: relative;
-            overflow: hidden;
         }
         .summary-card .tip-bubble {
             display: none;
@@ -108,12 +107,12 @@
         .summary-card:hover .tip-bubble:not(:empty) { display: block; }
 
         .summary-card .value {
-            font-size: 1.1rem;
+            font-size: 1.3rem;
             font-weight: 700;
             margin: 3px 0;
         }
 
-        .summary-card .label { color: var(--text-muted); font-size: 0.7rem; }
+        .summary-card .label { color: var(--text-muted); font-size: 0.8rem; }
         .summary-card.calories-in .value { color: var(--green); }
         .summary-card.calories-out .value { color: var(--red); }
         .summary-card.balance .value { color: var(--accent); }
@@ -441,7 +440,7 @@
             <button class="tab active" id="periodWeek" onclick="setPeriod('week')">Týždeň</button>
             <button class="tab" id="periodMonth" onclick="setPeriod('month')">Mesiac</button>
         </div>
-        <div class="summary-cards" style="grid-template-columns: repeat(5, minmax(0, 1fr));">
+        <div class="summary-cards" style="grid-template-columns: repeat(5, 1fr);">
             <div class="summary-card calories-in">
                 <div class="label">Príjem (kcal)</div>
                 <div class="value" id="sumCalories">0</div>
