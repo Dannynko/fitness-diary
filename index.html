@@ -1177,12 +1177,16 @@
                 gridSvg += '<text x="' + (padL - 14) + '" y="' + (y + 4) + '" fill="rgba(176,190,197,0.6)" font-size="10" text-anchor="end">' + val + '</text>';
             }
 
-            let linePath = '';
+            let linePaths = '';
+            let segment = '';
             pts.forEach(p => {
-                if (p.y === null) return;
-                linePath += (linePath === '' ? 'M' : 'L') + p.x + ',' + p.y + ' ';
+                if (p.y === null) {
+                    if (segment) { linePaths += '<path d="' + segment + '" fill="none" stroke="var(--orange)" stroke-width="1.5" stroke-linejoin="round" />'; segment = ''; }
+                } else {
+                    segment += (segment === '' ? 'M' : 'L') + p.x + ',' + p.y + ' ';
+                }
             });
-            const linePaths = linePath ? '<path d="' + linePath + '" fill="none" stroke="var(--orange)" stroke-width="1.5" stroke-linejoin="round" />' : '';
+            if (segment) linePaths += '<path d="' + segment + '" fill="none" stroke="var(--orange)" stroke-width="1.5" stroke-linejoin="round" />';
 
             const step = Math.max(1, Math.ceil(n / 10));
             let labels = '';
