@@ -8,83 +8,55 @@ const today = new Date().toISOString().split('T')[0];
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
   const page = await browser.newPage();
 
-  // Login - KT is Angular Material SPA, wait for Angular to render login form
-  console.log('Navigating to KT login...');
-  await page.goto('https://www.kaloricketabulky.sk/prihlasenie', { waitUntil: 'networkidle2', timeout: 30000 });
-
-  // Wait for Angular to render the login form (md-input-container)
-  await page.waitForFunction(() => {
-    const inputs = document.querySelectorAll('input');
-    for (const inp of inputs) {
-      if (inp.offsetParent !== null && (inp.type === 'email' || inp.type === 'text' || inp.type === 'password')) return true;
-    }
-    return false;
-  }, { timeout: 15000 }).catch(() => {});
-
-  // Find visible input fields
-  const fields = await page.evaluate(() => {
-    const all = [...document.querySelectorAll('input')].filter(el => el.offsetParent !== null);
-    return all.map(el => ({
-      tag: el.tagName, type: el.type, name: el.name, id: el.id,
-      placeholder: el.placeholder, ngModel: el.getAttribute('ng-model') || '',
-      cls: el.className.substring(0, 80)
-    }));
-  });
-  console.log('Visible inputs:', JSON.stringify(fields, null, 2));
-
-  // Find email and password by ng-model or type
-  let emailSel = null, pwSel = null;
-  for (const f of fields) {
-    const ngm = f.ngModel.toLowerCase();
-    const sel = f.id ? '#' + f.id : (f.ngModel ? `input[ng-model="${f.ngModel}"]` : null);
-    if (!sel) continue;
-    if (ngm.includes('email') || ngm.includes('login') || f.type === 'email' || f.type === 'text' && !emailSel) emailSel = sel;
-    if (ngm.includes('password') || ngm.includes('heslo') || f.type === 'password') pwSel = sel;
-  }
-
-  // Fallback: first text/email input = email, first password input = password
-  if (!emailSel) emailSel = fields.find(f => f.type === 'email' || f.type === 'text') ? `input[type="${fields.find(f => f.type === 'email')?.type || 'text'}"]` : null;
-  if (!pwSel) pwSel = 'input[type="password"]';
-
-  console.log('Email selector:', emailSel, 'Password selector:', pwSel);
-
-  if (!emailSel) {
-    console.error('Could not find email field');
-    // Dump all buttons for debugging
-    const btns = await page.evaluate(() => [...document.querySelectorAll('button, a.md-button, .md-button')].filter(el => el.offsetParent !== null).map(el => ({ tag: el.tagName, text: el.textContent?.trim().substring(0, 50), cls: el.className.substring(0, 50) })));
-    console.log('Visible buttons:', JSON.stringify(btns));
-    await browser.close();
-    process.exit(1);
-  }
-
-  await page.type(emailSel, process.env.KT_EMAIL);
-  await page.type(pwSel, process.env.KT_PASSWORD);
-
-  // Find submit button
-  const submitBtn = await page.evaluate(() => {
-    const btns = [...document.querySelectorAll('button, input[type="submit"], a.md-button')].filter(el => el.offsetParent !== null);
-    for (const b of btns) {
-      const txt = (b.textContent || '').toLowerCase();
-      if (txt.includes('prihlás') || txt.includes('login') || txt.includes('prihlas') || b.type === 'submit') return true;
-    }
-    return false;
-  });
-
-  if (submitBtn) {
-    await page.evaluate(() => {
-      const btns = [...document.querySelectorAll('button, input[type="submit"], a.md-button')].filter(el => el.offsetParent !== null);
-      for (const b of btns) {
-        const txt = (b.textContent || '').toLowerCase();
-        if (txt.includes('prihlás') || txt.includes('login') || txt.includes('prihlas') || b.type === 'submit') { b.click(); return; }
-      }
+  // Login via cookie injection: POST to /login, then use cookies
+  console.log('Logging in via POST...');
+  const loginResp = await page.evaluate(async (email, password) => {
+    const resp = await fetch('https://www.kaloricketabulky.sk/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ email, password, _remember: '1' }),
+      credentials: 'include',
+      redirect: 'follow'
     });
-  } else {
-    await page.keyboard.press('Enter');
+    return { status: resp.status, url: resp.url, ok: resp.ok };
+  }, process.env.KT_EMAIL, process.env.KT_PASSWORD);
+  console.log('Login response:', JSON.stringify(loginResp));
+
+  // Navigate to home to check if we're logged in
+  await page.goto('https://www.kaloricketabulky.sk/', { waitUntil: 'networkidle2', timeout: 20000 });
+
+  const loggedIn = await page.evaluate(() => {
+    const loggedEl = document.getElementById('logged');
+    return loggedEl ? loggedEl.value : 'not-found';
+  });
+  console.log('Logged in status:', loggedIn);
+
+  if (loggedIn !== 'true' && loggedIn !== '1') {
+    // Try direct Angular approach - call login via Angular scope
+    console.log('Trying Angular login...');
+    const angularLogin = await page.evaluate(async (email, password) => {
+      if (typeof angular === 'undefined') return { ok: false, err: 'no angular' };
+      const el = document.querySelector('[ng-app]') || document.querySelector('.ng-scope') || document.body;
+      const inj = angular.element(el).injector();
+      if (!inj) return { ok: false, err: 'no injector' };
+
+      try {
+        const $http = inj.get('$http');
+        const resp = await $http.post('/login', { email, password });
+        return { ok: true, status: resp.status, data: JSON.stringify(resp.data).substring(0, 200) };
+      } catch(e) {
+        return { ok: false, err: e.message || String(e), status: e.status };
+      }
+    }, process.env.KT_EMAIL, process.env.KT_PASSWORD);
+    console.log('Angular login result:', JSON.stringify(angularLogin));
+
+    if (angularLogin.ok) {
+      await page.reload({ waitUntil: 'networkidle2' });
+    }
   }
 
-  await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
   const url = page.url();
-  console.log('After login, URL:', url);
+  console.log('Current URL:', url);
 
   // Navigate to diary
   console.log('Navigating to diary...');
