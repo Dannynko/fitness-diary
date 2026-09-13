@@ -104,7 +104,7 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.5);
             pointer-events: none;
         }
-        .summary-card:hover .tip-bubble { display: block; }
+        .summary-card:hover .tip-bubble:not(:empty) { display: block; }
 
         .summary-card .value {
             font-size: 1.3rem;
@@ -1309,7 +1309,8 @@
             const edit = document.getElementById('goalEdit');
             const show = edit.style.display === 'none';
             edit.style.display = show ? 'block' : 'none';
-            document.getElementById('goalEditBtn').textContent = show ? 'Zavrieť ciele' : 'Upraviť ciele';
+            const btn = document.getElementById('goalEditBtn');
+            if (btn) btn.textContent = show ? 'Zavrieť ciele' : 'Upraviť ciele';
             if (show) {
                 document.getElementById('goalBazal').value = goals.bazal;
                 document.getElementById('goalTdee').value = goals.tdee;
