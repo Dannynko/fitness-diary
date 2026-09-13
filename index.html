@@ -441,12 +441,12 @@
             </div>
         </div>
         <div class="summary-cards" style="grid-template-columns: repeat(5, 1fr);">
-            <div class="summary-card calories-in">
-                <div class="label">Príjem (kcal)</div>
+            <div class="summary-card calories-in" id="inputCard" data-tip="">
+                <div class="label">Príjem (kcal) <span style="cursor:help;font-size:0.8em;opacity:0.6;">&#9432;</span></div>
                 <div class="value" id="sumCalories">0</div>
             </div>
-            <div class="summary-card calories-out" id="outputCard" title="">
-                <div class="label">Výdaj (kcal)</div>
+            <div class="summary-card calories-out" id="outputCard" data-tip="">
+                <div class="label">Výdaj (kcal) <span style="cursor:help;font-size:0.8em;opacity:0.6;">&#9432;</span></div>
                 <div class="value" id="sumOutput">0</div>
             </div>
             <div class="summary-card" id="balanceCard" data-tip="">
@@ -996,6 +996,10 @@
             const avgOut = totalOut / filledDays;
 
             document.getElementById('sumCalories').textContent = avgIn.toFixed(0);
+            const inputTip = summaryPeriod === 'day'
+                ? 'Celkový príjem za ' + formatDate(goalDate)
+                : 'Denný priemer z ' + filledDays + ' dní so záznamami\nCelkom: ' + totalIn.toFixed(0) + ' kcal';
+            document.getElementById('inputCard').dataset.tip = inputTip;
             const latestW = records.filter(r => r.weight != null && r.weight > 0).sort((a, b) => b.date.localeCompare(a.date))[0];
             const perKg = latestW ? '<span style="font-size:0.55em;color:var(--text-muted);"> (' + (avgProt / latestW.weight).toFixed(1) + ' g/kg)</span>' : '';
             document.getElementById('sumProtein').innerHTML = avgProt.toFixed(1) + perKg;
