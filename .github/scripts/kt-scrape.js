@@ -70,23 +70,25 @@ const today = new Date().toISOString().split('T')[0];
     });
     console.log('Login-related inputs:', JSON.stringify(allInputs, null, 2));
 
-    // Set values via Angular scope directly
-    const angularSetResult = await page.evaluate((email, password) => {
+    // We know ng-model="loginForm.email" and ng-model="loginForm.password" exist
+    // Find the scope with loginForm and set values, then find and call the login submit function
+    const loginAttempt = await page.evaluate(async (email, password) => {
       if (typeof angular === 'undefined') return 'no angular';
       const el = document.querySelector('[ng-app]') || document.querySelector('.ng-scope') || document.body;
       const inj = angular.element(el).injector();
       if (!inj) return 'no injector';
       const rs = inj.get('$rootScope');
 
-      // Walk scope tree looking for email/password models
+      // Find scope with loginForm
       let loginScope = null;
+      let loginFns = [];
       function walk(scope, depth) {
         if (!scope || depth > 20) return;
+        if (scope.loginForm && !loginScope) loginScope = scope;
+        // Collect all functions with 'login' in name
         for (const k in scope) {
-          if (k.charAt(0) === '$' || typeof scope[k] === 'function') continue;
-          const kl = k.toLowerCase();
-          if (kl === 'email' || kl === 'loginemail' || kl === 'user') {
-            loginScope = scope;
+          if (typeof scope[k] === 'function' && k.toLowerCase().includes('login') && !k.includes('Visibility')) {
+            loginFns.push({ scope, fn: k, depth });
           }
         }
         let child = scope.$$childHead;
@@ -94,55 +96,59 @@ const today = new Date().toISOString().split('T')[0];
       }
       walk(rs, 0);
 
-      if (loginScope) {
-        // Try setting email/password on the scope
-        if ('email' in loginScope) loginScope.email = email;
-        if ('password' in loginScope) loginScope.password = password;
-        if ('loginEmail' in loginScope) loginScope.loginEmail = email;
-        if ('loginPassword' in loginScope) loginScope.loginPassword = password;
-        loginScope.$apply();
-        return 'set on scope: ' + Object.keys(loginScope).filter(k => k.charAt(0) !== '$' && typeof loginScope[k] !== 'function').join(', ');
+      const fnNames = loginFns.map(f => f.fn);
+
+      if (!loginScope) return 'no loginForm scope found. Login fns: ' + fnNames.join(', ');
+
+      // Set loginForm values
+      if (!loginScope.loginForm) loginScope.loginForm = {};
+      loginScope.loginForm.email = email;
+      loginScope.loginForm.password = password;
+      loginScope.$apply();
+
+      // List all keys on loginScope for debugging
+      const scopeKeys = Object.keys(loginScope).filter(k => k.charAt(0) !== '$').map(k => k + ':' + typeof loginScope[k]);
+
+      // Try to find and call the login submit function
+      // Look for: login, submitLogin, doLogin, loginSubmit on the loginForm scope or its parents
+      const submitNames = ['login', 'submitLogin', 'doLogin', 'loginSubmit', 'signIn', 'userLogin', 'logIn'];
+      for (const name of submitNames) {
+        if (typeof loginScope[name] === 'function') {
+          try {
+            loginScope[name]();
+            return 'called ' + name + ' on loginForm scope. Keys: ' + scopeKeys.join(', ') + '. All login fns: ' + fnNames.join(', ');
+          } catch(e) { return 'error calling ' + name + ': ' + e.message; }
+        }
       }
 
-      // Try calling login function on rootScope
-      function findLogin(scope, depth) {
-        if (!scope || depth > 20) return null;
-        for (const k in scope) {
-          if (typeof scope[k] === 'function' && k.toLowerCase().includes('login')) {
-            return { scope, fn: k };
-          }
-        }
-        let child = scope.$$childHead;
-        while (child) {
-          const r = findLogin(child, depth + 1);
-          if (r) return r;
-          child = child.$$nextSibling;
-        }
-        return null;
-      }
-
-      const loginFn = findLogin(rs, 0);
-      if (loginFn) {
+      // Try any login function from the scope tree
+      for (const f of loginFns) {
         try {
-          loginFn.scope[loginFn.fn](email, password);
-          return 'called ' + loginFn.fn;
-        } catch(e) {
-          return 'fn error: ' + e.message;
-        }
+          f.scope[f.fn]();
+          return 'called ' + f.fn + ' (depth ' + f.depth + '). Keys: ' + scopeKeys.join(', ');
+        } catch(e) {}
       }
 
-      return 'no login scope/fn found';
+      return 'loginForm set but no submit fn. Keys: ' + scopeKeys.join(', ') + '. Login fns: ' + fnNames.join(', ');
     }, process.env.KT_EMAIL, process.env.KT_PASSWORD);
-    console.log('Angular set result:', angularSetResult);
+    console.log('Login attempt:', loginAttempt);
 
-    await new Promise(r => setTimeout(r, 3000));
-    await page.reload({ waitUntil: 'networkidle2' });
+    await new Promise(r => setTimeout(r, 5000));
 
     const loggedIn2 = await page.evaluate(() => {
       const el = document.getElementById('logged');
       return el ? el.value : 'not-found';
     });
-    console.log('Logged in after scope manipulation:', loggedIn2);
+    console.log('Logged in after login attempt:', loggedIn2);
+
+    if (loggedIn2 !== 'true' && loggedIn2 !== '1') {
+      await page.reload({ waitUntil: 'networkidle2' });
+      const loggedIn3 = await page.evaluate(() => {
+        const el = document.getElementById('logged');
+        return el ? el.value : 'not-found';
+      });
+      console.log('Logged in after reload:', loggedIn3);
+    }
   }
 
   // Navigate to diary
