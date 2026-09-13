@@ -771,10 +771,14 @@
             if (card && card.dataset.tip) {
                 if (!_tipEl) { _tipEl = document.createElement('div'); _tipEl.className = 'tip-popup'; document.body.appendChild(_tipEl); }
                 _tipEl.textContent = card.dataset.tip;
-                const r = card.getBoundingClientRect();
-                _tipEl.style.top = (r.bottom + 6) + 'px';
-                _tipEl.style.left = (r.left + r.width / 2 - 140) + 'px';
                 _tipEl.style.display = 'block';
+                const r = card.getBoundingClientRect();
+                const tw = _tipEl.offsetWidth;
+                let left = r.left + r.width / 2 - tw / 2;
+                if (left < 8) left = 8;
+                if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+                _tipEl.style.top = (r.bottom + 6) + 'px';
+                _tipEl.style.left = left + 'px';
             }
         });
         document.addEventListener('mouseout', e => {
