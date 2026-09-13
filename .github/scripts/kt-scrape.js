@@ -8,90 +8,114 @@ const today = new Date().toISOString().split('T')[0];
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
   const page = await browser.newPage();
 
-  // Intercept network to discover login API
-  const apiCalls = [];
-  page.on('response', resp => {
-    const u = resp.url();
-    if (u.includes('kaloricketabulky') && !u.includes('.css') && !u.includes('.js') && !u.includes('.png') && !u.includes('.jpg')) {
-      apiCalls.push({ url: u, status: resp.status() });
-    }
-  });
-
-  // Go to KT main page first, let Angular load
-  console.log('Loading KT...');
+  // Login: go to KT, get session cookie, then POST login with form encoding
+  console.log('Loading KT homepage...');
   await page.goto('https://www.kaloricketabulky.sk/', { waitUntil: 'networkidle2', timeout: 30000 });
 
-  // Use Angular's own login service
-  console.log('Attempting Angular login...');
+  // Use Angular $http with form encoding (not JSON)
+  console.log('Logging in via Angular $http (form-encoded)...');
   const loginResult = await page.evaluate(async (email, password) => {
-    try {
-      if (typeof angular === 'undefined') return { ok: false, err: 'no angular' };
-      const el = document.querySelector('[ng-app]') || document.querySelector('.ng-scope') || document.body;
-      const inj = angular.element(el).injector();
-      if (!inj) return { ok: false, err: 'no injector' };
+    if (typeof angular === 'undefined') return { ok: false, err: 'no angular' };
+    const el = document.querySelector('[ng-app]') || document.querySelector('.ng-scope') || document.body;
+    const inj = angular.element(el).injector();
+    if (!inj) return { ok: false, err: 'no injector' };
+    const $http = inj.get('$http');
 
-      // Try to find AuthService or UserService
-      const serviceNames = ['AuthService', 'UserService', 'loginService', 'authService', 'userService', 'auth', 'Auth'];
-      let authSvc = null;
-      for (const name of serviceNames) {
-        try { authSvc = inj.get(name); if (authSvc) break; } catch(e) {}
-      }
+    // KT login endpoint expects form-encoded, not JSON
+    const formData = 'email=' + encodeURIComponent(email) + '&password=' + encodeURIComponent(password) + '&_remember=1';
 
-      // List all registered services for debugging
-      const registeredServices = [];
+    const endpoints = [
+      '/login',
+      '/user/login',
+    ];
+
+    for (const url of endpoints) {
       try {
-        const providerInjector = inj.get('$injector');
-        // Angular doesn't expose service list easily, try known patterns
-        const commonNames = ['$http', 'AuthService', 'UserService', 'loginService', 'authService', 'sessionService', 'AccountService', 'userService'];
-        for (const n of commonNames) {
-          try { if (inj.get(n)) registeredServices.push(n); } catch(e) {}
-        }
+        const resp = await new Promise((resolve, reject) => {
+          $http({
+            method: 'POST',
+            url: url,
+            data: formData,
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+          }).then(
+            r => resolve({ ok: true, status: r.status, url }),
+            e => resolve({ ok: false, status: e.status, url, redirect: e.headers ? e.headers('location') : '' })
+          );
+        });
+        if (resp.ok) return resp;
       } catch(e) {}
-
-      // Use $http directly to try login endpoints
-      const $http = inj.get('$http');
-      const endpoints = [
-        { url: '/login', data: { email, password } },
-        { url: '/api/login', data: { email, password } },
-        { url: '/api/v1/login', data: { email, password } },
-        { url: '/api/v1/user/login', data: { email, password } },
-        { url: '/user/login', data: { email, password } },
-        { url: '/auth/login', data: { email, password } },
-      ];
-
-      for (const ep of endpoints) {
-        try {
-          const resp = await new Promise((resolve, reject) => {
-            $http.post(ep.url, ep.data).then(
-              r => resolve({ ok: true, status: r.status, data: JSON.stringify(r.data).substring(0, 300), url: ep.url }),
-              e => resolve({ ok: false, status: e.status, data: JSON.stringify(e.data).substring(0, 300), url: ep.url })
-            );
-          });
-          if (resp.ok) return { ...resp, services: registeredServices };
-          registeredServices.push(ep.url + ':' + resp.status);
-        } catch(e) {}
-      }
-
-      return { ok: false, err: 'all endpoints failed', services: registeredServices };
-    } catch(e) {
-      return { ok: false, err: e.message };
     }
+    return { ok: false, err: 'all failed' };
   }, process.env.KT_EMAIL, process.env.KT_PASSWORD);
 
   console.log('Login result:', JSON.stringify(loginResult));
-
-  // Log API calls we intercepted
-  console.log('API calls:', JSON.stringify(apiCalls.slice(-20)));
-
-  if (loginResult.ok) {
-    await page.reload({ waitUntil: 'networkidle2' });
-  }
+  await page.reload({ waitUntil: 'networkidle2', timeout: 20000 });
 
   const loggedIn = await page.evaluate(() => {
     const el = document.getElementById('logged');
     return el ? el.value : 'not-found';
   });
   console.log('Logged in:', loggedIn);
+
+  if (loggedIn !== 'true' && loggedIn !== '1') {
+    // Last resort: intercept login form, find it in the DOM (might be hidden), fill and submit
+    console.log('Trying direct form submission...');
+
+    // Navigate to login page with hash routing
+    await page.goto('https://www.kaloricketabulky.sk/#/prihlasenie', { waitUntil: 'networkidle2', timeout: 20000 });
+    await new Promise(r => setTimeout(r, 3000));
+
+    // Check for any password field now
+    const hasPw = await page.$('input[type="password"]');
+    console.log('Password field on #/prihlasenie:', !!hasPw);
+
+    if (!hasPw) {
+      // Try clicking login link/button on the page
+      const clicked = await page.evaluate(() => {
+        const links = [...document.querySelectorAll('a, button, md-button, .md-button')];
+        for (const l of links) {
+          const txt = (l.textContent || '').toLowerCase();
+          if (txt.includes('prihlás') || txt.includes('login') || txt.includes('prihlas')) {
+            l.click();
+            return txt;
+          }
+        }
+        return null;
+      });
+      console.log('Clicked login link:', clicked);
+      if (clicked) await new Promise(r => setTimeout(r, 3000));
+    }
+
+    // Try to find and fill password field
+    const pw2 = await page.$('input[type="password"]');
+    console.log('Password field after click:', !!pw2);
+
+    if (pw2) {
+      // Find all visible inputs
+      const visibleInputs = await page.evaluate(() => {
+        return [...document.querySelectorAll('input')].filter(el => el.offsetParent !== null && el.type !== 'hidden')
+          .map(el => ({ type: el.type, name: el.name, ngModel: el.getAttribute('ng-model') || '' }));
+      });
+      console.log('Visible inputs:', JSON.stringify(visibleInputs));
+
+      // Type into email-like field
+      for (const inp of visibleInputs) {
+        if (inp.type === 'email' || inp.type === 'text') {
+          const sel = inp.name ? `input[name="${inp.name}"]` : (inp.ngModel ? `input[ng-model="${inp.ngModel}"]` : null);
+          if (sel) { await page.type(sel, process.env.KT_EMAIL); break; }
+        }
+      }
+      await page.type('input[type="password"]', process.env.KT_PASSWORD);
+      await page.keyboard.press('Enter');
+      await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
+
+      const loggedIn2 = await page.evaluate(() => {
+        const el = document.getElementById('logged');
+        return el ? el.value : 'not-found';
+      });
+      console.log('Logged in after form:', loggedIn2);
+    }
+  }
 
   // Navigate to diary
   console.log('Navigating to diary...');
