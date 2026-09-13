@@ -58,63 +58,91 @@ const today = new Date().toISOString().split('T')[0];
   console.log('Logged in:', loggedIn);
 
   if (loggedIn !== 'true' && loggedIn !== '1') {
-    // Last resort: intercept login form, find it in the DOM (might be hidden), fill and submit
-    console.log('Trying direct form submission...');
+    // Find ALL inputs including hidden ones, looking for login ng-models
+    console.log('Searching for login form fields in DOM...');
+    const allInputs = await page.evaluate(() => {
+      return [...document.querySelectorAll('input')].map(el => ({
+        type: el.type, name: el.name, id: el.id,
+        ngModel: el.getAttribute('ng-model') || '',
+        visible: el.offsetParent !== null,
+        parent: el.parentElement?.className?.substring(0, 50) || ''
+      })).filter(i => i.ngModel.match(/email|password|heslo|login|user/i) || i.type === 'password');
+    });
+    console.log('Login-related inputs:', JSON.stringify(allInputs, null, 2));
 
-    // Navigate to login page with hash routing
-    await page.goto('https://www.kaloricketabulky.sk/#/prihlasenie', { waitUntil: 'networkidle2', timeout: 20000 });
-    await new Promise(r => setTimeout(r, 3000));
+    // Set values via Angular scope directly
+    const angularSetResult = await page.evaluate((email, password) => {
+      if (typeof angular === 'undefined') return 'no angular';
+      const el = document.querySelector('[ng-app]') || document.querySelector('.ng-scope') || document.body;
+      const inj = angular.element(el).injector();
+      if (!inj) return 'no injector';
+      const rs = inj.get('$rootScope');
 
-    // Check for any password field now
-    const hasPw = await page.$('input[type="password"]');
-    console.log('Password field on #/prihlasenie:', !!hasPw);
-
-    if (!hasPw) {
-      // Try clicking login link/button on the page
-      const clicked = await page.evaluate(() => {
-        const links = [...document.querySelectorAll('a, button, md-button, .md-button')];
-        for (const l of links) {
-          const txt = (l.textContent || '').toLowerCase();
-          if (txt.includes('prihlás') || txt.includes('login') || txt.includes('prihlas')) {
-            l.click();
-            return txt;
+      // Walk scope tree looking for email/password models
+      let loginScope = null;
+      function walk(scope, depth) {
+        if (!scope || depth > 20) return;
+        for (const k in scope) {
+          if (k.charAt(0) === '$' || typeof scope[k] === 'function') continue;
+          const kl = k.toLowerCase();
+          if (kl === 'email' || kl === 'loginemail' || kl === 'user') {
+            loginScope = scope;
           }
         }
+        let child = scope.$$childHead;
+        while (child) { walk(child, depth + 1); child = child.$$nextSibling; }
+      }
+      walk(rs, 0);
+
+      if (loginScope) {
+        // Try setting email/password on the scope
+        if ('email' in loginScope) loginScope.email = email;
+        if ('password' in loginScope) loginScope.password = password;
+        if ('loginEmail' in loginScope) loginScope.loginEmail = email;
+        if ('loginPassword' in loginScope) loginScope.loginPassword = password;
+        loginScope.$apply();
+        return 'set on scope: ' + Object.keys(loginScope).filter(k => k.charAt(0) !== '$' && typeof loginScope[k] !== 'function').join(', ');
+      }
+
+      // Try calling login function on rootScope
+      function findLogin(scope, depth) {
+        if (!scope || depth > 20) return null;
+        for (const k in scope) {
+          if (typeof scope[k] === 'function' && k.toLowerCase().includes('login')) {
+            return { scope, fn: k };
+          }
+        }
+        let child = scope.$$childHead;
+        while (child) {
+          const r = findLogin(child, depth + 1);
+          if (r) return r;
+          child = child.$$nextSibling;
+        }
         return null;
-      });
-      console.log('Clicked login link:', clicked);
-      if (clicked) await new Promise(r => setTimeout(r, 3000));
-    }
+      }
 
-    // Try to find and fill password field
-    const pw2 = await page.$('input[type="password"]');
-    console.log('Password field after click:', !!pw2);
-
-    if (pw2) {
-      // Find all visible inputs
-      const visibleInputs = await page.evaluate(() => {
-        return [...document.querySelectorAll('input')].filter(el => el.offsetParent !== null && el.type !== 'hidden')
-          .map(el => ({ type: el.type, name: el.name, ngModel: el.getAttribute('ng-model') || '' }));
-      });
-      console.log('Visible inputs:', JSON.stringify(visibleInputs));
-
-      // Type into email-like field
-      for (const inp of visibleInputs) {
-        if (inp.type === 'email' || inp.type === 'text') {
-          const sel = inp.name ? `input[name="${inp.name}"]` : (inp.ngModel ? `input[ng-model="${inp.ngModel}"]` : null);
-          if (sel) { await page.type(sel, process.env.KT_EMAIL); break; }
+      const loginFn = findLogin(rs, 0);
+      if (loginFn) {
+        try {
+          loginFn.scope[loginFn.fn](email, password);
+          return 'called ' + loginFn.fn;
+        } catch(e) {
+          return 'fn error: ' + e.message;
         }
       }
-      await page.type('input[type="password"]', process.env.KT_PASSWORD);
-      await page.keyboard.press('Enter');
-      await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
 
-      const loggedIn2 = await page.evaluate(() => {
-        const el = document.getElementById('logged');
-        return el ? el.value : 'not-found';
-      });
-      console.log('Logged in after form:', loggedIn2);
-    }
+      return 'no login scope/fn found';
+    }, process.env.KT_EMAIL, process.env.KT_PASSWORD);
+    console.log('Angular set result:', angularSetResult);
+
+    await new Promise(r => setTimeout(r, 3000));
+    await page.reload({ waitUntil: 'networkidle2' });
+
+    const loggedIn2 = await page.evaluate(() => {
+      const el = document.getElementById('logged');
+      return el ? el.value : 'not-found';
+    });
+    console.log('Logged in after scope manipulation:', loggedIn2);
   }
 
   // Navigate to diary
