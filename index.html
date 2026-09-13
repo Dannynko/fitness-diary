@@ -431,9 +431,14 @@
             <h1>Fitness Diary</h1>
         </header>
         <div id="ktImportStatus"></div>
-        <div style="display:flex; justify-content:flex-end; gap:6px; margin-bottom:8px;">
-            <button class="tab active" id="periodWeek" onclick="setPeriod('week')">Týždeň</button>
-            <button class="tab" id="periodMonth" onclick="setPeriod('month')">Mesiac</button>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span id="periodLabel" style="font-size:0.75rem; color:var(--text-muted);"></span>
+            <div style="display:flex; gap:6px;">
+                <button class="tab active" id="periodDay" onclick="setPeriod('day')">Deň</button>
+                <button class="tab" id="periodWeek" onclick="setPeriod('week')">Týždeň</button>
+
+                <button class="tab" id="periodMonth" onclick="setPeriod('month')">Mesiac</button>
+            </div>
         </div>
         <div class="summary-cards" style="grid-template-columns: repeat(5, 1fr);">
             <div class="summary-card calories-in">
@@ -932,15 +937,16 @@
             updateTodaySummary();
         }
 
-        let summaryPeriod = 'week';
+        let summaryPeriod = 'day';
 
         function setPeriod(p) {
             summaryPeriod = p;
+            document.getElementById('periodDay').className = 'tab' + (p === 'day' ? ' active' : '');
             document.getElementById('periodWeek').className = 'tab' + (p === 'week' ? ' active' : '');
             document.getElementById('periodMonth').className = 'tab' + (p === 'month' ? ' active' : '');
-            document.getElementById('dailyTab').style.display = p === 'week' ? 'block' : 'none';
+            document.getElementById('dailyTab').style.display = (p === 'day' || p === 'week') ? 'block' : 'none';
             document.getElementById('weeklyTab').style.display = p === 'month' ? 'block' : 'none';
-            chartPeriod = p === 'week' ? 'days' : 'weeks';
+            chartPeriod = p === 'month' ? 'weeks' : 'days';
             updateSummary();
             renderWeightChart();
         }
@@ -948,6 +954,9 @@
         function getDateRange(period) {
             const today = new Date();
             const todayStr = today.toISOString().split('T')[0];
+            if (period === 'day') {
+                return {start: goalDate, end: goalDate, days: 1};
+            }
             let startDate;
             if (period === 'week') {
                 const day = today.getDay();
@@ -967,6 +976,15 @@
         function updateSummary() {
             const range = getDateRange(summaryPeriod);
             const filtered = records.filter(r => r.date >= range.start && r.date <= range.end);
+
+            const lbl = document.getElementById('periodLabel');
+            if (summaryPeriod === 'day') {
+                lbl.textContent = formatDate(goalDate);
+            } else if (summaryPeriod === 'week') {
+                lbl.textContent = formatDate(range.start) + ' – ' + formatDate(range.end);
+            } else {
+                lbl.textContent = new Date(range.start).toLocaleDateString('sk-SK', {month: 'long', year: 'numeric'});
+            }
 
             const totalIn = filtered.reduce((s, r) => s + r.caloriesIn, 0);
             const totalProt = filtered.reduce((s, r) => s + r.protein, 0);
@@ -1355,6 +1373,7 @@
             updateGoals();
             renderDailyRecords();
             renderHealthInfo();
+            if (summaryPeriod === 'day') updateSummary();
         }
 
         function updateGoals() {
