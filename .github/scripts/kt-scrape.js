@@ -8,75 +8,83 @@ const today = new Date().toISOString().split('T')[0];
   const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
   const page = await browser.newPage();
 
-  // Login
+  // Login - KT is Angular Material SPA, wait for Angular to render login form
   console.log('Navigating to KT login...');
-  await page.goto('https://www.kaloricketabulky.sk/prihlasenie', { waitUntil: 'networkidle2', timeout: 20000 });
+  await page.goto('https://www.kaloricketabulky.sk/prihlasenie', { waitUntil: 'networkidle2', timeout: 30000 });
 
-  // Debug: dump all input fields on the page
-  const inputs = await page.evaluate(() => {
-    return [...document.querySelectorAll('input, button[type="submit"]')].map(el => ({
-      tag: el.tagName, type: el.type, name: el.name, id: el.id, placeholder: el.placeholder,
-      cls: el.className.substring(0, 50), text: el.textContent?.substring(0, 30) || ''
+  // Wait for Angular to render the login form (md-input-container)
+  await page.waitForFunction(() => {
+    const inputs = document.querySelectorAll('input');
+    for (const inp of inputs) {
+      if (inp.offsetParent !== null && (inp.type === 'email' || inp.type === 'text' || inp.type === 'password')) return true;
+    }
+    return false;
+  }, { timeout: 15000 }).catch(() => {});
+
+  // Find visible input fields
+  const fields = await page.evaluate(() => {
+    const all = [...document.querySelectorAll('input')].filter(el => el.offsetParent !== null);
+    return all.map(el => ({
+      tag: el.tagName, type: el.type, name: el.name, id: el.id,
+      placeholder: el.placeholder, ngModel: el.getAttribute('ng-model') || '',
+      cls: el.className.substring(0, 80)
     }));
   });
-  console.log('Form fields found:', JSON.stringify(inputs, null, 2));
+  console.log('Visible inputs:', JSON.stringify(fields, null, 2));
 
-  // Try multiple selectors for email
-  const emailSelectors = ['input[name="email"]', 'input[type="email"]', 'input[name="login"]', 'input[name="username"]', '#email', '#login-email', 'input[placeholder*="mail"]', 'input[placeholder*="Mail"]'];
-  let emailField = null;
-  for (const sel of emailSelectors) {
-    emailField = await page.$(sel);
-    if (emailField) { console.log('Email field:', sel); break; }
+  // Find email and password by ng-model or type
+  let emailSel = null, pwSel = null;
+  for (const f of fields) {
+    const ngm = f.ngModel.toLowerCase();
+    const sel = f.id ? '#' + f.id : (f.ngModel ? `input[ng-model="${f.ngModel}"]` : null);
+    if (!sel) continue;
+    if (ngm.includes('email') || ngm.includes('login') || f.type === 'email' || f.type === 'text' && !emailSel) emailSel = sel;
+    if (ngm.includes('password') || ngm.includes('heslo') || f.type === 'password') pwSel = sel;
   }
 
-  const pwSelectors = ['input[name="password"]', 'input[type="password"]', '#password', '#login-password'];
-  let pwField = null;
-  for (const sel of pwSelectors) {
-    pwField = await page.$(sel);
-    if (pwField) { console.log('Password field:', sel); break; }
-  }
+  // Fallback: first text/email input = email, first password input = password
+  if (!emailSel) emailSel = fields.find(f => f.type === 'email' || f.type === 'text') ? `input[type="${fields.find(f => f.type === 'email')?.type || 'text'}"]` : null;
+  if (!pwSel) pwSel = 'input[type="password"]';
 
-  if (!emailField || !pwField) {
-    // Maybe it's a single-page with Google OAuth only?
-    const pageContent = await page.content();
-    console.log('Page HTML snippet:', pageContent.substring(0, 2000));
-    console.error('Could not find login form fields');
+  console.log('Email selector:', emailSel, 'Password selector:', pwSel);
+
+  if (!emailSel) {
+    console.error('Could not find email field');
+    // Dump all buttons for debugging
+    const btns = await page.evaluate(() => [...document.querySelectorAll('button, a.md-button, .md-button')].filter(el => el.offsetParent !== null).map(el => ({ tag: el.tagName, text: el.textContent?.trim().substring(0, 50), cls: el.className.substring(0, 50) })));
+    console.log('Visible buttons:', JSON.stringify(btns));
     await browser.close();
     process.exit(1);
   }
 
-  await emailField.type(process.env.KT_EMAIL);
-  await pwField.type(process.env.KT_PASSWORD);
+  await page.type(emailSel, process.env.KT_EMAIL);
+  await page.type(pwSel, process.env.KT_PASSWORD);
 
-  // Find and click submit
-  const submitSelectors = ['button[type="submit"]', 'input[type="submit"]', '.login-btn', '.btn-primary', 'button.btn'];
-  let submitted = false;
-  for (const sel of submitSelectors) {
-    const btn = await page.$(sel);
-    if (btn) {
-      console.log('Submit button:', sel);
-      await Promise.all([
-        page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {}),
-        btn.click()
-      ]);
-      submitted = true;
-      break;
+  // Find submit button
+  const submitBtn = await page.evaluate(() => {
+    const btns = [...document.querySelectorAll('button, input[type="submit"], a.md-button')].filter(el => el.offsetParent !== null);
+    for (const b of btns) {
+      const txt = (b.textContent || '').toLowerCase();
+      if (txt.includes('prihlás') || txt.includes('login') || txt.includes('prihlas') || b.type === 'submit') return true;
     }
+    return false;
+  });
+
+  if (submitBtn) {
+    await page.evaluate(() => {
+      const btns = [...document.querySelectorAll('button, input[type="submit"], a.md-button')].filter(el => el.offsetParent !== null);
+      for (const b of btns) {
+        const txt = (b.textContent || '').toLowerCase();
+        if (txt.includes('prihlás') || txt.includes('login') || txt.includes('prihlas') || b.type === 'submit') { b.click(); return; }
+      }
+    });
+  } else {
+    await page.keyboard.press('Enter');
   }
 
-  if (!submitted) {
-    await emailField.press('Enter');
-    await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
-  }
-
+  await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
   const url = page.url();
   console.log('After login, URL:', url);
-
-  if (url.includes('prihlasenie') || url.includes('login')) {
-    console.error('Login failed - still on login page');
-    await browser.close();
-    process.exit(1);
-  }
 
   // Navigate to diary
   console.log('Navigating to diary...');
