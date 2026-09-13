@@ -520,15 +520,15 @@
             <div id="dailyTab">
                 <table>
                     <colgroup>
-                        <col style="width:37%;">
-                        <col style="width:9%;">
-                        <col style="width:9%;">
-                        <col style="width:9%;">
-                        <col style="width:9%;">
-                        <col style="width:9%;">
-                        <col style="width:9%;">
-                        <col style="width:9%;">
-                        <col style="width:24px;">
+                        <col style="width:30%;">
+                        <col style="width:10%;">
+                        <col style="width:10%;">
+                        <col style="width:10%;">
+                        <col style="width:8%;">
+                        <col style="width:10%;">
+                        <col style="width:10%;">
+                        <col style="width:10%;">
+                        <col style="width:2%;">
                     </colgroup>
                     <thead>
                         <tr>
@@ -1076,10 +1076,10 @@
                             rows += '<tr class="detail-row-' + date + '" style="display:none;font-size:0.7rem;color:var(--text-muted);line-height:1.2;">';
                             rows += '<td style="padding:1px 3px 1px 24px;' + bb + bl + bg + 'text-align:left;color:var(--text);">' + name + '</td>';
                             rows += '<td style="padding:1px 3px;' + bb + bg + 'font-size:0.65rem;">' + (amt || '') + '</td>';
-                            rows += '<td style="padding:1px 3px;' + bb + bg + '">' + r.protein.toFixed(0) + '</td>';
-                            rows += '<td style="padding:1px 3px;' + bb + bg + '">' + r.carbs.toFixed(0) + '</td>';
-                            rows += '<td style="padding:1px 3px;' + bb + bg + '">' + r.fat.toFixed(0) + '</td>';
-                            rows += '<td style="padding:1px 3px;' + bb + bg + '">' + r.caloriesIn.toFixed(0) + '</td>';
+                            rows += '<td style="padding:1px 3px;' + bb + bg + '">' + r.protein.toFixed(1) + ' g</td>';
+                            rows += '<td style="padding:1px 3px;' + bb + bg + '">' + r.carbs.toFixed(1) + ' g</td>';
+                            rows += '<td style="padding:1px 3px;' + bb + bg + '">' + r.fat.toFixed(1) + ' g</td>';
+                            rows += '<td style="padding:1px 3px;' + bb + bg + '">' + r.caloriesIn.toFixed(1) + '</td>';
                             rows += '<td colspan="3" style="' + bb + bg + '"></td>';
                             rows += '</tr>';
                         }
