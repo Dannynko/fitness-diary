@@ -1682,6 +1682,7 @@
                 saveRecords();
                 renderAll();
                 showToast('Apple Health: ' + days.length + ' dní importovaných');
+                try { await cloudSync(); } catch(e) {}
             } catch(e) {
                 showToast('Chyba: ' + e.message, true);
             }
