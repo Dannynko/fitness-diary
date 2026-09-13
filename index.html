@@ -427,15 +427,15 @@
                 <div class="value" id="sumOutput">0</div>
             </div>
             <div class="summary-card" id="balanceCard">
-                <div class="label">Rozdiel (kcal)</div>
+                <div class="label">Rozdiel (kcal) <span id="balanceTip" style="cursor:help;font-size:0.8em;opacity:0.6;">&#9432;</span></div>
                 <div class="value" id="sumBalance">0</div>
             </div>
             <div class="summary-card balance">
                 <div class="label">Bielkoviny (g)</div>
                 <div class="value" id="sumProtein">0</div>
             </div>
-            <div class="summary-card weight">
-                <div class="label">Váha (kg)</div>
+            <div class="summary-card weight" id="weightCard" style="cursor:pointer;" onclick="toggleGoalEdit()">
+                <div class="label">Váha (kg) <span id="weightTip" style="cursor:help;font-size:0.8em;opacity:0.6;">&#9432;</span></div>
                 <div class="value" id="currentWeight">-</div>
             </div>
         </div>
@@ -473,20 +473,13 @@
                     <div class="progress-bar"><div class="progress-fill" id="fatPctBar" style="width:0%; background: var(--red);"></div></div>
                 </div>
             </div>
-            <div style="margin-bottom:10px; padding:10px 12px; background:rgba(255,255,255,0.03); border-radius:8px; font-size:0.8rem;">
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
-                    <div style="display:flex; gap:20px; flex-wrap:wrap;">
-                        <div style="text-align:center;"><div style="color:var(--text-muted); font-size:0.7rem; margin-bottom:2px;">Cieľ</div><strong id="goalWeightShow">-</strong></div>
-                        <div style="text-align:center;"><div style="color:var(--text-muted); font-size:0.7rem; margin-bottom:2px;">Teraz</div><strong id="currentWeightGoal">-</strong></div>
-                        <div style="text-align:center;"><div style="color:var(--text-muted); font-size:0.7rem; margin-bottom:2px;">Zostáva</div><strong id="weightToLose">-</strong></div>
-                        <div style="text-align:center;"><div style="color:var(--text-muted); font-size:0.7rem; margin-bottom:2px;">Deficit/deň</div><strong id="avgDeficit">-</strong></div>
-                        <div style="text-align:center;"><div style="color:var(--text-muted); font-size:0.7rem; margin-bottom:2px;">Tempo</div><strong id="weeklyLossRate">-</strong></div>
-                        <div style="text-align:center;"><div style="color:var(--text-muted); font-size:0.7rem; margin-bottom:2px;">Odhad</div><strong id="estWeeks">-</strong></div>
-                    </div>
-                    <span style="cursor:pointer;color:var(--accent);font-size:0.75rem;" onclick="toggleGoalEdit()" id="goalEditBtn">Upraviť ciele</span>
-                </div>
-                <div id="goalAdvice" style="font-size:0.75rem; color:var(--text-muted); padding-top:6px; border-top:1px solid var(--card-border); line-height:1.5;"></div>
-            </div>
+            <div id="goalAdvice" style="display:none;"></div>
+            <span id="goalWeightShow" style="display:none;"></span>
+            <span id="currentWeightGoal" style="display:none;"></span>
+            <span id="weightToLose" style="display:none;"></span>
+            <span id="avgDeficit" style="display:none;"></span>
+            <span id="weeklyLossRate" style="display:none;"></span>
+            <span id="estWeeks" style="display:none;"></span>
             <div id="healthInfo" style="display:none; gap:15px; flex-wrap:wrap; margin-bottom:8px; padding:8px 12px; background:rgba(79,195,247,0.08); border-radius:8px; font-size:0.75rem;"></div>
             <div id="goalEdit" style="display:none; margin-bottom:10px;">
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px;">
@@ -1416,6 +1409,18 @@
                 advice.push('Zatiaľ nemáš dosť dát. Importuj jedlá z KT alebo pridaj záznamy váhy.');
             }
             document.getElementById('goalAdvice').innerHTML = advice.join('<br>');
+
+            const weightTip = 'Cieľ: ' + goals.weight + ' kg\n'
+                + 'Teraz: ' + (curW || '-') + ' kg\n'
+                + 'Zostáva: ' + (kgToLose > 0 ? kgToLose.toFixed(1) : '0') + ' kg\n'
+                + 'Tempo: ' + (weeklyLossKg > 0 ? weeklyLossKg.toFixed(2) + ' kg/týž' : '-') + '\n'
+                + 'Odhad: ' + document.getElementById('estWeeks').textContent;
+            document.getElementById('weightCard').title = weightTip;
+
+            const plainAdvice = advice.map(a => a.replace(/<[^>]*>/g, '')).join('\n');
+            const balanceTip = 'Deficit/deň: ' + (dailyDeficit > 0 ? Math.round(dailyDeficit) + ' kcal' : 'Žiadny') + '\n' + plainAdvice;
+            document.getElementById('balanceCard').title = balanceTip;
+
             renderHealthInfo();
         }
 
