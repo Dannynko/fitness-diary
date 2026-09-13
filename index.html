@@ -419,20 +419,18 @@
             </div>
         </header>
         <div id="ktImportStatus"></div>
-        <div class="summary-cards" style="grid-template-columns: repeat(3, 1fr);">
-            <div class="summary-card calories-out">
-                <div class="label">Výdaj (kcal)</div>
-                <div class="value" id="sumExpenditure">0</div>
-                <div style="font-size:0.65rem; color:var(--text-muted); margin-top:2px;">
-                    <span id="sumBazalLabel">Bazál 0</span> + <span id="sumActiveLabel">Aktív 0</span>
-                </div>
-                <div style="font-size:0.7rem; margin-top:4px;">
-                    Príjem <strong id="sumCalories">0</strong> · <span id="sumBalance" style="font-weight:600;">0</span>
-                </div>
+        <div class="summary-cards" style="grid-template-columns: repeat(4, 1fr);">
+            <div class="summary-card calories-in">
+                <div class="label">Príjem (kcal)</div>
+                <div class="value" id="sumCalories">0</div>
             </div>
             <div class="summary-card balance">
                 <div class="label">Bielkoviny (g)</div>
                 <div class="value" id="sumProtein">0</div>
+            </div>
+            <div class="summary-card calories-out">
+                <div class="label">Výdaj (kcal)</div>
+                <div class="value" id="sumOutput">0</div>
             </div>
             <div class="summary-card weight">
                 <div class="label">Váha (kg)</div>
@@ -942,20 +940,11 @@
 
             const totalIn = filtered.reduce((s, r) => s + r.caloriesIn, 0);
             const totalProt = filtered.reduce((s, r) => s + r.protein, 0);
-            const totalActive = filtered.reduce((s, r) => s + r.caloriesOut, 0);
-            const daysInRange = new Set(filtered.map(r => r.date)).size || 1;
-            const totalBazal = goals.bazal * daysInRange;
-            const totalExpenditure = totalBazal + totalActive;
-            const balance = totalIn - totalExpenditure;
+            const totalOut = filtered.reduce((s, r) => s + r.caloriesOut, 0);
 
-            document.getElementById('sumExpenditure').textContent = totalExpenditure.toFixed(0);
-            document.getElementById('sumBazalLabel').textContent = 'Bazál ' + totalBazal.toFixed(0);
-            document.getElementById('sumActiveLabel').textContent = 'Aktív ' + totalActive.toFixed(0);
             document.getElementById('sumCalories').textContent = totalIn.toFixed(0);
-            const balEl = document.getElementById('sumBalance');
-            balEl.textContent = (balance > 0 ? '+' : '') + balance.toFixed(0);
-            balEl.style.color = balance > 0 ? 'var(--red)' : 'var(--green)';
             document.getElementById('sumProtein').textContent = totalProt.toFixed(1);
+            document.getElementById('sumOutput').textContent = totalOut.toFixed(0);
 
             const latestWeight = records
                 .filter(r => r.weight != null && r.weight > 0)
@@ -1725,7 +1714,6 @@
             if (!today) { el.style.display = 'none'; return; }
             el.style.display = 'flex';
             let html = '';
-            if (today.activeCalories) html += '<span>🔥 ' + today.activeCalories + ' kcal</span>';
             if (today.steps) html += '<span>👟 ' + today.steps.toLocaleString() + ' krokov</span>';
             if (today.vo2max) html += '<span>❤️ VO₂ ' + today.vo2max + '</span>';
             if (today.sleepHours) html += '<span>😴 ' + today.sleepHours.toFixed(1) + ' h</span>';
