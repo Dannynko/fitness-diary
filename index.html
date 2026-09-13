@@ -419,18 +419,22 @@
             </div>
         </header>
         <div id="ktImportStatus"></div>
-        <div class="summary-cards" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="summary-cards" style="grid-template-columns: repeat(5, 1fr);">
             <div class="summary-card calories-in">
                 <div class="label">Príjem (kcal)</div>
                 <div class="value" id="sumCalories">0</div>
             </div>
-            <div class="summary-card balance">
-                <div class="label">Bielkoviny (g)</div>
-                <div class="value" id="sumProtein">0</div>
-            </div>
             <div class="summary-card calories-out">
                 <div class="label">Výdaj (kcal)</div>
                 <div class="value" id="sumOutput">0</div>
+            </div>
+            <div class="summary-card" id="balanceCard">
+                <div class="label">Rozdiel (kcal)</div>
+                <div class="value" id="sumBalance">0</div>
+            </div>
+            <div class="summary-card balance">
+                <div class="label">Bielkoviny (g)</div>
+                <div class="value" id="sumProtein">0</div>
             </div>
             <div class="summary-card weight">
                 <div class="label">Váha (kg)</div>
@@ -945,6 +949,11 @@
             document.getElementById('sumCalories').textContent = totalIn.toFixed(0);
             document.getElementById('sumProtein').textContent = totalProt.toFixed(1);
             document.getElementById('sumOutput').textContent = totalOut.toFixed(0);
+            const balance = totalIn - totalOut;
+            const balEl = document.getElementById('sumBalance');
+            balEl.textContent = (balance > 0 ? '+' : '') + balance.toFixed(0);
+            balEl.style.color = balance > 0 ? 'var(--red)' : 'var(--green)';
+            document.getElementById('balanceCard').style.borderColor = balance > 0 ? 'var(--red)' : 'var(--green)';
 
             const latestWeight = records
                 .filter(r => r.weight != null && r.weight > 0)
