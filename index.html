@@ -251,6 +251,8 @@
         th { background: rgba(79, 195, 247, 0.08); color: var(--accent); font-weight: 600; border-bottom: none; }
         thead tr th:first-child { border-radius: 8px 0 0 8px; }
         thead tr th:last-child { border-radius: 0 8px 8px 0; }
+        th:nth-child(n+3):nth-child(-n+5), td:nth-child(n+3):nth-child(-n+5),
+        th:nth-child(n+7):nth-child(-n+9), td:nth-child(n+7):nth-child(-n+9) { text-align: right; }
         th:nth-child(6), td:nth-child(6) { padding: 0; border-bottom: none; }
         tr:hover { background: rgba(255, 255, 255, 0.05); }
         .positive { color: var(--green); }
