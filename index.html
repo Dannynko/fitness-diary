@@ -428,12 +428,22 @@
             .form-grid { grid-template-columns: 1fr; }
             .summary-cards { grid-template-columns: 1fr; }
         }
+        .delete-confirm {
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            background: rgba(255,70,70,0.25);
+            border-radius: 50%;
+            animation: shake 0.35s ease;
+        }
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
-            20% { transform: translateX(-4px); }
-            40% { transform: translateX(4px); }
-            60% { transform: translateX(-3px); }
-            80% { transform: translateX(3px); }
+            20% { transform: translateX(-3px); }
+            40% { transform: translateX(3px); }
+            60% { transform: translateX(-2px); }
+            80% { transform: translateX(2px); }
         }
     </style>
 </head>
@@ -934,20 +944,13 @@
             }
             if (_pendingDelete) resetDeleteConfirm();
             _pendingDelete = date;
-            el.style.background = 'rgba(255,70,70,0.15)';
-            el.style.borderRadius = '4px';
-            el.style.padding = '2px 6px';
-            el.style.animation = 'shake 0.4s';
+            el.classList.add('delete-confirm');
             el.dataset.pendingDelete = '1';
-            setTimeout(() => { el.style.animation = ''; }, 400);
         }
         function resetDeleteConfirm() {
             _pendingDelete = null;
             document.querySelectorAll('[data-pending-delete]').forEach(el => {
-                el.style.background = '';
-                el.style.borderRadius = '';
-                el.style.padding = '';
-                el.style.animation = '';
+                el.classList.remove('delete-confirm');
                 delete el.dataset.pendingDelete;
             });
         }
