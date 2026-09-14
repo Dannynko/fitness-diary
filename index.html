@@ -1385,6 +1385,7 @@
             goals.carbs = parseFloat(document.getElementById('goalCarbs').value) || 200;
             goals.fat = parseFloat(document.getElementById('goalFat').value) || 60;
             goals.weight = parseFloat(document.getElementById('goalWeight').value) || 80;
+            goals.updatedAt = new Date().toISOString();
             localStorage.setItem('fitnessGoals', JSON.stringify(goals));
             toggleGoalEdit();
             updateGoals();
@@ -1793,7 +1794,7 @@
                 const allHealth = [...(localData.healthData || []), ...(remoteData.healthData || [])];
                 const mergedHealth = dedup(allHealth, h => h.date + (h.type || ''));
 
-                const mergedGoals = remoteData.goals || localData.goals;
+                const mergedGoals = (localData.goals.updatedAt && (!remoteData.goals || !remoteData.goals.updatedAt || localData.goals.updatedAt > remoteData.goals.updatedAt)) ? localData.goals : (remoteData.goals || localData.goals);
 
                 records = mergedRecords;
                 saveRecords();
