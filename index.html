@@ -1793,7 +1793,7 @@
                 const allHealth = [...(localData.healthData || []), ...(remoteData.healthData || [])];
                 const mergedHealth = dedup(allHealth, h => h.date + (h.type || ''));
 
-                const mergedGoals = (remoteData.lastSync && (!localData.lastSync || remoteData.lastSync > localData.lastSync)) ? (remoteData.goals || localData.goals) : localData.goals;
+                const mergedGoals = remoteData.goals || localData.goals;
 
                 records = mergedRecords;
                 saveRecords();
