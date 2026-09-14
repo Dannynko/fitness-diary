@@ -1832,6 +1832,9 @@
 
         // ===== APPLE HEALTH IMPORT =====
         function processHealthDay(day) {
+            day.activeCalories = parseFloat(day.activeCalories) || 0;
+            if (day.steps) day.steps = parseFloat(day.steps) || 0;
+            if (day.sleepHours) day.sleepHours = parseFloat(day.sleepHours) || 0;
             let healthData = JSON.parse(localStorage.getItem('healthData') || '[]');
             healthData = healthData.filter(h => h.date !== day.date);
             healthData.push(day);
