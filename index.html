@@ -860,9 +860,9 @@
             window.dispatchEvent(new CustomEvent('kt-sync-request'));
         }
 
-        window.addEventListener('kt-sync-response', function(e) {
+        window.addEventListener('kt-sync-response', async function(e) {
             const btn = document.getElementById('ktImportBtn');
-            btn.textContent = 'KT Import';
+            btn.textContent = 'Import dát';
             btn.disabled = false;
             btn.style.opacity = '1';
 
@@ -874,70 +874,20 @@
 
             if (!response.success) {
                 showToast(response.error || 'Chyba importu', true);
-                if (response.debug) {
-                    document.getElementById('ktImportStatus').innerHTML =
-                        '<p style="color: var(--orange); font-size: 0.8rem; margin-top: 5px; word-break: break-all;">DEBUG: ' + response.debug + '</p>';
-                }
                 return;
             }
 
+            try { await cloudSync(true); } catch(ex) {}
+            renderAll();
+
             if (!response.items || response.items.length === 0) {
-                if (response.syncDate) {
-                    const before = records.length;
-                    records = records.filter(r => !(r.source === 'kt' && r.date === response.syncDate));
-                    if (records.length < before) {
-                        localStorage.setItem('calorieRecords', JSON.stringify(records));
-                        renderAll();
-                    }
-                }
                 showToast('KT denník prázdny — záznamy vymazané');
                 return;
             }
 
-            if (response.debug) console.log('KT debug:', response.debug);
-            importKtJson(response.items);
+            showToast('Importovaných ' + response.count + ' položiek z KT (posledné 3 dni)');
         });
 
-        function importKtJson(items) {
-            if (!Array.isArray(items) || items.length === 0) return;
-
-            const dates = new Set(items.map(i => i.d || new Date().toISOString().split('T')[0]));
-            const before = records.length;
-            records = records.filter(r => !(r.source === 'kt' && dates.has(r.date)));
-            const removed = before - records.length;
-
-            let imported = 0;
-            for (const item of items) {
-                const date = item.d || new Date().toISOString().split('T')[0];
-                const protein = pn(item.p);
-                const carbs = pn(item.c);
-                const fat = pn(item.f);
-                const energy = pn(item.e);
-                const caloriesIn = energy || (protein * 4 + carbs * 4 + fat * 9);
-                if (caloriesIn === 0 && protein === 0) continue;
-                const foodName = item.t || '';
-                const amount = item.a || '';
-                const meal = item.m || '';
-                const title = foodName + (amount ? ' (' + amount + ')' : '');
-                records.push({
-                    id: Date.now() + Math.random(),
-                    date, protein, carbs, fat, caloriesIn,
-                    caloriesOut: 0, weight: null,
-                    source: 'kt', ktId: title + '_' + date + '_' + energy,
-                    foodName, amount, meal
-                });
-                imported++;
-            }
-            if (imported > 0) {
-                localStorage.setItem('calorieRecords', JSON.stringify(records));
-                renderAll();
-                const importDate = items[0]?.d || '?';
-                showToast('Importovaných ' + imported + ' položiek z KT pre ' + importDate + (removed > 0 ? ' (nahradených ' + removed + ')' : ''));
-                setTimeout(() => cloudSync(true), 1000);
-            } else {
-                showToast('Žiadne jedlá na import', true);
-            }
-        }
 
         function pn(str) {
             if (!str) return 0;
