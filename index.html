@@ -932,6 +932,7 @@
             document.getElementById('weeklyTab').style.display = p === 'month' ? 'block' : 'none';
             chartPeriod = p === 'month' ? 'weeks' : 'days';
             updateSummary();
+            updateGoals();
             renderDailyRecords();
             renderWeightChart();
         }
@@ -1395,24 +1396,45 @@
 
         function shiftGoalDate(delta) {
             const d = new Date(goalDate);
-            d.setDate(d.getDate() + delta);
+            d.setDate(d.getDate() + (summaryPeriod === 'week' ? delta * 7 : delta));
             goalDate = d.toISOString().split('T')[0];
             updateGoals();
             renderDailyRecords();
             renderHealthInfo();
-            if (summaryPeriod === 'day') updateSummary();
+            if (summaryPeriod === 'day' || summaryPeriod === 'week') updateSummary();
         }
 
         function updateGoals() {
-            document.getElementById('goalDateLabel').textContent = formatDate(goalDate, true);
-            const todayRecs = records.filter(r => r.date === goalDate && r.source !== 'weight');
-            const tCals = todayRecs.reduce((s, r) => s + r.caloriesIn, 0);
-            const tProt = todayRecs.reduce((s, r) => s + r.protein, 0);
-            const tCarbs = todayRecs.reduce((s, r) => s + r.carbs, 0);
-            const tFat = todayRecs.reduce((s, r) => s + r.fat, 0);
-
-            const todayActive = todayRecs.reduce((s, r) => s + r.caloriesOut, 0);
-            const todayExpenditure = goals.bazal + todayActive;
+            let tCals, tProt, tCarbs, tFat, todayExpenditure;
+            if (summaryPeriod === 'week') {
+                const gd = new Date(goalDate + 'T12:00:00');
+                const dow = gd.getDay();
+                const monOffset = dow === 0 ? 6 : dow - 1;
+                const mon = new Date(gd);
+                mon.setDate(gd.getDate() - monOffset);
+                const sun = new Date(mon);
+                sun.setDate(mon.getDate() + 6);
+                const monStr = mon.toISOString().split('T')[0];
+                const sunStr = sun.toISOString().split('T')[0];
+                document.getElementById('goalDateLabel').textContent = formatDate(monStr) + ' – ' + formatDate(sunStr);
+                const weekRecs = records.filter(r => r.date >= monStr && r.date <= sunStr && r.source !== 'weight');
+                const daysWithData = new Set(weekRecs.map(r => r.date)).size || 1;
+                tCals = weekRecs.reduce((s, r) => s + r.caloriesIn, 0) / daysWithData;
+                tProt = weekRecs.reduce((s, r) => s + r.protein, 0) / daysWithData;
+                tCarbs = weekRecs.reduce((s, r) => s + r.carbs, 0) / daysWithData;
+                tFat = weekRecs.reduce((s, r) => s + r.fat, 0) / daysWithData;
+                const weekActive = weekRecs.reduce((s, r) => s + r.caloriesOut, 0) / daysWithData;
+                todayExpenditure = goals.bazal + weekActive;
+            } else {
+                document.getElementById('goalDateLabel').textContent = formatDate(goalDate, true);
+                const todayRecs = records.filter(r => r.date === goalDate && r.source !== 'weight');
+                tCals = todayRecs.reduce((s, r) => s + r.caloriesIn, 0);
+                tProt = todayRecs.reduce((s, r) => s + r.protein, 0);
+                tCarbs = todayRecs.reduce((s, r) => s + r.carbs, 0);
+                tFat = todayRecs.reduce((s, r) => s + r.fat, 0);
+                const todayActive = todayRecs.reduce((s, r) => s + r.caloriesOut, 0);
+                todayExpenditure = goals.bazal + todayActive;
+            }
             document.getElementById('goalBazalShow').textContent = Math.round(todayExpenditure);
             document.getElementById('todayCalsShow').textContent = tCals.toFixed(0);
             const calsPct = Math.min(100, Math.round(tCals / todayExpenditure * 100));
