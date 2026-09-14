@@ -798,6 +798,16 @@
                 location.reload();
                 return;
             }
+            if (!localStorage.getItem('fix_20260914')) {
+                let lr = JSON.parse(localStorage.getItem('records') || '[]');
+                lr = lr.filter(r => !(r.source === 'kt' && r.date === '2026-09-14'));
+                localStorage.setItem('records', JSON.stringify(lr));
+                let hd = JSON.parse(localStorage.getItem('healthData') || '[]');
+                hd = hd.filter(h => h.date !== '2026-09-14');
+                localStorage.setItem('healthData', JSON.stringify(hd));
+                localStorage.setItem('fix_20260914', '1');
+                records = lr.filter(r => !r.source || r.source !== 'kt' || r.date !== '2026-09-14');
+            }
             document.getElementById('weightDate').valueAsDate = new Date();
             renderAll();
             try { await cloudSync(); } catch(e) { console.error('sync init err', e); }
