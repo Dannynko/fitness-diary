@@ -966,7 +966,9 @@
             if (summaryPeriod === 'day') {
                 lbl.textContent = formatDate(goalDate, true);
             } else if (summaryPeriod === 'week') {
-                lbl.textContent = formatDate(range.start) + ' – ' + formatDate(range.end);
+                const sun = new Date(range.start + 'T12:00:00');
+                sun.setDate(sun.getDate() + 6);
+                lbl.textContent = formatDate(range.start) + ' – ' + formatDate(sun.toISOString().split('T')[0]);
             } else {
                 lbl.textContent = new Date(range.start).toLocaleDateString('sk-SK', {month: 'long', year: 'numeric'});
             }
