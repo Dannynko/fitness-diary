@@ -993,15 +993,15 @@
             const totalProt = filtered.reduce((s, r) => s + r.protein, 0);
             const totalOut = filtered.reduce((s, r) => s + r.caloriesOut, 0);
 
-            const totalDays = summaryPeriod === 'day' ? 1 : range.days;
-            const avgIn = totalIn / totalDays;
-            const avgProt = totalProt / totalDays;
-            const avgOut = totalOut / totalDays;
+            const daysWithData = new Set(filtered.filter(r => r.source !== 'weight').map(r => r.date)).size || 1;
+            const avgIn = totalIn / daysWithData;
+            const avgProt = totalProt / daysWithData;
+            const avgOut = totalOut / daysWithData;
 
             document.getElementById('sumCalories').textContent = avgIn.toFixed(0);
             const inputTip = summaryPeriod === 'day'
                 ? 'Celkový príjem za ' + formatDate(goalDate)
-                : 'Denný priemer za ' + totalDays + ' dní\nCelkom: ' + totalIn.toFixed(0) + ' kcal';
+                : 'Denný priemer z ' + daysWithData + ' dní so záznamami\nCelkom: ' + totalIn.toFixed(0) + ' kcal';
             document.getElementById('inputCard').dataset.tip = inputTip;
             const latestW = records.filter(r => r.weight != null && r.weight > 0).sort((a, b) => b.date.localeCompare(a.date))[0];
             const perKg = latestW ? '<span style="font-size:0.55em;color:var(--text-muted);"> (' + (avgProt / latestW.weight).toFixed(1) + ' g/kg)</span>' : '';
@@ -1438,12 +1438,12 @@
                 const mEndStr = mEnd.toISOString().split('T')[0];
                 document.getElementById('goalDateLabel').textContent = gd.toLocaleDateString('sk-SK', {month: 'long', year: 'numeric'});
                 const monthRecs = records.filter(r => r.date >= mStartStr && r.date <= mEndStr && r.source !== 'weight');
-                const totalDays = Math.round((mEnd - mStart) / 86400000) + 1;
-                tCals = monthRecs.reduce((s, r) => s + r.caloriesIn, 0) / totalDays;
-                tProt = monthRecs.reduce((s, r) => s + r.protein, 0) / totalDays;
-                tCarbs = monthRecs.reduce((s, r) => s + r.carbs, 0) / totalDays;
-                tFat = monthRecs.reduce((s, r) => s + r.fat, 0) / totalDays;
-                const mActive = monthRecs.reduce((s, r) => s + r.caloriesOut, 0) / totalDays;
+                const daysWithData = new Set(monthRecs.map(r => r.date)).size || 1;
+                tCals = monthRecs.reduce((s, r) => s + r.caloriesIn, 0) / daysWithData;
+                tProt = monthRecs.reduce((s, r) => s + r.protein, 0) / daysWithData;
+                tCarbs = monthRecs.reduce((s, r) => s + r.carbs, 0) / daysWithData;
+                tFat = monthRecs.reduce((s, r) => s + r.fat, 0) / daysWithData;
+                const mActive = monthRecs.reduce((s, r) => s + r.caloriesOut, 0) / daysWithData;
                 todayExpenditure = goals.bazal + mActive;
             } else if (summaryPeriod === 'week') {
                 const gd = new Date(goalDate + 'T12:00:00');
@@ -1457,11 +1457,12 @@
                 const sunStr = sun.toISOString().split('T')[0];
                 document.getElementById('goalDateLabel').textContent = formatDate(monStr) + ' – ' + formatDate(sunStr);
                 const weekRecs = records.filter(r => r.date >= monStr && r.date <= sunStr && r.source !== 'weight');
-                tCals = weekRecs.reduce((s, r) => s + r.caloriesIn, 0) / 7;
-                tProt = weekRecs.reduce((s, r) => s + r.protein, 0) / 7;
-                tCarbs = weekRecs.reduce((s, r) => s + r.carbs, 0) / 7;
-                tFat = weekRecs.reduce((s, r) => s + r.fat, 0) / 7;
-                const weekActive = weekRecs.reduce((s, r) => s + r.caloriesOut, 0) / 7;
+                const daysWithData = new Set(weekRecs.map(r => r.date)).size || 1;
+                tCals = weekRecs.reduce((s, r) => s + r.caloriesIn, 0) / daysWithData;
+                tProt = weekRecs.reduce((s, r) => s + r.protein, 0) / daysWithData;
+                tCarbs = weekRecs.reduce((s, r) => s + r.carbs, 0) / daysWithData;
+                tFat = weekRecs.reduce((s, r) => s + r.fat, 0) / daysWithData;
+                const weekActive = weekRecs.reduce((s, r) => s + r.caloriesOut, 0) / daysWithData;
                 todayExpenditure = goals.bazal + weekActive;
             } else {
                 document.getElementById('goalDateLabel').textContent = formatDate(goalDate, true);
