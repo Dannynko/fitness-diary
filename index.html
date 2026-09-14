@@ -937,6 +937,7 @@
 
         function saveRecords() {
             localStorage.setItem('calorieRecords', JSON.stringify(records));
+            scheduleSync();
         }
 
         function renderAll() {
@@ -1385,6 +1386,7 @@
             toggleGoalEdit();
             updateGoals();
             showToast('Ciele uložené');
+            scheduleSync();
         }
 
         let goalDate = new Date().toISOString().split('T')[0];
@@ -1571,12 +1573,14 @@
             localStorage.setItem('bodyMeasurements', JSON.stringify(measurements));
             renderMeasurements();
             showToast('Miery uložené');
+            scheduleSync();
         }
 
         function deleteMeasurement(date) {
             measurements = measurements.filter(m => m.date !== date);
             localStorage.setItem('bodyMeasurements', JSON.stringify(measurements));
             renderMeasurements();
+            scheduleSync();
         }
 
         function renderMeasurements() {
@@ -1633,12 +1637,14 @@
             document.getElementById('exWeight').value = '';
             renderExercises();
             showToast('Cvik pridaný');
+            scheduleSync();
         }
 
         function deleteExercise(id) {
             exercises = exercises.filter(e => e.id !== id);
             localStorage.setItem('exerciseLog', JSON.stringify(exercises));
             renderExercises();
+            scheduleSync();
         }
 
         function renderExercises() {
@@ -1680,6 +1686,13 @@
             localStorage.setItem('ghSyncToken', token);
             localStorage.setItem('ghSyncGistId', gistId);
             showToast('Sync nastavenia uložené');
+        }
+
+        let _syncTimer = null;
+        function scheduleSync() {
+            if (_syncing) return;
+            clearTimeout(_syncTimer);
+            _syncTimer = setTimeout(() => cloudSync(), 2000);
         }
 
         let _syncing = false;
