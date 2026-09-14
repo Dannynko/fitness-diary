@@ -792,6 +792,12 @@
         });
 
         document.addEventListener('DOMContentLoaded', async () => {
+            if (new URLSearchParams(location.search).has('reset')) {
+                localStorage.clear();
+                history.replaceState(null, '', location.pathname);
+                location.reload();
+                return;
+            }
             document.getElementById('weightDate').valueAsDate = new Date();
             renderAll();
             try { await cloudSync(); } catch(e) { console.error('sync init err', e); }
