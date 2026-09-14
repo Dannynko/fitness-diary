@@ -549,6 +549,7 @@
                             <th>Bielk.</th>
                             <th>Sach.</th>
                             <th>Tuky</th>
+                            <th></th>
                             <th>Prij.</th>
                             <th>Spál.</th>
                             <th>Rozd.</th>
@@ -556,7 +557,7 @@
                         </tr>
                     </thead>
                     <tbody id="dailyRecords">
-                        <tr><td colspan="8" class="no-data">Žiadne záznamy</td></tr>
+                        <tr><td colspan="9" class="no-data">Žiadne záznamy</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -576,7 +577,7 @@
                         </tr>
                     </thead>
                     <tbody id="weeklyRecords">
-                        <tr><td colspan="8" class="no-data">Žiadne záznamy</td></tr>
+                        <tr><td colspan="9" class="no-data">Žiadne záznamy</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1038,6 +1039,7 @@
                     <td>${d.protein.toFixed(1)} g</td>
                     <td>${d.carbs.toFixed(1)} g</td>
                     <td>${d.fat.toFixed(1)} g</td>
+                    <td></td>
                     <td>${d.caloriesIn.toFixed(0)}</td>
                     <td>${d.caloriesOut.toFixed(0)}</td>
                     <td class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(0)}</td>
@@ -1060,7 +1062,7 @@
                         const mProt = mItems.reduce((s, r) => s + r.protein, 0);
                         const mCals = mItems.reduce((s, r) => s + r.caloriesIn, 0);
                         const mProtRatio = mCals > 0 ? (mProt / mCals * 100).toFixed(1) : 0;
-                        rows += '<tr class="detail-row-' + date + '" style="display:none;"><td colspan="8" style="padding:3px 3px 1px 20px;border-bottom:none;' + bl + bg + '"><strong style="color:var(--accent);font-size:0.7rem;">' + meal + '</strong><span style="font-size:0.65rem;color:var(--text-muted);margin-left:8px;">' + mProt.toFixed(0) + ' g bielk. · ' + mCals.toFixed(0) + ' kcal (' + mProtRatio + ' g/100 kcal)</span></td></tr>';
+                        rows += '<tr class="detail-row-' + date + '" style="display:none;"><td colspan="9" style="padding:3px 3px 1px 20px;border-bottom:none;' + bl + bg + '"><strong style="color:var(--accent);font-size:0.7rem;">' + meal + '</strong><span style="font-size:0.65rem;color:var(--text-muted);margin-left:8px;">' + mProt.toFixed(0) + ' g bielk. · ' + mCals.toFixed(0) + ' kcal (' + mProtRatio + ' g/100 kcal)</span></td></tr>';
                         for (const r of mItems) {
                             const name = r.foodName || r.ktId || '?';
                             const amt = r.amount || '';
@@ -1070,6 +1072,7 @@
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.protein.toFixed(1) + ' g</td>';
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.carbs.toFixed(1) + ' g</td>';
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.fat.toFixed(1) + ' g</td>';
+                            rows += '<td style="padding:0;' + sb + bg + '"></td>';
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.caloriesIn.toFixed(1) + ' kcal</td>';
                             rows += '<td colspan="3" style="' + sb + bg + '"></td>';
                             rows += '</tr>';
@@ -1079,7 +1082,7 @@
                 }
             }
             if (html === '') {
-                html = '<tr><td colspan="8" class="no-data">Žiadne záznamy pre ' + formatDate(datesToShow[0]) + '</td></tr>';
+                html = '<tr><td colspan="9" class="no-data">Žiadne záznamy pre ' + formatDate(datesToShow[0]) + '</td></tr>';
             }
             tbody.innerHTML = html;
         }
@@ -1096,7 +1099,7 @@
         function renderWeeklyRecords() {
             const tbody = document.getElementById('weeklyRecords');
             if (records.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="no-data">Žiadne záznamy</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="no-data">Žiadne záznamy</td></tr>';
                 return;
             }
 
@@ -1581,7 +1584,7 @@
         function renderMeasurements() {
             const tbody = document.getElementById('measureHistory');
             if (measurements.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="no-data" style="padding:15px;">Žiadne záznamy</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="no-data" style="padding:15px;">Žiadne záznamy</td></tr>';
                 document.getElementById('ratioCards').innerHTML = '';
                 return;
             }
