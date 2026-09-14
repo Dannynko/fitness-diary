@@ -431,7 +431,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({
         success: true,
         items: resultItems.map(i => ({ t: i.t, a: i.a, e: i.e, p: i.p, c: i.c, f: i.f, d: i.d, m: i.m })),
-        count: resultItems.length
+        count: resultItems.length,
+        syncDate: isoDate
       });
     });
   });

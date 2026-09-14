@@ -874,11 +874,17 @@
             }
 
             if (!response.items || response.items.length === 0) {
-                showToast('Denník je prázdny', true);
+                if (response.syncDate) {
+                    const before = records.length;
+                    records = records.filter(r => !(r.source === 'kt' && r.date === response.syncDate));
+                    if (records.length < before) {
+                        localStorage.setItem('calorieRecords', JSON.stringify(records));
+                        renderAll();
+                    }
+                }
+                showToast('KT denník prázdny — záznamy vymazané');
                 return;
             }
-
-            console.log('KT import debug:', {foodSample: response.foodSample, matched: response.matchedKeys, numbers: response.allNumbers});
 
             importKtJson(response.items);
         });
