@@ -548,68 +548,40 @@
 
             <div id="dailyTab">
                 <table>
-                    <colgroup>
-                        <col style="width:28%;">
-                        <col style="width:15%;">
-                        <col style="width:7%;">
-                        <col style="width:7%;">
-                        <col style="width:7%;">
-                        <col style="width:1%;">
-                        <col style="width:7%;">
-                        <col style="width:7%;">
-                        <col style="width:7%;">
-                        <col style="width:2%;">
-                    </colgroup>
                     <thead>
                         <tr>
-                            <th>Dátum</th>
-                            <th></th>
+                            <th style="text-align:left;">Dátum</th>
                             <th>Bielk.</th>
                             <th>Sach.</th>
-                            <th>Tuky</th>
-                            <th></th>
-                            <th>Prij.</th>
-                            <th>Spál.</th>
-                            <th>Rozd.</th>
+                            <th style="padding-right:16px;">Tuky</th>
+                            <th>Prijaté</th>
+                            <th>Spálené</th>
+                            <th>Rozdiel</th>
                             <th></th>
                         </tr>
                     </thead>
                     <tbody id="dailyRecords">
-                        <tr><td colspan="10" class="no-data">Žiadne záznamy</td></tr>
+                        <tr><td colspan="8" class="no-data">Žiadne záznamy</td></tr>
                     </tbody>
                 </table>
             </div>
 
             <div id="weeklyTab" style="display: none;">
                 <table>
-                    <colgroup>
-                        <col style="width:28%;">
-                        <col style="width:15%;">
-                        <col style="width:7%;">
-                        <col style="width:7%;">
-                        <col style="width:7%;">
-                        <col style="width:1%;">
-                        <col style="width:7%;">
-                        <col style="width:7%;">
-                        <col style="width:7%;">
-                        <col style="width:2%;">
-                    </colgroup>
                     <thead>
                         <tr>
-                            <th>Týždeň</th>
-                            <th></th>
+                            <th style="text-align:left;">Týždeň</th>
                             <th>Bielk.</th>
                             <th>Sach.</th>
-                            <th>Tuky</th>
-                            <th></th>
-                            <th>Prij.</th>
-                            <th>Spál.</th>
-                            <th>Rozd.</th>
+                            <th style="padding-right:16px;">Tuky</th>
+                            <th>Prijaté</th>
+                            <th>Spálené</th>
+                            <th>Rozdiel</th>
                             <th></th>
                         </tr>
                     </thead>
                     <tbody id="weeklyRecords">
-                        <tr><td colspan="10" class="no-data">Žiadne záznamy</td></tr>
+                        <tr><td colspan="8" class="no-data">Žiadne záznamy</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1093,11 +1065,9 @@
                 const hasItems = d.items.length > 0;
                 html += `<tr${hasItems ? ' style="cursor:pointer" onclick="toggleDetail(\'' + date + '\')"' : ''}>
                     <td>${hasItems ? '<span id="arrow-' + date + '" style="display:inline-block;font-size:0.7rem;margin-right:4px;transition:transform 0.2s;">&#9654;</span>' : ''}${formatDate(date, true)} ${hasItems ? '<span style="font-size:0.7rem;color:var(--text-muted);">(' + d.items.length + ')</span>' : ''}</td>
-                    <td></td>
                     <td>${d.protein.toFixed(1)} g</td>
                     <td>${d.carbs.toFixed(1)} g</td>
-                    <td>${d.fat.toFixed(1)} g</td>
-                    <td></td>
+                    <td style="padding-right:16px;">${d.fat.toFixed(1)} g</td>
                     <td>${d.caloriesIn.toFixed(0)}</td>
                     <td>${d.caloriesOut.toFixed(0)}</td>
                     <td class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(0)}</td>
@@ -1120,17 +1090,16 @@
                         const mProt = mItems.reduce((s, r) => s + r.protein, 0);
                         const mCals = mItems.reduce((s, r) => s + r.caloriesIn, 0);
                         const mProtRatio = mCals > 0 ? (mProt / mCals * 100).toFixed(1) : 0;
-                        rows += '<tr class="detail-row-' + date + '" style="display:none;"><td colspan="10" style="padding:3px 3px 1px 20px;border-bottom:none;' + bl + bg + '"><strong style="color:var(--accent);font-size:0.7rem;">' + meal + '</strong><span style="font-size:0.65rem;color:var(--text-muted);margin-left:8px;">' + mProt.toFixed(0) + ' g bielk. · ' + mCals.toFixed(0) + ' kcal (' + mProtRatio + ' g/100 kcal)</span></td></tr>';
+                        rows += '<tr class="detail-row-' + date + '" style="display:none;"><td colspan="8" style="padding:3px 3px 1px 20px;border-bottom:none;' + bl + bg + '"><strong style="color:var(--accent);font-size:0.7rem;">' + meal + '</strong><span style="font-size:0.65rem;color:var(--text-muted);margin-left:8px;">' + mProt.toFixed(0) + ' g bielk. · ' + mCals.toFixed(0) + ' kcal (' + mProtRatio + ' g/100 kcal)</span></td></tr>';
                         for (const r of mItems) {
                             const name = r.foodName || r.ktId || '?';
                             const amt = r.amount || '';
                             const label = name + (amt ? ' <span style="font-size:0.65rem;color:var(--text-muted);margin-left:6px;">(' + amt + ')</span>' : '');
                             rows += '<tr class="detail-row-' + date + '" style="display:none;font-size:0.7rem;color:var(--text-muted);line-height:1.2;">';
-                            rows += '<td colspan="2" style="padding:4px 3px 4px 24px;' + sb + bl + bg + 'text-align:left;color:var(--text);">' + label + '</td>';
+                            rows += '<td style="padding:4px 3px 4px 24px;' + sb + bl + bg + 'text-align:left;color:var(--text);">' + label + '</td>';
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.protein.toFixed(1) + ' g</td>';
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.carbs.toFixed(1) + ' g</td>';
-                            rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.fat.toFixed(1) + ' g</td>';
-                            rows += '<td style="padding:0;' + sb + bg + '"></td>';
+                            rows += '<td style="padding:4px 3px 4px 3px;padding-right:16px;' + ra + sb + bg + '">' + r.fat.toFixed(1) + ' g</td>';
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.caloriesIn.toFixed(1) + ' kcal</td>';
                             rows += '<td colspan="3" style="' + sb + bg + '"></td>';
                             rows += '</tr>';
@@ -1140,7 +1109,7 @@
                 }
             }
             if (html === '') {
-                html = '<tr><td colspan="10" class="no-data">Žiadne záznamy pre ' + formatDate(datesToShow[0]) + '</td></tr>';
+                html = '<tr><td colspan="8" class="no-data">Žiadne záznamy pre ' + formatDate(datesToShow[0]) + '</td></tr>';
             }
             tbody.innerHTML = html;
         }
@@ -1159,7 +1128,7 @@
             const range = getDateRange('month');
             const monthRecs = records.filter(r => r.date >= range.start && r.date <= range.end);
             if (monthRecs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="no-data">Žiadne záznamy</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="no-data">Žiadne záznamy</td></tr>';
                 return;
             }
 
@@ -1186,11 +1155,9 @@
                 const wn = getWeekNumber(weekStart);
                 return `<tr>
                     <td>${formatDate(weekStart)} – ${formatDate(end.toISOString().split('T')[0])} (T${wn})</td>
-                    <td></td>
                     <td>${w.protein.toFixed(1)} g</td>
                     <td>${w.carbs.toFixed(1)} g</td>
-                    <td>${w.fat.toFixed(1)} g</td>
-                    <td></td>
+                    <td style="padding-right:16px;">${w.fat.toFixed(1)} g</td>
                     <td>${w.caloriesIn.toFixed(0)}</td>
                     <td>${w.caloriesOut.toFixed(0)}</td>
                     <td class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(0)}</td>
@@ -1687,7 +1654,7 @@
         function renderMeasurements() {
             const tbody = document.getElementById('measureHistory');
             if (measurements.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="no-data" style="padding:15px;">Žiadne záznamy</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="no-data" style="padding:15px;">Žiadne záznamy</td></tr>';
                 document.getElementById('ratioCards').innerHTML = '';
                 return;
             }
