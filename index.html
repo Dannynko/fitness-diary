@@ -1895,18 +1895,23 @@
         async function importAppleHealth() {
             try {
                 const text = await navigator.clipboard.readText();
-                const raw = JSON.parse(text);
-                const days = Array.isArray(raw) ? raw : [raw];
-                if (days.length === 0 || !days[0].date) throw new Error('Neplatný formát');
-
-                days.forEach(day => processHealthDay(day));
-                saveRecords();
-                renderAll();
-                showToast('Apple Health: ' + days.length + ' dní importovaných');
-                try { await cloudSync(); } catch(e) {}
+                processHealthImport(text);
             } catch(e) {
-                showToast('Chyba: ' + e.message, true);
+                const input = prompt('Vlož JSON zo schránky:');
+                if (input) {
+                    try { processHealthImport(input); } catch(e2) { showToast('Chyba: ' + e2.message, true); }
+                }
             }
+        }
+
+        function processHealthImport(text) {
+            const raw = JSON.parse(text);
+            const days = Array.isArray(raw) ? raw : [raw];
+            if (days.length === 0 || !days[0].date) throw new Error('Neplatný formát');
+            days.forEach(day => processHealthDay(day));
+            saveRecords();
+            renderAll();
+            showToast('Apple Health: ' + days.length + ' dní importovaných');
         }
 
         // ===== HEALTH INFO DISPLAY =====
