@@ -546,11 +546,9 @@
                     <thead>
                         <tr>
                             <th>Dátum</th>
-                            <th>Gramáž</th>
                             <th>Bielk.</th>
                             <th>Sach.</th>
                             <th>Tuky</th>
-                            <th></th>
                             <th>Prij.</th>
                             <th>Spál.</th>
                             <th>Rozd.</th>
@@ -558,7 +556,7 @@
                         </tr>
                     </thead>
                     <tbody id="dailyRecords">
-                        <tr><td colspan="10" class="no-data">Žiadne záznamy</td></tr>
+                        <tr><td colspan="8" class="no-data">Žiadne záznamy</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -964,7 +962,7 @@
 
             const lbl = document.getElementById('periodLabel');
             if (summaryPeriod === 'day') {
-                lbl.textContent = formatDate(goalDate);
+                lbl.textContent = formatDate(goalDate, true);
             } else if (summaryPeriod === 'week') {
                 lbl.textContent = formatDate(range.start) + ' – ' + formatDate(range.end);
             } else {
@@ -1036,12 +1034,10 @@
                 const cls = diff > 0 ? 'negative' : diff < 0 ? 'positive' : 'neutral';
                 const hasItems = d.items.length > 0;
                 html += `<tr${hasItems ? ' style="cursor:pointer" onclick="toggleDetail(\'' + date + '\')"' : ''}>
-                    <td>${hasItems ? '<span id="arrow-' + date + '" style="display:inline-block;font-size:0.7rem;margin-right:4px;transition:transform 0.2s;">&#9654;</span>' : ''}${formatDate(date)} ${hasItems ? '<span style="font-size:0.7rem;color:var(--text-muted);">(' + d.items.length + ')</span>' : ''}</td>
-                    <td></td>
+                    <td>${hasItems ? '<span id="arrow-' + date + '" style="display:inline-block;font-size:0.7rem;margin-right:4px;transition:transform 0.2s;">&#9654;</span>' : ''}${formatDate(date, true)} ${hasItems ? '<span style="font-size:0.7rem;color:var(--text-muted);">(' + d.items.length + ')</span>' : ''}</td>
                     <td>${d.protein.toFixed(1)} g</td>
                     <td>${d.carbs.toFixed(1)} g</td>
                     <td>${d.fat.toFixed(1)} g</td>
-                    <td></td>
                     <td>${d.caloriesIn.toFixed(0)}</td>
                     <td>${d.caloriesOut.toFixed(0)}</td>
                     <td class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(0)}</td>
@@ -1064,17 +1060,16 @@
                         const mProt = mItems.reduce((s, r) => s + r.protein, 0);
                         const mCals = mItems.reduce((s, r) => s + r.caloriesIn, 0);
                         const mProtRatio = mCals > 0 ? (mProt / mCals * 100).toFixed(1) : 0;
-                        rows += '<tr class="detail-row-' + date + '" style="display:none;"><td colspan="10" style="padding:3px 3px 1px 20px;border-bottom:none;' + bl + bg + '"><strong style="color:var(--accent);font-size:0.7rem;">' + meal + '</strong><span style="font-size:0.65rem;color:var(--text-muted);margin-left:8px;">' + mProt.toFixed(0) + ' g bielk. · ' + mCals.toFixed(0) + ' kcal (' + mProtRatio + ' g/100 kcal)</span></td></tr>';
+                        rows += '<tr class="detail-row-' + date + '" style="display:none;"><td colspan="8" style="padding:3px 3px 1px 20px;border-bottom:none;' + bl + bg + '"><strong style="color:var(--accent);font-size:0.7rem;">' + meal + '</strong><span style="font-size:0.65rem;color:var(--text-muted);margin-left:8px;">' + mProt.toFixed(0) + ' g bielk. · ' + mCals.toFixed(0) + ' kcal (' + mProtRatio + ' g/100 kcal)</span></td></tr>';
                         for (const r of mItems) {
                             const name = r.foodName || r.ktId || '?';
                             const amt = r.amount || '';
                             const label = name + (amt ? ' <span style="font-size:0.65rem;color:var(--text-muted);margin-left:6px;">(' + amt + ')</span>' : '');
                             rows += '<tr class="detail-row-' + date + '" style="display:none;font-size:0.7rem;color:var(--text-muted);line-height:1.2;">';
-                            rows += '<td colspan="2" style="padding:4px 3px 4px 24px;' + sb + bl + bg + 'text-align:left;color:var(--text);">' + label + '</td>';
+                            rows += '<td style="padding:4px 3px 4px 24px;' + sb + bl + bg + 'text-align:left;color:var(--text);">' + label + '</td>';
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.protein.toFixed(1) + ' g</td>';
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.carbs.toFixed(1) + ' g</td>';
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.fat.toFixed(1) + ' g</td>';
-                            rows += '<td style="padding:0;' + sb + bg + '"></td>';
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.caloriesIn.toFixed(1) + ' kcal</td>';
                             rows += '<td colspan="3" style="' + sb + bg + '"></td>';
                             rows += '</tr>';
@@ -1084,7 +1079,7 @@
                 }
             }
             if (html === '') {
-                html = '<tr><td colspan="10" class="no-data">Žiadne záznamy pre ' + formatDate(datesToShow[0]) + '</td></tr>';
+                html = '<tr><td colspan="8" class="no-data">Žiadne záznamy pre ' + formatDate(datesToShow[0]) + '</td></tr>';
             }
             tbody.innerHTML = html;
         }
@@ -1321,8 +1316,12 @@
             return d;
         }
 
-        function formatDate(dateStr) {
-            return new Date(dateStr).toLocaleDateString('sk-SK', { day: 'numeric', month: 'short', year: 'numeric' });
+        function formatDate(dateStr, withDay) {
+            const d = new Date(dateStr);
+            const base = d.toLocaleDateString('sk-SK', { day: 'numeric', month: 'short', year: 'numeric' });
+            if (!withDay) return base;
+            const dayName = d.toLocaleDateString('sk-SK', { weekday: 'short' });
+            return dayName.charAt(0).toUpperCase() + dayName.slice(1) + ' ' + base;
         }
 
 
@@ -1398,7 +1397,7 @@
         }
 
         function updateGoals() {
-            document.getElementById('goalDateLabel').textContent = formatDate(goalDate);
+            document.getElementById('goalDateLabel').textContent = formatDate(goalDate, true);
             const todayRecs = records.filter(r => r.date === goalDate && r.source !== 'weight');
             const tCals = todayRecs.reduce((s, r) => s + r.caloriesIn, 0);
             const tProt = todayRecs.reduce((s, r) => s + r.protein, 0);
@@ -1582,7 +1581,7 @@
         function renderMeasurements() {
             const tbody = document.getElementById('measureHistory');
             if (measurements.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="no-data" style="padding:15px;">Žiadne záznamy</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" class="no-data" style="padding:15px;">Žiadne záznamy</td></tr>';
                 document.getElementById('ratioCards').innerHTML = '';
                 return;
             }
