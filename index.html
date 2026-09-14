@@ -432,10 +432,9 @@
             display: inline-flex !important;
             align-items: center;
             justify-content: center;
-            width: 20px;
-            height: 20px;
-            background: rgba(255,70,70,0.25);
-            border-radius: 50%;
+            padding: 1px 8px;
+            background: rgba(255,70,70,0.2);
+            border-radius: 4px;
             animation: shake 0.35s ease;
         }
         @keyframes shake {
@@ -933,8 +932,10 @@
 
 
         let _pendingDelete = null;
+        let _deleteTimer = null;
         function deleteRecordsByDate(date, el) {
             if (_pendingDelete === date) {
+                clearTimeout(_deleteTimer);
                 records = records.filter(r => r.date !== date);
                 saveRecords();
                 renderAll();
@@ -946,6 +947,7 @@
             _pendingDelete = date;
             el.classList.add('delete-confirm');
             el.dataset.pendingDelete = '1';
+            _deleteTimer = setTimeout(resetDeleteConfirm, 2000);
         }
         function resetDeleteConfirm() {
             _pendingDelete = null;
