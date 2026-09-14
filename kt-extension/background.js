@@ -236,7 +236,7 @@ function scrapeTab(tabId, isoDate, callback) {
       return;
     }
     const r = results[0].result;
-    callback(r.ok ? r.data : null);
+    callback(r.ok ? r.data : null, r.detectedDate, r.diaryKeys);
   });
 }
 
@@ -389,7 +389,13 @@ function scrapeDiary(isoDate) {
       deduped.push(items[j]);
     }
   }
-  return { ok: deduped.length > 0, data: deduped, detectedDate: isoDate };
+  var diaryKeys = [];
+  for (var dk in diary) {
+    if (dk.charAt(0) === '$') continue;
+    var tp = diary[dk] instanceof Date ? 'Date:'+dateToLocal(diary[dk]) : typeof diary[dk];
+    diaryKeys.push(dk + ':' + tp);
+  }
+  return { ok: deduped.length > 0, data: deduped, detectedDate: isoDate, diaryKeys: diaryKeys.join(', ') };
 }
 
 async function pushToGist(items, syncDates) {
@@ -449,16 +455,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     const isoDate = dateFromUrl(authTabs[0].url);
-    scrapeTab(authTabs[0].id, isoDate, async (items) => {
+    scrapeTab(authTabs[0].id, isoDate, async (items, detectedDate, diaryKeys) => {
+      const actualDate = detectedDate || isoDate;
       const resultItems = items || [];
       try {
-        await pushToGist(resultItems, [isoDate]);
+        await pushToGist(resultItems, [actualDate]);
       } catch(e) { console.log('pushToGist err', e); }
       sendResponse({
         success: true,
         items: resultItems.map(i => ({ t: i.t, a: i.a, e: i.e, p: i.p, c: i.c, f: i.f, d: i.d, m: i.m })),
         count: resultItems.length,
-        syncDate: isoDate
+        syncDate: actualDate,
+        debug: 'url:' + isoDate + ' detected:' + (detectedDate||'none') + ' keys:' + (diaryKeys||'none')
       });
     });
   });

@@ -894,6 +894,7 @@
                 return;
             }
 
+            if (response.debug) console.log('KT debug:', response.debug);
             importKtJson(response.items);
         });
 
