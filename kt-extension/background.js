@@ -268,6 +268,20 @@ function scrapeDiary(isoDate) {
   walkScope(rootScope, 0);
   if (!diary) return { ok: false };
 
+  var dateProps = ['date', 'actualDate', 'currentDate', 'selectedDate', 'diaryDate', 'datum'];
+  for (var dp = 0; dp < dateProps.length; dp++) {
+    if (diary.hasOwnProperty(dateProps[dp])) {
+      var dv = diary[dateProps[dp]];
+      if (dv instanceof Date && !isNaN(dv)) {
+        isoDate = dv.toISOString().split('T')[0];
+        break;
+      } else if (typeof dv === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dv)) {
+        isoDate = dv.substring(0, 10);
+        break;
+      }
+    }
+  }
+
   var items = [];
   var mealNames = ['Raňajky', 'Desiata', 'Obed', 'Olovrant', 'Večera', 'Druhá večera'];
 
