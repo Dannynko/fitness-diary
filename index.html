@@ -1705,6 +1705,22 @@
                 const gist = await resp.json();
                 const remoteData = JSON.parse(gist.files['fitness-data.json'].content);
 
+                if (gist.files['health-import.json']) {
+                    try {
+                        const hiRaw = JSON.parse(gist.files['health-import.json'].content);
+                        const hiDays = Array.isArray(hiRaw) ? hiRaw : [hiRaw];
+                        hiDays.forEach(day => {
+                            if (day && day.date) processHealthDay(day);
+                        });
+                        saveRecords();
+                        await fetch('https://api.github.com/gists/' + config.gistId, {
+                            method: 'PATCH',
+                            headers: { 'Authorization': 'token ' + config.token, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ files: { 'health-import.json': { content: '[]' } } })
+                        });
+                    } catch(e) { console.log('health-import err', e); }
+                }
+
                 const localData = {
                     records: records,
                     measurements: JSON.parse(localStorage.getItem('bodyMeasurements') || '[]'),
