@@ -933,6 +933,7 @@
                 renderAll();
                 const importDate = items[0]?.d || '?';
                 showToast('Importovaných ' + imported + ' položiek z KT pre ' + importDate + (removed > 0 ? ' (nahradených ' + removed + ')' : ''));
+                setTimeout(() => cloudSync(true), 1000);
             } else {
                 showToast('Žiadne jedlá na import', true);
             }
