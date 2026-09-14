@@ -1756,12 +1756,9 @@
                 }
 
                 const localNonKt = localData.records.filter(r => r.source !== 'kt');
-                const localKt = localData.records.filter(r => r.source === 'kt');
                 const remoteKt = (remoteData.records || []).filter(r => r.source === 'kt');
                 const remoteNonKt = (remoteData.records || []).filter(r => r.source !== 'kt');
-                const remoteKtKeys = new Set(remoteKt.map(r => r.ktId || r.id || (r.date + (r.foodName||'') + (r.source||''))));
-                const newLocalKt = localKt.filter(r => !remoteKtKeys.has(r.ktId || r.id || (r.date + (r.foodName||'') + (r.source||''))));
-                const allRecords = [...remoteKt, ...newLocalKt, ...remoteNonKt, ...localNonKt];
+                const allRecords = [...remoteKt, ...remoteNonKt, ...localNonKt];
                 let mergedRecords = dedup(allRecords, r => r.ktId || r.id || (r.date + (r.foodName||'') + (r.source||'')));
 
                 const ktDeduped = [];

@@ -414,7 +414,6 @@ async function pushToGist(items, syncDates) {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'autoSync') { quickSync(); return; }
   if (request.action !== 'fetchKtDiary') return;
-  const isoDate = new Date().toISOString().split('T')[0];
 
   chrome.tabs.query({ url: ['*://*.kaloricketabulky.sk/*', '*://kaloricketabulky.sk/*'] }, (tabs) => {
     const authTabs = tabs.filter(t => t.url && !t.url.includes('/login') && !t.url.includes('accounts.google'));
@@ -423,15 +422,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return;
     }
 
-    scrapeTab(authTabs[0].id, isoDate, (items) => {
-      if (!items || items.length === 0) {
-        sendResponse({ success: false, error: 'Žiadne dáta v denníku' });
-        return;
-      }
+    const isoDate = dateFromUrl(authTabs[0].url);
+    scrapeTab(authTabs[0].id, isoDate, async (items) => {
+      const resultItems = items || [];
+      try {
+        await pushToGist(resultItems, [isoDate]);
+      } catch(e) { console.log('pushToGist err', e); }
       sendResponse({
         success: true,
-        items: items.map(i => ({ t: i.t, a: i.a, e: i.e, p: i.p, c: i.c, f: i.f, d: i.d, m: i.m })),
-        count: items.length
+        items: resultItems.map(i => ({ t: i.t, a: i.a, e: i.e, p: i.p, c: i.c, f: i.f, d: i.d, m: i.m })),
+        count: resultItems.length
       });
     });
   });
