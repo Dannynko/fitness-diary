@@ -914,7 +914,7 @@
                 imported++;
             }
             if (imported > 0) {
-                saveRecords();
+                localStorage.setItem('calorieRecords', JSON.stringify(records));
                 renderAll();
                 showToast('Importovaných ' + imported + ' položiek z KT' + (removed > 0 ? ' (nahradených ' + removed + ')' : ''));
             } else {
