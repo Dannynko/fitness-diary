@@ -1743,7 +1743,7 @@
                     exercises: JSON.parse(localStorage.getItem('exerciseLog') || '[]'),
                     goals: goals,
                     healthData: JSON.parse(localStorage.getItem('healthData') || '[]'),
-                    lastSync: new Date().toISOString()
+                    lastSync: localStorage.getItem('lastSyncTime') || null
                 };
 
                 function dedup(arr, keyFn) {
