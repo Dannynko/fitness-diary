@@ -268,17 +268,34 @@ function scrapeDiary(isoDate) {
   walkScope(rootScope, 0);
   if (!diary) return { ok: false };
 
+  function dateToLocal(d) {
+    var y = d.getFullYear();
+    var m = ('0' + (d.getMonth()+1)).slice(-2);
+    var dd = ('0' + d.getDate()).slice(-2);
+    return y + '-' + m + '-' + dd;
+  }
   var dateProps = ['date', 'actualDate', 'currentDate', 'selectedDate', 'diaryDate', 'datum'];
+  var foundDate = false;
   for (var dp = 0; dp < dateProps.length; dp++) {
     if (diary.hasOwnProperty(dateProps[dp])) {
       var dv = diary[dateProps[dp]];
       if (dv instanceof Date && !isNaN(dv)) {
-        isoDate = dv.toISOString().split('T')[0];
+        isoDate = dateToLocal(dv);
+        foundDate = true;
         break;
       } else if (typeof dv === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dv)) {
         isoDate = dv.substring(0, 10);
+        foundDate = true;
         break;
       }
+    }
+  }
+  if (!foundDate) {
+    var dateEl = document.querySelector('.diary-date, .date-picker, [class*="date"] input, .diary h2, .diary h3');
+    if (dateEl) {
+      var txt = dateEl.value || dateEl.textContent || '';
+      var dm = txt.match(/(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/);
+      if (dm) isoDate = dm[3] + '-' + ('0'+dm[2]).slice(-2) + '-' + ('0'+dm[1]).slice(-2);
     }
   }
 
