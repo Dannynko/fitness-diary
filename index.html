@@ -568,13 +568,15 @@
                     <thead>
                         <tr>
                             <th>Týždeň</th>
-                            <th>Bielkoviny</th>
-                            <th>Sacharidy</th>
+                            <th></th>
+                            <th>Bielk.</th>
+                            <th>Sach.</th>
                             <th>Tuky</th>
-                            <th>Prijaté</th>
-                            <th>Spálené</th>
-                            <th>Rozdiel</th>
-                            <th>Priem. váha</th>
+                            <th></th>
+                            <th>Prij.</th>
+                            <th>Spál.</th>
+                            <th>Rozd.</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody id="weeklyRecords">
@@ -938,23 +940,26 @@
         }
 
         function getDateRange(period) {
-            const today = new Date();
-            const todayStr = today.toISOString().split('T')[0];
+            const ref = new Date(goalDate + 'T12:00:00');
             if (period === 'day') {
                 return {start: goalDate, end: goalDate, days: 1};
             }
-            let startDate;
+            let startDate, endDate;
             if (period === 'week') {
-                const day = today.getDay();
+                const day = ref.getDay();
                 const diff = day === 0 ? 6 : day - 1;
-                startDate = new Date(today);
-                startDate.setDate(today.getDate() - diff);
+                startDate = new Date(ref);
+                startDate.setDate(ref.getDate() - diff);
+                endDate = new Date(startDate);
+                endDate.setDate(startDate.getDate() + 6);
             } else {
-                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                startDate = new Date(ref.getFullYear(), ref.getMonth(), 1);
+                endDate = new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
             }
             const startStr = startDate.toISOString().split('T')[0];
-            const days = Math.max(1, Math.floor((today - startDate) / 86400000) + 1);
-            return {start: startStr, end: todayStr, days: days};
+            const endStr = endDate.toISOString().split('T')[0];
+            const days = Math.max(1, Math.floor((endDate - startDate) / 86400000) + 1);
+            return {start: startStr, end: endStr, days: days};
         }
 
         function updateTodaySummary() { updateSummary(); }
@@ -967,11 +972,9 @@
             if (summaryPeriod === 'day') {
                 lbl.textContent = formatDate(goalDate, true);
             } else if (summaryPeriod === 'week') {
-                const sun = new Date(range.start + 'T12:00:00');
-                sun.setDate(sun.getDate() + 6);
-                lbl.textContent = formatDate(range.start) + ' – ' + formatDate(sun.toISOString().split('T')[0]);
+                lbl.textContent = formatDate(range.start) + ' – ' + formatDate(range.end);
             } else {
-                lbl.textContent = new Date(range.start).toLocaleDateString('sk-SK', {month: 'long', year: 'numeric'});
+                lbl.textContent = new Date(goalDate + 'T12:00:00').toLocaleDateString('sk-SK', {month: 'long', year: 'numeric'});
             }
 
             const totalIn = filtered.reduce((s, r) => s + r.caloriesIn, 0);
@@ -1103,23 +1106,25 @@
 
         function renderWeeklyRecords() {
             const tbody = document.getElementById('weeklyRecords');
-            if (records.length === 0) {
+            const range = getDateRange('month');
+            const monthRecs = records.filter(r => r.date >= range.start && r.date <= range.end);
+            if (monthRecs.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="10" class="no-data">Žiadne záznamy</td></tr>';
                 return;
             }
 
             const grouped = {};
-            records.forEach(r => {
+            monthRecs.forEach(r => {
                 const ws = getWeekStart(new Date(r.date));
                 const key = ws.toISOString().split('T')[0];
-                if (!grouped[key]) grouped[key] = { protein: 0, carbs: 0, fat: 0, caloriesIn: 0, caloriesOut: 0, weights: [] };
+                if (!grouped[key]) grouped[key] = { protein: 0, carbs: 0, fat: 0, caloriesIn: 0, caloriesOut: 0, days: new Set() };
                 const g = grouped[key];
                 g.protein += r.protein;
                 g.carbs += r.carbs;
                 g.fat += r.fat;
                 g.caloriesIn += r.caloriesIn;
                 g.caloriesOut += r.caloriesOut;
-                if (r.weight) g.weights.push(r.weight);
+                if (r.source !== 'weight') g.days.add(r.date);
             });
 
             tbody.innerHTML = Object.keys(grouped).sort((a, b) => b.localeCompare(a)).map(weekStart => {
@@ -1127,19 +1132,19 @@
                 const end = new Date(weekStart);
                 end.setDate(end.getDate() + 6);
                 const diff = w.caloriesIn - w.caloriesOut;
-                const avgWeight = w.weights.length > 0
-                    ? (w.weights.reduce((a, b) => a + b, 0) / w.weights.length).toFixed(1) : '-';
                 const cls = diff > 0 ? 'negative' : diff < 0 ? 'positive' : 'neutral';
                 const wn = getWeekNumber(weekStart);
                 return `<tr>
-                    <td>${formatDate(weekStart)} &ndash; ${formatDate(end.toISOString().split('T')[0])} (T${wn})</td>
-                    <td>${w.protein.toFixed(1)}</td>
-                    <td>${w.carbs.toFixed(1)}</td>
-                    <td>${w.fat.toFixed(1)}</td>
-                    <td>${w.caloriesIn.toFixed(1)}</td>
-                    <td>${w.caloriesOut.toFixed(1)}</td>
-                    <td class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(1)}</td>
-                    <td>${avgWeight}</td>
+                    <td>${formatDate(weekStart)} – ${formatDate(end.toISOString().split('T')[0])} (T${wn})</td>
+                    <td></td>
+                    <td>${w.protein.toFixed(1)} g</td>
+                    <td>${w.carbs.toFixed(1)} g</td>
+                    <td>${w.fat.toFixed(1)} g</td>
+                    <td></td>
+                    <td>${w.caloriesIn.toFixed(0)}</td>
+                    <td>${w.caloriesOut.toFixed(0)}</td>
+                    <td class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(0)}</td>
+                    <td></td>
                 </tr>`;
             }).join('');
         }
@@ -1396,17 +1401,39 @@
 
         function shiftGoalDate(delta) {
             const d = new Date(goalDate);
-            d.setDate(d.getDate() + (summaryPeriod === 'week' ? delta * 7 : delta));
+            if (summaryPeriod === 'month') {
+                d.setMonth(d.getMonth() + delta);
+            } else if (summaryPeriod === 'week') {
+                d.setDate(d.getDate() + delta * 7);
+            } else {
+                d.setDate(d.getDate() + delta);
+            }
             goalDate = d.toISOString().split('T')[0];
             updateGoals();
             renderDailyRecords();
+            renderWeeklyRecords();
             renderHealthInfo();
-            if (summaryPeriod === 'day' || summaryPeriod === 'week') updateSummary();
+            updateSummary();
         }
 
         function updateGoals() {
             let tCals, tProt, tCarbs, tFat, todayExpenditure;
-            if (summaryPeriod === 'week') {
+            if (summaryPeriod === 'month') {
+                const gd = new Date(goalDate + 'T12:00:00');
+                const mStart = new Date(gd.getFullYear(), gd.getMonth(), 1);
+                const mEnd = new Date(gd.getFullYear(), gd.getMonth() + 1, 0);
+                const mStartStr = mStart.toISOString().split('T')[0];
+                const mEndStr = mEnd.toISOString().split('T')[0];
+                document.getElementById('goalDateLabel').textContent = gd.toLocaleDateString('sk-SK', {month: 'long', year: 'numeric'});
+                const monthRecs = records.filter(r => r.date >= mStartStr && r.date <= mEndStr && r.source !== 'weight');
+                const daysWithData = new Set(monthRecs.map(r => r.date)).size || 1;
+                tCals = monthRecs.reduce((s, r) => s + r.caloriesIn, 0) / daysWithData;
+                tProt = monthRecs.reduce((s, r) => s + r.protein, 0) / daysWithData;
+                tCarbs = monthRecs.reduce((s, r) => s + r.carbs, 0) / daysWithData;
+                tFat = monthRecs.reduce((s, r) => s + r.fat, 0) / daysWithData;
+                const mActive = monthRecs.reduce((s, r) => s + r.caloriesOut, 0) / daysWithData;
+                todayExpenditure = goals.bazal + mActive;
+            } else if (summaryPeriod === 'week') {
                 const gd = new Date(goalDate + 'T12:00:00');
                 const dow = gd.getDay();
                 const monOffset = dow === 0 ? 6 : dow - 1;
