@@ -274,29 +274,24 @@ function scrapeDiary(isoDate) {
     var dd = ('0' + d.getDate()).slice(-2);
     return y + '-' + m + '-' + dd;
   }
-  var dateProps = ['date', 'actualDate', 'currentDate', 'selectedDate', 'diaryDate', 'datum'];
   var foundDate = false;
-  for (var dp = 0; dp < dateProps.length; dp++) {
-    if (diary.hasOwnProperty(dateProps[dp])) {
-      var dv = diary[dateProps[dp]];
-      if (dv instanceof Date && !isNaN(dv)) {
-        isoDate = dateToLocal(dv);
-        foundDate = true;
-        break;
-      } else if (typeof dv === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dv)) {
-        isoDate = dv.substring(0, 10);
-        foundDate = true;
-        break;
-      }
+  for (var k in diary) {
+    if (k.charAt(0) === '$') continue;
+    var dv = diary[k];
+    if (dv instanceof Date && !isNaN(dv)) {
+      isoDate = dateToLocal(dv);
+      foundDate = true;
+      break;
+    } else if (typeof dv === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dv)) {
+      isoDate = dv.substring(0, 10);
+      foundDate = true;
+      break;
     }
   }
   if (!foundDate) {
-    var dateEl = document.querySelector('.diary-date, .date-picker, [class*="date"] input, .diary h2, .diary h3');
-    if (dateEl) {
-      var txt = dateEl.value || dateEl.textContent || '';
-      var dm = txt.match(/(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/);
-      if (dm) isoDate = dm[3] + '-' + ('0'+dm[2]).slice(-2) + '-' + ('0'+dm[1]).slice(-2);
-    }
+    var allText = document.body.innerText || '';
+    var dm = allText.match(/(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/);
+    if (dm) isoDate = dm[3] + '-' + ('0'+dm[2]).slice(-2) + '-' + ('0'+dm[1]).slice(-2);
   }
 
   var items = [];
@@ -394,7 +389,7 @@ function scrapeDiary(isoDate) {
       deduped.push(items[j]);
     }
   }
-  return { ok: deduped.length > 0, data: deduped };
+  return { ok: deduped.length > 0, data: deduped, detectedDate: isoDate };
 }
 
 async function pushToGist(items, syncDates) {

@@ -930,7 +930,8 @@
             if (imported > 0) {
                 localStorage.setItem('calorieRecords', JSON.stringify(records));
                 renderAll();
-                showToast('Importovaných ' + imported + ' položiek z KT' + (removed > 0 ? ' (nahradených ' + removed + ')' : ''));
+                const importDate = items[0]?.d || '?';
+                showToast('Importovaných ' + imported + ' položiek z KT pre ' + importDate + (removed > 0 ? ' (nahradených ' + removed + ')' : ''));
             } else {
                 showToast('Žiadne jedlá na import', true);
             }
