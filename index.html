@@ -1696,7 +1696,7 @@
         function scheduleSync() {
             if (_syncing) return;
             clearTimeout(_syncTimer);
-            _syncTimer = setTimeout(() => cloudSync(), 2000);
+            _syncTimer = setTimeout(() => cloudSync(true), 2000);
         }
 
         let _syncing = false;
