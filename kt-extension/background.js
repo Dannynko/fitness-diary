@@ -436,24 +436,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'autoSync') { quickSync(); return; }
   if (request.action !== 'fetchKtDiary') return;
 
-  (async () => {
-    try {
-      const result = await scrapeKtFull();
-      if (!result) {
-        sendResponse({ success: false, error: 'Nepodarilo sa otvoriť KT. Prihlás sa na kaloricketabulky.sk.' });
-        return;
-      }
-      await pushToGist(result.items, result.dates);
+  chrome.tabs.query({ url: ['*://*.kaloricketabulky.sk/*', '*://kaloricketabulky.sk/*'] }, (tabs) => {
+    const authTabs = tabs.filter(t => t.url && !t.url.includes('/login') && !t.url.includes('accounts.google'));
+    if (authTabs.length === 0) {
+      sendResponse({ success: false, error: 'Otvor kaloricketabulky.sk a prihlás sa.' });
+      return;
+    }
+
+    const isoDate = dateFromUrl(authTabs[0].url);
+    scrapeTab(authTabs[0].id, isoDate, async (items, detectedDate) => {
+      const actualDate = detectedDate || isoDate;
+      const resultItems = items || [];
+      try {
+        await pushToGist(resultItems, [actualDate]);
+      } catch(e) { console.log('pushToGist err', e); }
       sendResponse({
         success: true,
-        items: result.items.map(i => ({ t: i.t, a: i.a, e: i.e, p: i.p, c: i.c, f: i.f, d: i.d, m: i.m })),
-        count: result.items.length,
-        syncDate: result.dates.join(', '),
-        fullSync: true
+        items: resultItems.map(i => ({ t: i.t, a: i.a, e: i.e, p: i.p, c: i.c, f: i.f, d: i.d, m: i.m })),
+        count: resultItems.length,
+        syncDate: actualDate
       });
-    } catch(e) {
-      sendResponse({ success: false, error: 'Chyba: ' + e.message });
-    }
-  })();
+    });
+  });
   return true;
 });
