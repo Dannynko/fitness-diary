@@ -427,9 +427,9 @@
             .summary-cards { grid-template-columns: 1fr; }
         }
         .delete-confirm {
-            background: rgba(255,70,70,0.2);
+            background: rgba(255,70,70,0.2) !important;
             border-radius: 4px;
-            animation: shake 0.35s ease;
+            animation: shake 0.4s ease !important;
         }
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
@@ -1084,7 +1084,7 @@
                     <td>${d.caloriesIn.toFixed(0)}</td>
                     <td>${d.caloriesOut.toFixed(0)}</td>
                     <td class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(0)}</td>
-                    <td>${dayRecords.length > 0 ? '<span style="color:var(--red);cursor:pointer;font-size:1.1rem;font-weight:700;" onclick="event.stopPropagation();deleteRecordsByDate(\'' + date + '\',this)">&times;</span>' : ''}</td>
+                    <td>${dayRecords.length > 0 ? '<span style="color:var(--red);cursor:pointer;font-size:1.1rem;font-weight:700;display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;" onclick="event.stopPropagation();deleteRecordsByDate(\'' + date + '\',this)">&times;</span>' : ''}</td>
                 </tr>`;
                 if (hasItems) {
                     const byMeal = {};
