@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "KT Sync",
   "description": "Automatický import z KalorickéTabuľky.sk do Fitness Diary",
-  "version": "18.0",
+  "version": "19.0",
   "permissions": ["scripting", "tabs", "alarms", "storage"],
   "host_permissions": [
     "https://www.kaloricketabulky.sk/*",

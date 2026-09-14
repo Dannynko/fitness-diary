@@ -274,24 +274,13 @@ function scrapeDiary(isoDate) {
     var dd = ('0' + d.getDate()).slice(-2);
     return y + '-' + m + '-' + dd;
   }
-  var foundDate = false;
-  for (var k in diary) {
-    if (k.charAt(0) === '$') continue;
-    var dv = diary[k];
-    if (dv instanceof Date && !isNaN(dv)) {
-      isoDate = dateToLocal(dv);
-      foundDate = true;
-      break;
-    } else if (typeof dv === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dv)) {
-      isoDate = dv.substring(0, 10);
-      foundDate = true;
-      break;
-    }
-  }
-  if (!foundDate) {
-    var allText = document.body.innerText || '';
-    var dm = allText.match(/(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})/);
-    if (dm) isoDate = dm[3] + '-' + ('0'+dm[2]).slice(-2) + '-' + ('0'+dm[1]).slice(-2);
+  if (typeof diary.date === 'number' && diary.date > 0) {
+    var ts = diary.date > 9999999999 ? diary.date : diary.date * 1000;
+    isoDate = dateToLocal(new Date(ts));
+  } else if (diary.date instanceof Date && !isNaN(diary.date)) {
+    isoDate = dateToLocal(diary.date);
+  } else if (typeof diary.date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(diary.date)) {
+    isoDate = diary.date.substring(0, 10);
   }
 
   var items = [];
