@@ -877,11 +877,17 @@
                 return;
             }
 
+            if (response.syncDate) {
+                const dates = response.syncDate.split(', ');
+                const before = records.length;
+                records = records.filter(r => !(r.source === 'kt' && dates.includes(r.date)));
+                if (records.length !== before) localStorage.setItem('calorieRecords', JSON.stringify(records));
+            }
             try { await cloudSync(true); } catch(ex) {}
             renderAll();
 
             if (!response.items || response.items.length === 0) {
-                showToast('KT denník prázdny — záznamy vymazané');
+                showToast('KT denník prázdny pre ' + (response.syncDate || '?') + ' — záznamy vymazané');
                 return;
             }
 
