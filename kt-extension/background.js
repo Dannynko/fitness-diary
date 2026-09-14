@@ -16,56 +16,212 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'kt-auto-sync') autoSync();
+  if (alarm.name === 'kt-auto-sync') fullSync();
 });
 
-async function autoSync() {
+function getLast3Days() {
+  const dates = [];
+  for (let i = 0; i < 3; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    dates.push(d.toISOString().split('T')[0]);
+  }
+  return dates;
+}
+
+async function quickSync() {
   try {
-    const items = await scrapeKt();
-    if (!items || items.length === 0) return;
-    await pushToGist(items);
+    const result = await scrapeKtQuick();
+    if (!result) return;
+    await pushToGist(result.items, result.dates);
     chrome.storage.local.set({
       lastSync: new Date().toISOString(),
-      lastSyncCount: items.length
+      lastSyncCount: result.items.length
     });
   } catch (e) {
-    console.log('KT auto-sync error:', e.message);
+    console.log('KT quick-sync error:', e.message);
   }
 }
 
-function scrapeKt() {
-  return new Promise((resolve) => {
-    const isoDate = new Date().toISOString().split('T')[0];
+async function fullSync() {
+  try {
+    const result = await scrapeKtFull();
+    if (!result) return;
+    await pushToGist(result.items, result.dates);
+    chrome.storage.local.set({
+      lastSync: new Date().toISOString(),
+      lastSyncCount: result.items.length
+    });
+  } catch (e) {
+    console.log('KT full-sync error:', e.message);
+  }
+}
 
-    chrome.tabs.query({ url: '*://*.kaloricketabulky.sk/*' }, (tabs) => {
+function dateFromUrl(url) {
+  const m = url && url.match(/[?&]date=(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : new Date().toISOString().split('T')[0];
+}
+
+function scrapeKtQuick() {
+  return new Promise((resolve) => {
+    chrome.tabs.query({ url: ['*://*.kaloricketabulky.sk/*', '*://kaloricketabulky.sk/*'] }, (tabs) => {
       const authTabs = tabs.filter(t => t.url && !t.url.includes('/login') && !t.url.includes('accounts.google'));
 
       if (authTabs.length > 0) {
-        scrapeTab(authTabs[0].id, isoDate, resolve);
-      } else {
-        chrome.tabs.create({ url: 'https://www.kaloricketabulky.sk/moj-diar', active: false }, (tab) => {
-          const tabId = tab.id;
-          const listener = (updatedTabId, info) => {
-            if (updatedTabId === tabId && info.status === 'complete') {
-              chrome.tabs.onUpdated.removeListener(listener);
-              setTimeout(() => {
-                scrapeTab(tabId, isoDate, (items) => {
-                  chrome.tabs.remove(tabId);
-                  resolve(items);
-                });
-              }, 3000);
-            }
-          };
-          chrome.tabs.onUpdated.addListener(listener);
-          setTimeout(() => {
-            chrome.tabs.onUpdated.removeListener(listener);
-            try { chrome.tabs.remove(tabId); } catch(e) {}
-            resolve(null);
-          }, 30000);
+        const isoDate = dateFromUrl(authTabs[0].url);
+        scrapeTab(authTabs[0].id, isoDate, (items) => {
+          resolve({ items: items || [], dates: [isoDate] });
         });
+      } else {
+        resolve(null);
       }
     });
   });
+}
+
+function scrapeKtFull() {
+  return new Promise((resolve) => {
+    const dates = getLast3Days();
+
+    chrome.tabs.create({ url: 'https://www.kaloricketabulky.sk/moj-diar', active: false }, (tab) => {
+      const tabId = tab.id;
+      const listener = (updatedTabId, info) => {
+        if (updatedTabId === tabId && info.status === 'complete') {
+          chrome.tabs.onUpdated.removeListener(listener);
+          chrome.tabs.get(tabId, (t) => {
+            if (t.url && (t.url.includes('/login') || t.url.includes('accounts.google'))) {
+              chrome.tabs.remove(tabId);
+              resolve(null);
+              return;
+            }
+            setTimeout(() => {
+              scrapeMultipleDays(tabId, dates, (items) => {
+                chrome.tabs.remove(tabId);
+                resolve({ items: items || [], dates });
+              });
+            }, 3000);
+          });
+        }
+      };
+      chrome.tabs.onUpdated.addListener(listener);
+      setTimeout(() => {
+        chrome.tabs.onUpdated.removeListener(listener);
+        try { chrome.tabs.remove(tabId); } catch(e) {}
+        resolve(null);
+      }, 90000);
+    });
+  });
+}
+
+function itemsFingerprint(items) {
+  if (!items || items.length === 0) return '';
+  return items.map(i => i.t + ':' + i.e).sort().join('|');
+}
+
+function scrapeMultipleDays(tabId, dates, callback) {
+  const allItems = [];
+  let i = 0;
+  let todayFingerprint = null;
+
+  function processNext() {
+    if (i >= dates.length) {
+      callback(allItems.length > 0 ? allItems : null);
+      return;
+    }
+    const date = dates[i];
+    i++;
+
+    if (i === 1) {
+      scrapeTab(tabId, date, (items) => {
+        if (items) {
+          todayFingerprint = itemsFingerprint(items);
+          allItems.push(...items);
+        }
+        processNext();
+      });
+    } else {
+      navigateToDate(tabId, date, () => {
+        scrapeTab(tabId, date, (items) => {
+          if (items) {
+            const fp = itemsFingerprint(items);
+            if (fp !== todayFingerprint) {
+              allItems.push(...items);
+            }
+          }
+          processNext();
+        });
+      });
+    }
+  }
+
+  processNext();
+}
+
+function navigateToDate(tabId, isoDate, callback) {
+  chrome.tabs.update(tabId, {
+    url: 'https://www.kaloricketabulky.sk/moj-diar?date=' + isoDate
+  }, () => {
+    const listener = (id, info) => {
+      if (id === tabId && info.status === 'complete') {
+        chrome.tabs.onUpdated.removeListener(listener);
+        setTimeout(() => {
+          chrome.scripting.executeScript({
+            target: { tabId },
+            world: 'MAIN',
+            func: changeDiaryDate,
+            args: [isoDate]
+          }, () => {
+            setTimeout(callback, 2000);
+          });
+        }, 2000);
+      }
+    };
+    chrome.tabs.onUpdated.addListener(listener);
+    setTimeout(() => {
+      chrome.tabs.onUpdated.removeListener(listener);
+      callback();
+    }, 15000);
+  });
+}
+
+function changeDiaryDate(isoDate) {
+  if (typeof angular === 'undefined') return false;
+  var appEl = document.querySelector('[ng-app]') || document.querySelector('.ng-scope') || document.body;
+  var injector = angular.element(appEl).injector();
+  if (!injector) return false;
+
+  var rootScope;
+  try { rootScope = injector.get('$rootScope'); } catch(e) { return false; }
+
+  var diaryScope = null;
+  function walkScope(scope, depth) {
+    if (!scope || depth > 20) return;
+    if (scope.diary && !diaryScope) diaryScope = scope;
+    var child = scope.$$childHead;
+    while (child) { walkScope(child, depth + 1); child = child.$$nextSibling; }
+  }
+  walkScope(rootScope, 0);
+  if (!diaryScope) return false;
+
+  var target = new Date(isoDate + 'T12:00:00');
+  var diary = diaryScope.diary;
+  var dateProps = ['date', 'actualDate', 'currentDate', 'selectedDate', 'diaryDate', 'datum'];
+  for (var i = 0; i < dateProps.length; i++) {
+    if (diary.hasOwnProperty(dateProps[i])) {
+      if (diary[dateProps[i]] instanceof Date) diary[dateProps[i]] = target;
+      else diary[dateProps[i]] = isoDate;
+    }
+  }
+
+  var methods = ['loadDiary','getDiary','load','refresh','changePeriod','setDate',
+                 'goToDate','fetchDiary','loadDay','getDay','changeDate'];
+  for (var i = 0; i < methods.length; i++) {
+    if (typeof diaryScope[methods[i]] === 'function') try { diaryScope[methods[i]](target); } catch(e) {}
+    if (typeof diary[methods[i]] === 'function') try { diary[methods[i]](target); } catch(e) {}
+  }
+
+  try { if (!diaryScope.$$phase && !rootScope.$$phase) diaryScope.$apply(); } catch(e) {}
+  return true;
 }
 
 function scrapeTab(tabId, isoDate, callback) {
@@ -121,10 +277,14 @@ function scrapeDiary(isoDate) {
       var timeKeys = Object.keys(time).filter(function(k) { return k.charAt(0) !== '$'; });
       var mealName = time.title || time.name || time.label || mealNames[t] || ('Jedlo ' + (t + 1));
       var foodArray = null;
-      for (var k = 0; k < timeKeys.length; k++) {
-        if (Array.isArray(time[timeKeys[k]]) && time[timeKeys[k]].length > 0) {
-          foodArray = time[timeKeys[k]];
-          break;
+      if (time.foodstuff && Array.isArray(time.foodstuff) && time.foodstuff.length > 0) {
+        foodArray = time.foodstuff;
+      } else {
+        for (var k = 0; k < timeKeys.length; k++) {
+          if (Array.isArray(time[timeKeys[k]]) && time[timeKeys[k]].length > 0) {
+            foodArray = time[timeKeys[k]];
+            break;
+          }
         }
       }
       if (!foodArray) continue;
@@ -174,9 +334,8 @@ function scrapeDiary(isoDate) {
           return '';
         }
 
-        var title = findStr(food, ['title', 'name', 'nazov', 'nazev', 'food']);
-        var amount = findVal(food, ['amount', 'quantity', 'mnozstvo', 'mnozstv', 'weight', 'hmotnost', 'grams']);
-        var unit = findStr(food, ['unit', 'jednotk']) || 'g';
+        var title = food.title || food.name || findStr(food, ['title', 'name', 'nazov', 'nazev', 'food']);
+        var unitStr = food.unit || findStr(food, ['unit', 'jednotk']) || '';
         var energy = findVal(food, ['energy', 'energi', 'kcal', 'kalori', 'calori']);
         var protein = findVal(food, ['protein', 'bielkov', 'bílkov']);
         var carbs = findVal(food, ['carb', 'sachar', 'uhlov', 'uhloh', 'hydrat']);
@@ -184,16 +343,30 @@ function scrapeDiary(isoDate) {
         if (!title) title = food[foodKeys[0]] || '';
 
         items.push({
-          t: String(title), a: amount ? (amount + ' ' + unit) : '',
-          e: energy, p: protein, c: carbs, f: fat, d: isoDate, m: mealName
+          t: String(title), a: unitStr,
+          e: energy, p: protein, c: carbs, f: fat, d: isoDate, m: mealName,
+          idx: t + '_' + f
         });
       }
     }
   }
-  return { ok: items.length > 0, data: items };
+  var deduped = [];
+  var seen = {};
+  for (var j = 0; j < items.length; j++) {
+    var key = items[j].t + '|' + items[j].m;
+    if (seen[key] !== undefined) {
+      if (items[j].e > deduped[seen[key]].e) {
+        deduped[seen[key]] = items[j];
+      }
+    } else {
+      seen[key] = deduped.length;
+      deduped.push(items[j]);
+    }
+  }
+  return { ok: deduped.length > 0, data: deduped };
 }
 
-async function pushToGist(items) {
+async function pushToGist(items, syncDates) {
   const resp = await fetch('https://api.github.com/gists/' + GIST_ID, {
     headers: { 'Authorization': 'token ' + TOKEN, 'Accept': 'application/vnd.github.v3+json' }
   });
@@ -215,11 +388,11 @@ async function pushToGist(items) {
     caloriesOut: 0,
     meal: item.m,
     source: 'kt',
-    ktId: item.t + '_' + item.d + '_' + item.e
+    ktId: item.t + '_' + item.d + '_' + item.e + '_' + item.m + '_' + (item.idx || 0)
   }));
 
-  const today = new Date().toISOString().split('T')[0];
-  const filtered = existingRecords.filter(r => !(r.source === 'kt' && r.date === today));
+  const datesToClear = new Set(syncDates || items.map(i => i.d));
+  const filtered = existingRecords.filter(r => !(r.source === 'kt' && datesToClear.has(r.date)));
   const merged = [...filtered, ...newRecords];
 
   const deduped = [];
@@ -238,13 +411,12 @@ async function pushToGist(items) {
   });
 }
 
-// Manual trigger from the fitness diary app
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'autoSync') { autoSync(); return; }
+  if (request.action === 'autoSync') { quickSync(); return; }
   if (request.action !== 'fetchKtDiary') return;
   const isoDate = new Date().toISOString().split('T')[0];
 
-  chrome.tabs.query({ url: '*://*.kaloricketabulky.sk/*' }, (tabs) => {
+  chrome.tabs.query({ url: ['*://*.kaloricketabulky.sk/*', '*://kaloricketabulky.sk/*'] }, (tabs) => {
     const authTabs = tabs.filter(t => t.url && !t.url.includes('/login') && !t.url.includes('accounts.google'));
     if (authTabs.length === 0) {
       sendResponse({ success: false, error: 'Otvor kaloricketabulky.sk a prihlás sa.' });
