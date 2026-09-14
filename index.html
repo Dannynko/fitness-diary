@@ -512,7 +512,13 @@
             <div id="goalEdit" style="display:none; margin-bottom:10px;">
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px;">
                     <div class="form-group"><label>Bazál (kcal)</label><input type="number" id="goalBazal" value="1900"></div>
-                    <div class="form-group"><label>TDEE (kcal)</label><input type="number" id="goalTdee" value="2350"></div>
+                    <div class="form-group"><label>Aktivita</label><select id="goalActivity" onchange="updateTdeeFromActivity()" style="width:100%;padding:6px;border-radius:6px;border:1px solid var(--border);background:var(--card-bg);color:var(--text);font-size:0.85rem;">
+                        <option value="1.2">Sedavý (1.2×)</option>
+                        <option value="1.375">Mierne aktívny (1.375×)</option>
+                        <option value="1.55">Aktívny (1.55×)</option>
+                        <option value="1.725">Veľmi aktívny (1.725×)</option>
+                    </select></div>
+                    <div class="form-group"><label>TDEE (kcal)</label><input type="number" id="goalTdee" value="2350" readonly style="opacity:0.7;"></div>
                     <div class="form-group"><label>Bielkoviny (g)</label><input type="number" id="goalProt" value="155"></div>
                     <div class="form-group"><label>Sacharidy (g)</label><input type="number" id="goalCarbs" value="175"></div>
                     <div class="form-group"><label>Tuky (g)</label><input type="number" id="goalFat" value="65"></div>
@@ -1375,7 +1381,9 @@
             if (btn) btn.textContent = show ? 'Zavrieť ciele' : 'Upraviť ciele';
             if (show) {
                 document.getElementById('goalBazal').value = goals.bazal;
+                document.getElementById('goalActivity').value = goals.activity || '1.2';
                 document.getElementById('goalTdee').value = goals.tdee;
+                document.getElementById('goalBazal').oninput = updateTdeeFromActivity;
                 document.getElementById('goalProt').value = goals.protein;
                 document.getElementById('goalCarbs').value = goals.carbs;
                 document.getElementById('goalFat').value = goals.fat;
@@ -1383,9 +1391,16 @@
             }
         }
 
+        function updateTdeeFromActivity() {
+            const bazal = parseFloat(document.getElementById('goalBazal').value) || 1850;
+            const mult = parseFloat(document.getElementById('goalActivity').value) || 1.2;
+            document.getElementById('goalTdee').value = Math.round(bazal * mult);
+        }
+
         function saveGoals() {
             goals.bazal = parseFloat(document.getElementById('goalBazal').value) || 1850;
-            goals.tdee = parseFloat(document.getElementById('goalTdee').value) || 2300;
+            goals.activity = parseFloat(document.getElementById('goalActivity').value) || 1.2;
+            goals.tdee = Math.round(goals.bazal * goals.activity);
             goals.protein = parseFloat(document.getElementById('goalProt').value) || 150;
             goals.carbs = parseFloat(document.getElementById('goalCarbs').value) || 200;
             goals.fat = parseFloat(document.getElementById('goalFat').value) || 60;
