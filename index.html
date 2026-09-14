@@ -253,9 +253,7 @@
         th { background: rgba(79, 195, 247, 0.08); color: var(--accent); font-weight: 600; border-bottom: none; }
         thead tr th:first-child { border-radius: 8px 0 0 8px; }
         thead tr th:last-child { border-radius: 0 8px 8px 0; }
-        th:nth-child(n+3):nth-child(-n+5), td:nth-child(n+3):nth-child(-n+5),
-        th:nth-child(n+7):nth-child(-n+9), td:nth-child(n+7):nth-child(-n+9) { text-align: right; }
-        th:nth-child(6), td:nth-child(6) { padding: 0; }
+        th:nth-child(n+2):nth-child(-n+7), td:nth-child(n+2):nth-child(-n+7) { text-align: right; }
         tr:hover { background: rgba(255, 255, 255, 0.05); }
         .positive { color: var(--green); }
         .negative { color: var(--red); }
@@ -547,7 +545,7 @@
 
 
             <div id="dailyTab">
-                <table style="table-layout:fixed;width:100%;">
+                <table>
                     <colgroup>
                         <col style="width:25%;">
                         <col style="width:11%;">
@@ -563,7 +561,7 @@
                             <th style="text-align:left;">Dátum</th>
                             <th>Bielk.</th>
                             <th>Sach.</th>
-                            <th style="padding-right:16px;">Tuky</th>
+                            <th>Tuky</th>
                             <th>Prijaté</th>
                             <th>Spálené</th>
                             <th>Rozdiel</th>
@@ -577,7 +575,7 @@
             </div>
 
             <div id="weeklyTab" style="display: none;">
-                <table style="table-layout:fixed;width:100%;">
+                <table>
                     <colgroup>
                         <col style="width:25%;">
                         <col style="width:11%;">
@@ -593,7 +591,7 @@
                             <th style="text-align:left;">Týždeň</th>
                             <th>Bielk.</th>
                             <th>Sach.</th>
-                            <th style="padding-right:16px;">Tuky</th>
+                            <th>Tuky</th>
                             <th>Prijaté</th>
                             <th>Spálené</th>
                             <th>Rozdiel</th>
@@ -1087,7 +1085,7 @@
                     <td>${hasItems ? '<span id="arrow-' + date + '" style="display:inline-block;font-size:0.7rem;margin-right:4px;transition:transform 0.2s;">&#9654;</span>' : ''}${formatDate(date, true)} ${hasItems ? '<span style="font-size:0.7rem;color:var(--text-muted);">(' + d.items.length + ')</span>' : ''}</td>
                     <td>${d.protein.toFixed(1)} g</td>
                     <td>${d.carbs.toFixed(1)} g</td>
-                    <td style="padding-right:16px;">${d.fat.toFixed(1)} g</td>
+                    <td>${d.fat.toFixed(1)} g</td>
                     <td>${d.caloriesIn.toFixed(0)}</td>
                     <td>${d.caloriesOut.toFixed(0)}</td>
                     <td class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(0)}</td>
@@ -1119,7 +1117,7 @@
                             rows += '<td style="padding:4px 3px 4px 24px;' + sb + bl + bg + 'text-align:left;color:var(--text);">' + label + '</td>';
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.protein.toFixed(1) + ' g</td>';
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.carbs.toFixed(1) + ' g</td>';
-                            rows += '<td style="padding:4px 3px 4px 3px;padding-right:16px;' + ra + sb + bg + '">' + r.fat.toFixed(1) + ' g</td>';
+                            rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.fat.toFixed(1) + ' g</td>';
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.caloriesIn.toFixed(1) + ' kcal</td>';
                             rows += '<td colspan="3" style="' + sb + bg + '"></td>';
                             rows += '</tr>';
@@ -1177,7 +1175,7 @@
                     <td>${formatDate(weekStart)} – ${formatDate(end.toISOString().split('T')[0])} (T${wn})</td>
                     <td>${w.protein.toFixed(1)} g</td>
                     <td>${w.carbs.toFixed(1)} g</td>
-                    <td style="padding-right:16px;">${w.fat.toFixed(1)} g</td>
+                    <td>${w.fat.toFixed(1)} g</td>
                     <td>${w.caloriesIn.toFixed(0)}</td>
                     <td>${w.caloriesOut.toFixed(0)}</td>
                     <td class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(0)}</td>
