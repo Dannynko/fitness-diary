@@ -1751,7 +1751,7 @@
             let ratios = '';
             function rc(label, val, cls, statusText, tipLines, cmText) {
                 const tip = tipLines.join('\n');
-                ratios += '<div class="ratio-card" onclick="this.classList.toggle(\'tip-open\')" style="text-align:left;display:flex;align-items:center;gap:10px;"><div style="font-size:0.7rem;color:var(--text-muted);white-space:nowrap;min-width:55px;">' + cmText + '</div><div style="flex:1;text-align:center;"><div class="goal-label">' + label + '</div><div class="ratio-val">' + val + '</div><div class="ratio-status ' + cls + '">' + statusText + '</div></div><div class="ratio-tip">' + tip.replace(/\n/g, '<br>') + '</div></div>';
+                ratios += '<div class="ratio-card" onclick="this.classList.toggle(\'tip-open\')" style="display:flex;align-items:center;"><div style="font-size:0.7rem;color:var(--text-muted);white-space:nowrap;width:55px;text-align:left;">' + cmText + '</div><div style="flex:1;text-align:center;"><div class="goal-label">' + label + '</div><div class="ratio-val">' + val + '</div><div class="ratio-status ' + cls + '">' + statusText + '</div></div><div style="width:55px;"></div><div class="ratio-tip">' + tip.replace(/\n/g, '<br>') + '</div></div>';
             }
 
             if (latest.waist && latest.chest) {
