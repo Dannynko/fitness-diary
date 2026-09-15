@@ -2299,18 +2299,26 @@
 
                 if (gist.files['health-import.json']) {
                     try {
-                        const hiRaw = JSON.parse(gist.files['health-import.json'].content);
-                        const hiDays = Array.isArray(hiRaw) ? hiRaw : [hiRaw];
-                        hiDays.forEach(day => {
-                            if (day && day.date) processHealthDay(day);
-                        });
-                        saveRecords();
-                        await fetch('https://api.github.com/gists/' + config.gistId, {
-                            method: 'PATCH',
-                            headers: { 'Authorization': 'token ' + config.token, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ files: { 'health-import.json': { content: '[]' } } })
-                        });
-                    } catch(e) { console.log('health-import err', e); }
+                        let hiContent = gist.files['health-import.json'].content;
+                        if (hiContent && hiContent.trim() !== '[]' && hiContent.trim() !== '') {
+                            hiContent = hiContent.replace(/,\s*"type:"/g, ',"type":"').replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3');
+                            const hiRaw = JSON.parse(hiContent);
+                            const hiDays = Array.isArray(hiRaw) ? hiRaw : [hiRaw];
+                            let imported = 0;
+                            hiDays.forEach(day => {
+                                if (day && day.date) { processHealthDay(day); imported++; }
+                            });
+                            if (imported > 0) {
+                                saveRecords();
+                                showToast('Apple Health: ' + imported + ' dní importovaných (' + hiDays.map(d => Math.round(d.activeCalories || 0) + ' kcal').join(', ') + ')');
+                            }
+                            await fetch('https://api.github.com/gists/' + config.gistId, {
+                                method: 'PATCH',
+                                headers: { 'Authorization': 'token ' + config.token, 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ files: { 'health-import.json': { content: '[]' } } })
+                            });
+                        }
+                    } catch(e) { console.log('health-import err', e); showToast('Health import chyba: ' + e.message, true); }
                 }
 
                 const localData = {
