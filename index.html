@@ -6,12 +6,15 @@
     <title>Fitness Diary</title>
     <meta name="description" content="Sledovanie kalórií, makroživín a váhy po dňoch a týždňoch">
     <meta name="theme-color" content="#4fc3f7">
-    <meta name="apple-mobile-web-app-title" content="KalTracker">
+    <meta name="apple-mobile-web-app-title" content="Fitness Diary">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234fc3f7'/><text x='50' y='72' font-size='70' font-weight='bold' fill='white' text-anchor='middle' font-family='sans-serif'>F</text></svg>">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%234fc3f7'/><text x='50' y='72' font-size='70' font-weight='bold' fill='white' text-anchor='middle' font-family='sans-serif'>F</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -298,7 +301,7 @@
 
         .ratio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 10px; overflow: visible; position: relative; z-index: 10; }
         .ratio-card { background: rgba(255,255,255,0.03); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; position: relative; }
-        .ratio-card .ratio-tip { display: none; position: absolute; left: 0; top: 100%; z-index: 9999; background: var(--bg-primary); border: 1px solid var(--card-border); border-radius: 8px; padding: 10px; font-size: 0.75rem; text-align: left; white-space: pre-line; color: var(--text-primary); min-width: 240px; max-width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); margin-top: 4px; }
+        .ratio-card .ratio-tip { display: none; position: absolute; left: 0; top: 100%; z-index: 9999; background: var(--bg-primary); border: 1px solid var(--card-border); border-radius: 8px; padding: 10px; font-size: 0.75rem; text-align: left; white-space: nowrap; color: var(--text-primary); width: max-content; max-width: 420px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); margin-top: 4px; }
         .ratio-card:hover .ratio-tip, .ratio-card.tip-open .ratio-tip { display: block; }
         .ratio-val { font-size: 1.2rem; font-weight: 700; margin: 4px 0; }
         .ratio-status { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; display: inline-block; white-space: nowrap; }
@@ -546,6 +549,7 @@
                     <div class="form-group"><label>Sacharidy (g)</label><input type="number" id="goalCarbs" value="175"></div>
                     <div class="form-group"><label>Tuky (g)</label><input type="number" id="goalFat" value="65"></div>
                     <div class="form-group"><label>Cieľ. váha (kg)</label><input type="number" id="goalWeight" value="80" step="0.1"></div>
+                    <div class="form-group"><label>Výška (cm)</label><input type="number" id="goalHeight" value="181" step="1"></div>
                 </div>
                 <button class="btn-primary" onclick="saveGoals()" style="margin-top: 6px;">Uložiť</button>
             </div>
@@ -661,21 +665,26 @@
                         </div>
                         <input type="date" id="measureDate" onchange="loadMeasurementsForDate()" style="padding: 4px 8px; border: none; color: #fff; font-size: 0.8rem; background: transparent; outline: none; box-shadow: none;">
                     </div>
+                    <button class="btn-secondary" onclick="toggleMeasureInputs()">Zadať</button>
+                </div>
+            </div>
+            <div id="measureInputs" style="display:none; margin-bottom:8px;">
+                <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+                    <div class="measure-item" style="flex:1; min-width:70px;"><label>Ramená</label><input type="number" id="mShoulders" step="0.5" placeholder="cm"></div>
+                    <div class="measure-item" style="flex:1; min-width:70px;"><label>Hrudník</label><input type="number" id="mChest" step="0.5" placeholder="cm"></div>
+                    <div class="measure-item" style="flex:1; min-width:70px;"><label>Pás</label><input type="number" id="mWaist" step="0.5" placeholder="cm"></div>
+                    <div class="measure-item" style="flex:1; min-width:70px;"><label>Biceps</label><input type="number" id="mBicepL" step="0.5" placeholder="L"><input type="number" id="mBicepR" step="0.5" placeholder="P" style="margin-top:4px;"></div>
+                    <div class="measure-item" style="flex:1; min-width:70px;"><label>Predlaktie</label><input type="number" id="mForearmL" step="0.5" placeholder="L"><input type="number" id="mForearmR" step="0.5" placeholder="P" style="margin-top:4px;"></div>
+                    <div class="measure-item" style="flex:1; min-width:70px;"><label>Stehno</label><input type="number" id="mThighL" step="0.5" placeholder="L"><input type="number" id="mThighR" step="0.5" placeholder="P" style="margin-top:4px;"></div>
+                    <div class="measure-item" style="flex:1; min-width:70px;"><label>Lýtko</label><input type="number" id="mCalfL" step="0.5" placeholder="L"><input type="number" id="mCalfR" step="0.5" placeholder="P" style="margin-top:4px;"></div>
+                </div>
+                <div style="display:flex; gap:6px;">
                     <button class="btn-secondary" id="measureSaveBtn" onclick="saveMeasurements()">Uložiť</button>
                     <button class="btn-secondary" id="measureEditBtn" onclick="saveMeasurements()" style="display:none;">Upraviť</button>
                 </div>
             </div>
-            <div id="latestMeasures" style="margin-bottom:10px;"></div>
-            <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                <div class="measure-item" style="flex:1; min-width:70px;"><label>Ramená</label><input type="number" id="mShoulders" step="0.5" placeholder="cm"></div>
-                <div class="measure-item" style="flex:1; min-width:70px;"><label>Hrudník</label><input type="number" id="mChest" step="0.5" placeholder="cm"></div>
-                <div class="measure-item" style="flex:1; min-width:70px;"><label>Pás</label><input type="number" id="mWaist" step="0.5" placeholder="cm"></div>
-                <div class="measure-item" style="flex:1; min-width:70px;"><label>Biceps</label><input type="number" id="mBicepL" step="0.5" placeholder="L"><input type="number" id="mBicepR" step="0.5" placeholder="P" style="margin-top:4px;"></div>
-                <div class="measure-item" style="flex:1; min-width:70px;"><label>Predlaktie</label><input type="number" id="mForearmL" step="0.5" placeholder="L"><input type="number" id="mForearmR" step="0.5" placeholder="P" style="margin-top:4px;"></div>
-                <div class="measure-item" style="flex:1; min-width:70px;"><label>Stehno</label><input type="number" id="mThighL" step="0.5" placeholder="L"><input type="number" id="mThighR" step="0.5" placeholder="P" style="margin-top:4px;"></div>
-                <div class="measure-item" style="flex:1; min-width:70px;"><label>Lýtko</label><input type="number" id="mCalfL" step="0.5" placeholder="L"><input type="number" id="mCalfR" step="0.5" placeholder="P" style="margin-top:4px;"></div>
-            </div>
             <div class="ratio-grid" id="ratioCards"></div>
+            <div id="bodyAnalysis" style="margin-top:10px;"></div>
         </div>
 
         <!-- Výkon v cvikoch -->
@@ -1407,7 +1416,7 @@
         });
 
         // ===== GOALS =====
-        let goals = JSON.parse(localStorage.getItem('fitnessGoals')) || { bazal: 1900, tdee: 2350, protein: 155, carbs: 175, fat: 65, weight: 80 };
+        let goals = JSON.parse(localStorage.getItem('fitnessGoals')) || { bazal: 1900, tdee: 2350, protein: 155, carbs: 175, fat: 65, weight: 80, height: 181 };
         if (!goals.tdee) goals.tdee = Math.round(goals.bazal * 1.24);
 
         function toggleGoalEdit() {
@@ -1425,6 +1434,7 @@
                 document.getElementById('goalCarbs').value = goals.carbs;
                 document.getElementById('goalFat').value = goals.fat;
                 document.getElementById('goalWeight').value = goals.weight;
+                document.getElementById('goalHeight').value = goals.height || 181;
             }
         }
 
@@ -1442,6 +1452,7 @@
             goals.carbs = parseFloat(document.getElementById('goalCarbs').value) || 200;
             goals.fat = parseFloat(document.getElementById('goalFat').value) || 60;
             goals.weight = parseFloat(document.getElementById('goalWeight').value) || 80;
+            goals.height = parseFloat(document.getElementById('goalHeight').value) || 181;
             goals.updatedAt = new Date().toISOString();
             localStorage.setItem('fitnessGoals', JSON.stringify(goals));
             toggleGoalEdit();
@@ -1712,7 +1723,7 @@
             measurements.sort((a, b) => b.date.localeCompare(a.date));
             localStorage.setItem('bodyMeasurements', JSON.stringify(measurements));
             renderMeasurements();
-            document.getElementById('measureSaveBtn').textContent = 'Upraviť';
+            document.getElementById('measureInputs').style.display = 'none';
             showToast(existing >= 0 ? 'Miery aktualizované' : 'Miery uložené');
             scheduleSync();
         }
@@ -1725,143 +1736,421 @@
             scheduleSync();
         }
 
+        function toggleMeasureInputs() {
+            const el = document.getElementById('measureInputs');
+            el.style.display = el.style.display === 'none' ? '' : 'none';
+        }
+
         function renderMeasurements() {
             if (measurements.length === 0) {
                 document.getElementById('ratioCards').innerHTML = '';
-                document.getElementById('latestMeasures').innerHTML = '';
+                document.getElementById('bodyAnalysis').innerHTML = '';
                 return;
             }
 
             const latest = measurements[0];
-            let vals = '<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;">Posledné meranie: ' + formatDate(latest.date) + '</div>';
-            vals += '<div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:0.8rem;">';
-            if (latest.chest) vals += '<span>Hrudník <strong>' + latest.chest + '</strong></span>';
-            if (latest.waist) vals += '<span>Pás <strong>' + latest.waist + '</strong></span>';
+            const H = goals.height || 181;
+            const bicep = latest.bicepL || latest.bicep;
+            const forearm = latest.forearmL;
+            const thigh = latest.thighL || latest.thigh;
+            const calf = latest.calfL;
+            const W = latest.waist, C = latest.chest, S = latest.shoulders;
 
-            if (latest.shoulders) vals += '<span>Ramená <strong>' + latest.shoulders + '</strong></span>';
-            const tL = latest.thighL || latest.thigh, tR = latest.thighR;
-            if (tL) vals += '<span>Stehno <strong>' + tL + (tR ? '/' + tR : '') + '</strong></span>';
-            const bL = latest.bicepL || latest.bicep, bR = latest.bicepR;
-            if (bL) vals += '<span>Biceps <strong>' + bL + (bR ? '/' + bR : '') + '</strong></span>';
-            if (latest.forearmL) vals += '<span>Predl. <strong>' + latest.forearmL + (latest.forearmR ? '/' + latest.forearmR : '') + '</strong></span>';
-            if (latest.calfL) vals += '<span>Lýtko <strong>' + latest.calfL + (latest.calfR ? '/' + latest.calfR : '') + '</strong></span>';
-            vals += '</div>';
-            document.getElementById('latestMeasures').innerHTML = vals;
+            const partNames = { waist: 'Pás', chest: 'Hrudník', shoulders: 'Ramená', bicep: 'Biceps', forearm: 'Predlaktie', thigh: 'Stehno', calf: 'Lýtko' };
+            const cur = { waist: W, chest: C, shoulders: S, bicep, forearm, thigh, calf };
+            const partEx = {
+                waist: 'deficit kalórií, kardio, core',
+                chest: 'bench, rozpažky, veslovanie, zhyby',
+                shoulders: 'OHP, lateral raises, face pulls',
+                bicep: 'curls, chin-ups, hammer curls',
+                forearm: 'farmer walks, wrist curls, dead hangs',
+                thigh: 'drepy, leg press, výpady',
+                calf: 'calf raises, beh do kopca, skákacie cviky'
+            };
 
-            let ratios = '';
-            function rc(label, val, cls, statusText, tipLines, cmTop, cmBot) {
-                const tip = tipLines.join('\n');
-                const cmDiv = '<div style="font-size:0.65rem;color:var(--text-muted);white-space:nowrap;text-align:right;line-height:1.3;flex:0 0 auto;margin-right:4px;"><div>' + cmTop + ' cm</div><div style="border-top:1px solid var(--text-muted);margin:1px 0;">' + cmBot + ' cm</div></div>';
-                const maxLen = Math.max(String(cmTop).length, String(cmBot).length) + 3;
+            // Koherentný proporčný ideál (McCallum + Steve Reeves + zlatý rez)
+            const curWeight = (records.filter(r => r.weight != null && r.weight > 0).sort((a, b) => b.date.localeCompare(a.date))[0] || {}).weight || goals.weight || 80;
+            const goalWeight = goals.weight || curWeight;
+            const kgToLose = Math.max(0, curWeight - goalWeight);
+            const iC = Math.round(H * 0.65 * 10) / 10;
+            const iW = Math.round(H * 0.455 * 10) / 10;
+            const ideal = {
+                chest: iC,
+                waist: iW,
+                shoulders: Math.round(iW * 1.618 * 10) / 10,
+                bicep: Math.round(iC * 0.36 * 10) / 10,
+                forearm: Math.round(iC * 0.29 * 10) / 10,
+                calf: Math.round(iC * 0.34 * 10) / 10,
+                thigh: Math.round(iW * 0.757 * 10) / 10
+            };
+
+            // Blame analýza — koľkokrát je každá časť príčinou zlého pomeru
+            const blame = {};
+            function addBlame(part, dir, sev) {
+                if (!blame[part]) blame[part] = { up: 0, down: 0, total: 0 };
+                blame[part][dir] += sev;
+                blame[part].total += sev;
+            }
+
+            const ratioResults = [];
+            function chk(label, val, okMin, okMax, warnMin, warnMax, cmTopV, cmBotV, partA, partB, idealStr, blameIfLow, blameIfHigh) {
+                const cls = val >= okMin && val <= okMax ? 'ratio-ok' : val >= warnMin && val <= warnMax ? 'ratio-warn' : 'ratio-bad';
+                const status = cls === 'ratio-ok' ? 'Ideálny' : cls === 'ratio-warn' ? 'Hraničné' : 'Zamerať sa';
+                if (cls !== 'ratio-ok') {
+                    const sev = cls === 'ratio-bad' ? 2 : 1;
+                    const dirs = val < okMin ? blameIfLow : blameIfHigh;
+                    dirs.forEach(d => addBlame(d[0], d[1], sev));
+                }
+                ratioResults.push({ label, val, cls, status, cmTopV, cmBotV, partA, partB, idealStr });
+            }
+
+            if (W && C) chk('Pás / Hrudník', W/C, 0, 0.73, 0, 0.80, W, C, 'waist', 'chest', '0.70', [], [['waist','down'],['chest','up']]);
+            if (S && W) chk('Ramená / Pás', S/W, 1.60, 99, 1.45, 99, S, W, 'shoulders', 'waist', '1.618', [['waist','down'],['shoulders','up']], []);
+            if (bicep && forearm) chk('Predlaktie / Biceps', forearm/bicep, 0.70, 0.82, 0.60, 0.88, forearm, bicep, 'forearm', 'bicep', '0.70–0.80', [['forearm','up']], []);
+            if (thigh && calf) chk('Lýtko / Stehno', calf/thigh, 0.60, 0.70, 0.50, 0.75, calf, thigh, 'calf', 'thigh', '0.60–0.70', [['calf','up']], []);
+            if (bicep && calf) chk('Biceps / Lýtko', bicep/calf, 0.90, 1.10, 0.80, 1.20, bicep, calf, 'bicep', 'calf', '~1.00', [['bicep','up']], [['calf','up']]);
+            if (thigh && W) chk('Stehno / Pás', thigh/W, 0.70, 0.85, 0.60, 0.90, thigh, W, 'thigh', 'waist', '~0.75', [['thigh','up'],['waist','down']], []);
+            if (bicep && W) chk('Biceps / Pás', bicep/W, 0.46, 0.53, 0.40, 0.58, bicep, W, 'bicep', 'waist', '0.46–0.53', [['bicep','up'],['waist','down']], []);
+            if (bicep && C) chk('Biceps / Hrudník', bicep/C, 0.34, 0.38, 0.30, 0.42, bicep, C, 'bicep', 'chest', '0.36', [['bicep','up']], []);
+            if (forearm && C) chk('Predlaktie / Hrudník', forearm/C, 0.27, 0.31, 0.24, 0.34, forearm, C, 'forearm', 'chest', '0.29', [['forearm','up']], []);
+            if (calf && C) chk('Lýtko / Hrudník', calf/C, 0.32, 0.36, 0.28, 0.40, calf, C, 'calf', 'chest', '0.34', [['calf','up']], []);
+
+            // Render ratio karty s kontextovými tooltipmi
+            // Projekcia pomerov pri cieľových mierach
+            const projMap = {};
+            if (ideal.waist && ideal.chest) projMap['Pás / Hrudník'] = (ideal.waist/ideal.chest).toFixed(2);
+            if (ideal.shoulders && ideal.waist) projMap['Ramená / Pás'] = (ideal.shoulders/ideal.waist).toFixed(2);
+            if (ideal.forearm && ideal.bicep) projMap['Predlaktie / Biceps'] = (ideal.forearm/ideal.bicep).toFixed(2);
+            if (ideal.calf && ideal.thigh) projMap['Lýtko / Stehno'] = (ideal.calf/ideal.thigh).toFixed(2);
+            if (ideal.bicep && ideal.calf) projMap['Biceps / Lýtko'] = (ideal.bicep/ideal.calf).toFixed(2);
+            if (ideal.thigh && ideal.waist) projMap['Stehno / Pás'] = (ideal.thigh/ideal.waist).toFixed(2);
+            if (ideal.bicep && ideal.waist) projMap['Biceps / Pás'] = (ideal.bicep/ideal.waist).toFixed(2);
+            if (ideal.bicep && ideal.chest) projMap['Biceps / Hrudník'] = (ideal.bicep/ideal.chest).toFixed(2);
+            if (ideal.forearm && ideal.chest) projMap['Predlaktie / Hrudník'] = (ideal.forearm/ideal.chest).toFixed(2);
+            if (ideal.calf && ideal.chest) projMap['Lýtko / Hrudník'] = (ideal.calf/ideal.chest).toFixed(2);
+
+            let ratiosHtml = '';
+            ratioResults.forEach(r => {
+                const lines = ['<strong>Ideál: ' + r.idealStr + '</strong>'];
+                lines.push(partNames[r.partA] + ': ' + r.cmTopV + ' cm | ' + partNames[r.partB] + ': ' + r.cmBotV + ' cm');
+
+                if (r.cls !== 'ratio-ok') {
+                    const bA = blame[r.partA], bB = blame[r.partB];
+                    const scoreA = bA ? bA.total : 0, scoreB = bB ? bB.total : 0;
+                    const root = scoreA >= scoreB ? r.partA : r.partB;
+                    const other = root === r.partA ? r.partB : r.partA;
+                    const rootBlame = blame[root];
+                    const rootDir = rootBlame.down > rootBlame.up ? 'príliš veľký' : 'príliš malý';
+
+                    const otherBad = blame[other] && blame[other].total > 0;
+                    if (!otherBad) {
+                        lines.push('Príčina: ' + partNames[root] + ' ' + rootDir + ' — ' + partNames[other] + ' je v norme');
+                    } else if (scoreA > scoreB * 1.5) {
+                        lines.push('Hlavná príčina: ' + partNames[root] + ' ' + rootDir);
+                    } else {
+                        lines.push('Príčina: ' + partNames[r.partA] + ' aj ' + partNames[r.partB] + ' mierne mimo');
+                    }
+
+                    const tgt = ideal[root];
+                    if (tgt && cur[root]) {
+                        const d = tgt - cur[root];
+                        lines.push('Cieľ ' + partNames[root] + ': ' + cur[root] + ' → ' + tgt + ' cm (' + (d > 0 ? '+' : '') + d.toFixed(0) + ')');
+                    }
+                    lines.push('➜ ' + partEx[root]);
+                } else {
+                    lines.push('Výborne — v ideálnom rozsahu!');
+                }
+
+                if (projMap[r.label]) {
+                    lines.push('Pri cieľových mierach: ' + r.val.toFixed(2) + ' → ' + projMap[r.label] + ' ✓');
+                }
+
+                const tip = lines.join('\n');
+                const cmDiv = '<div style="font-size:0.65rem;color:var(--text-muted);white-space:nowrap;text-align:right;line-height:1.3;flex:0 0 auto;margin-right:4px;"><div>' + r.cmTopV + ' cm</div><div style="border-top:1px solid var(--text-muted);margin:1px 0;">' + r.cmBotV + ' cm</div></div>';
+                const maxLen = Math.max(String(r.cmTopV).length, String(r.cmBotV).length) + 3;
                 const spacerW = (maxLen * 5.5) + 'px';
-                ratios += '<div class="ratio-card" onclick="this.classList.toggle(\'tip-open\')" style="display:flex;align-items:center;">' + cmDiv + '<div style="flex:1;text-align:center;"><div class="goal-label">' + label + '</div><div class="ratio-val">' + val + '</div><div class="ratio-status ' + cls + '">' + statusText + '</div></div><div style="width:' + spacerW + ';flex:0 0 auto;"></div><div class="ratio-tip">' + tip.replace(/\n/g, '<br>') + '</div></div>';
+                ratiosHtml += '<div class="ratio-card" onclick="this.classList.toggle(\'tip-open\')" style="display:flex;align-items:center;">' + cmDiv + '<div style="flex:1;text-align:center;"><div class="goal-label">' + r.label + '</div><div class="ratio-val">' + r.val.toFixed(2) + '</div><div class="ratio-status ' + r.cls + '">' + r.status + '</div></div><div style="width:' + spacerW + ';flex:0 0 auto;"></div><div class="ratio-tip">' + tip.replace(/\n/g, '<br>') + '</div></div>';
+            });
+            document.getElementById('ratioCards').innerHTML = ratiosHtml;
+
+            // Komplexná analýza — koherentné ciele
+            const okCount = ratioResults.filter(r => r.cls === 'ratio-ok').length;
+            const total = ratioResults.length;
+            let analysis = '';
+
+            function partDetail(p, diff) {
+                const ad = Math.abs(diff);
+                const v = cur[p], t = ideal[p];
+                const f = { note: '' };
+                if (ad < 1) { f.note = 'V cieli ✓'; return f; }
+                const estWaistAtGoal = W ? Math.round(W - kgToLose * 1.5 - (kgToLose > 0 ? 3 : 0)) : t;
+                switch(p) {
+                    case 'waist':
+                        f.note = 'Proporčný ideál pre ' + H + ' cm. Pri ' + goalWeight + ' kg (−' + kgToLose.toFixed(0) + ' kg) reálny <b>pás</b> ~' + estWaistAtGoal + ' cm. Pre ideálnych ' + t + ' cm treba ~' + Math.round((v - t) * 0.7) + ' kg čistého <b>tuku</b> dole — vyžaduje kombináciu <b>deficitu</b> + <b>svalovej výstavby</b>. ' + (blame.waist ? 'Ovplyvňuje ' + blame.waist.total + ' pomerov — najväčšia páka.' : '');
+                        break;
+                    case 'chest':
+                        f.note = 'Kotva celého systému — <b>biceps</b>, <b>predlaktie</b>, <b>lýtko</b> sa počítajú z <b>hrudníka</b>. ' + v + ' → ' + t + ' cm (+' + ad.toFixed(0) + '). Obvod = <b>hrudné svaly</b> + <b>chrbát</b> (lats, trapézy). Bench, rozpažky + sťahovanie, veslovanie, zhyby. Reálne +3–5 cm za rok. Dlhodobý cieľ (2–3 roky).';
+                        break;
+                    case 'shoulders':
+                        f.note = '<b>Pás</b> × 1.618 (zlatý rez). Pri reálnom <b>páse</b> ~' + estWaistAtGoal + ' cm by cieľ bol ' + Math.round(estWaistAtGoal * 1.618) + ' cm (teraz ' + v + '). <b>Laterálne zdvihy</b> — stredný <b>deltoid</b> = najväčší vizuálny dopad na šírku. Reálne +3–4 cm/rok. Menší <b>pás</b> = nižší cieľ.';
+                        break;
+                    case 'bicep':
+                        f.note = '<b>Hrudník</b> × 0.36. Aktuálne <b>biceps</b>/<b>hrudník</b> = ' + (bicep && C ? (bicep/C).toFixed(2) : '?') + (bicep && C && bicep/C >= 0.34 && bicep/C <= 0.38 ? ' — v norme voči aktuálnemu <b>hrudníku</b>.' : '.') + ' S rastom <b>hrudníka</b> rastie aj cieľ. <b>Curls</b>, <b>chin-ups</b>, <b>hammer curls</b>. +1–1.5 cm za 6 mes.';
+                        break;
+                    case 'forearm':
+                        f.note = '<b>Hrudník</b> × 0.29. <b>Predlaktie</b>/<b>biceps</b> = ' + (forearm && bicep ? (forearm/bicep).toFixed(2) : '?') + (forearm && bicep && forearm/bicep >= 0.70 ? ' (OK voči <b>bicepsu</b>)' : ' (zaostáva aj voči <b>bicepsu</b>)') + '. Prevažne <b>šľachy</b> — najpomalšie rastúci sval. ~1–2 cm/rok. <b>Farmer walks</b>, <b>wrist curls</b>, <b>dead hangs</b>, <b>gripper</b>.';
+                        break;
+                    case 'thigh':
+                        f.note = '<b>Pás</b> × 0.757. Pri reálnom <b>páse</b> ~' + estWaistAtGoal + ' cm cieľ <b>stehna</b> = ' + Math.round(estWaistAtGoal * 0.757) + ' cm. <b>Stehná</b> = najväčšia svalová skupina, rastú najrýchlejšie. <b>Drepy</b>, <b>leg press</b>, <b>výpady</b>. +2–3 cm za 6 mes.';
+                        break;
+                    case 'calf':
+                        f.note = '<b>Hrudník</b> × 0.34. <b>Lýtko</b>/<b>stehno</b> = ' + (calf && thigh ? (calf/thigh).toFixed(2) : '?') + (calf && thigh && calf/thigh >= 0.60 ? ' (v norme voči <b>stehnu</b>).' : ' (zaostáva voči <b>stehnu</b>).') + ' <b>Lýtka</b> sú geneticky limitované (veľa <b>šliach</b>). <b>Calf raises</b> 4–5× týždenne, beh do kopca. ~1 cm za 6 mes.';
+                        break;
+                }
+                return f;
             }
 
-            if (latest.waist && latest.chest) {
-                const v = latest.waist / latest.chest;
-                const cls = v <= 0.73 ? 'ratio-ok' : v < 0.80 ? 'ratio-warn' : 'ratio-bad';
-                const lines = ['<strong>Ideál: 0.70</strong> (pás = 70% hrudníka)', 'Pás: ' + latest.waist + ' cm | Hrudník: ' + latest.chest + ' cm'];
-                if (v > 0.73) { lines.push('Problém: ' + (latest.waist > latest.chest * 0.73 ? 'pás príliš široký' : 'hrudník by mohol byť širší')); lines.push('Cieľ: pás ~' + (0.70 * latest.chest).toFixed(1) + ' cm alebo hrudník ~' + (latest.waist / 0.70).toFixed(1) + ' cm'); lines.push('➜ Bench press, rozpažky, deficit kalórií'); }
-                else lines.push('Výborný V-tvar trupu!');
-                rc('Pás / Hrudník', v.toFixed(2), cls, (v <= 0.73 ? 'V-tvar' : v < 0.80 ? 'Hraničný' : 'Zamerať sa'), lines, latest.waist, latest.chest);
-            }
-            if (latest.shoulders && latest.waist) {
-                const v = latest.shoulders / latest.waist;
-                const cls = v > 1.60 ? 'ratio-ok' : v > 1.45 ? 'ratio-warn' : 'ratio-bad';
-                const lines = ['<strong>Ideál: 1.618</strong> (zlatý rez / Adonisov index)', 'Ramená: ' + latest.shoulders + ' cm | Pás: ' + latest.waist + ' cm'];
-                if (v < 1.60) { lines.push('Problém: ' + (latest.waist > latest.shoulders / 1.45 ? 'pás príliš široký' : 'ramená by mohli byť širšie')); lines.push('Cieľ: ramená ~' + (1.618 * latest.waist).toFixed(1) + ' cm alebo pás ~' + (latest.shoulders / 1.618).toFixed(1) + ' cm'); lines.push('➜ OHP, lateral raises, deficit kalórií'); }
-                else lines.push('Blízko zlatého rezu!');
-                rc('Ramená / Pás', v.toFixed(2), cls, (v > 1.60 ? 'Výborne' : v > 1.45 ? 'Priemerný' : 'Nízky'), lines, latest.shoulders, latest.waist);
-            }
-            if ((latest.bicepL || latest.bicep) && latest.forearmL) {
-                const bicep = latest.bicepL || latest.bicep;
-                const forearm = latest.forearmL;
-                const v = forearm / bicep;
-                const cls = v > 0.70 ? 'ratio-ok' : v > 0.60 ? 'ratio-warn' : 'ratio-bad';
-                const lines = ['<strong>Ideál: 0.70–0.80</strong>', 'Biceps: ' + bicep + ' cm | Predlaktie: ' + forearm + ' cm'];
-                if (v < 0.70) lines.push('➜ Predlaktia sú slabý článok — farmer walks, wrist curls');
-                else lines.push('Proporcie horných končatín sú vyrovnané');
-                rc('Predlaktie / Biceps', v.toFixed(2), cls, (v > 0.70 ? 'Vyrovnané' : v > 0.60 ? 'Priemerný' : 'Slabé predl.'), lines, forearm, bicep);
-            }
-            if ((latest.thighL || latest.thigh) && latest.calfL) {
-                const thigh = latest.thighL || latest.thigh;
-                const calf = latest.calfL;
-                const v = calf / thigh;
-                const cls = v > 0.60 ? 'ratio-ok' : v > 0.50 ? 'ratio-warn' : 'ratio-bad';
-                const lines = ['<strong>Ideál: 0.60–0.70</strong>', 'Stehno: ' + thigh + ' cm | Lýtko: ' + calf + ' cm'];
-                if (v < 0.60) lines.push('➜ Lýtka sú slabý článok — calf raises, beh do kopca');
-                else lines.push('Dolné končatiny sú proporčné');
-                rc('Lýtko / Stehno', v.toFixed(2), cls, (v > 0.60 ? 'Proporčné' : v > 0.50 ? 'Priemerný' : 'Slabé lýtka'), lines, calf, thigh);
-            }
-            if ((latest.bicepL || latest.bicep) && latest.calfL) {
-                const bicep = latest.bicepL || latest.bicep;
-                const calf = latest.calfL;
-                const v = bicep / calf;
-                const cls = v > 0.90 && v < 1.10 ? 'ratio-ok' : v > 0.80 && v < 1.20 ? 'ratio-warn' : 'ratio-bad';
-                const lines = ['<strong>Ideál: ~1.00</strong> (rovnaký obvod)', 'Biceps: ' + bicep + ' cm | Lýtko: ' + calf + ' cm'];
-                if (v < 0.90) lines.push('➜ Bicepsy zaostávajú — curls, chin-ups');
-                else if (v > 1.10) lines.push('➜ Lýtka zaostávajú — calf raises, beh do kopca');
-                else lines.push('Vyrovnané proporcie horná/dolná!');
-                rc('Biceps / Lýtko', v.toFixed(2), cls, (v > 0.90 && v < 1.10 ? 'Vyrovnané' : 'Nevyrovnané'), lines, bicep, calf);
-            }
-            if ((latest.thighL || latest.thigh) && latest.waist) {
-                const thigh = latest.thighL || latest.thigh;
-                const v = thigh / latest.waist;
-                const cls = v > 0.70 ? 'ratio-ok' : v > 0.60 ? 'ratio-warn' : 'ratio-bad';
-                const lines = ['<strong>Ideál: ~0.75</strong> (Steve Reeves)', 'Stehno: ' + thigh + ' cm | Pás: ' + latest.waist + ' cm'];
-                if (v < 0.70) lines.push('➜ Nohy zaostávajú — drepy, leg press, výpady');
-                else lines.push('Dobrý pomer nôh k trupu!');
-                rc('Stehno / Pás', v.toFixed(2), cls, (v > 0.70 ? 'Atletický' : v > 0.60 ? 'Priemerný' : 'Slabé nohy'), lines, thigh, latest.waist);
-            }
-            if ((latest.bicepL || latest.bicep) && latest.waist) {
-                const bicep = latest.bicepL || latest.bicep;
-                const v = bicep / latest.waist;
-                const cls = v > 0.46 && v < 0.53 ? 'ratio-ok' : v > 0.40 && v < 0.58 ? 'ratio-warn' : 'ratio-bad';
-                const lines = ['<strong>Ideál: 0.46–0.53</strong> (Adonis Index)', 'Biceps: ' + bicep + ' cm | Pás: ' + latest.waist + ' cm'];
-                if (v < 0.46) lines.push('➜ Ruky zaostávajú — curls, chin-ups, hammer curls');
-                else if (v > 0.53) lines.push('Výborný rozvoj rúk voči trupu!');
-                else lines.push('Ideálne proporcie rúk k trupu!');
-                rc('Biceps / Pás', v.toFixed(2), cls, (v > 0.46 && v < 0.53 ? 'Ideálny' : v < 0.46 ? 'Slabé ruky' : 'Silné ruky'), lines, bicep, latest.waist);
-            }
-            if (latest.chest) {
-                const bicep = latest.bicepL || latest.bicep;
-                const forearm = latest.forearmL;
-                const calf = latest.calfL;
-                if (bicep) {
-                    const v = bicep / latest.chest;
-                    const ideal = 0.36;
-                    const cls = v > 0.34 && v < 0.38 ? 'ratio-ok' : v > 0.30 && v < 0.42 ? 'ratio-warn' : 'ratio-bad';
-                    const need = (ideal * latest.chest).toFixed(1);
-                    const lines = ['<strong>Ideál: 0.36</strong> (McCallum — 36% hrudníka)', 'Biceps: ' + bicep + ' cm | Hrudník: ' + latest.chest + ' cm'];
-                    if (v < 0.34) lines.push('➜ Bicepsy zaostávajú — cieľ: ' + need + ' cm', 'Curls, chin-ups, hammer curls');
-                    else if (v > 0.38) lines.push('Bicepsy sú nadpriemerne vyvinuté!');
-                    else lines.push('Proporčné voči postave!');
-                    rc('Biceps / Hrudník', v.toFixed(2), cls, (v < 0.34 ? 'Zaostáva' : v > 0.38 ? 'Nad priemer' : 'Proporčný'), lines, bicep, latest.chest);
+            const hasParts = ['waist','chest','shoulders','bicep','forearm','thigh','calf'].filter(p => cur[p]);
+
+            if (hasParts.length >= 2) {
+                analysis = '<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px;font-size:0.8rem;">';
+                analysis += '<div style="font-weight:600;margin-bottom:10px;">Cieľové miery pre ' + H + ' cm <span style="font-weight:400;color:var(--text-muted);font-size:0.7rem;">(vzájomne konzistentné — všetky pomery v ideále)</span></div>';
+
+                hasParts.forEach(p => {
+                    const diff = ideal[p] - cur[p];
+                    const absDiff = Math.abs(diff);
+                    const isOk = absDiff < 1;
+                    const color = isOk ? 'var(--green)' : absDiff > 8 ? 'var(--red)' : absDiff > 3 ? 'var(--orange, #ffa726)' : 'var(--text-primary)';
+                    const diffStr = isOk ? '✓' : (diff > 0 ? '+' : '') + diff.toFixed(0) + ' cm';
+                    const d = partDetail(p, diff);
+
+                    analysis += '<div style="display:flex;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.06);align-items:center;">';
+                    analysis += '<span style="width:75px;font-weight:600;flex:0 0 auto;">' + partNames[p] + '</span>';
+                    analysis += '<span style="width:35px;text-align:right;flex:0 0 auto;">' + cur[p] + '</span>';
+                    analysis += '<span style="color:var(--text-muted);flex:0 0 auto;">→</span>';
+                    analysis += '<span style="width:35px;font-weight:600;flex:0 0 auto;">' + ideal[p] + '</span>';
+                    analysis += '<span style="width:50px;color:' + color + ';font-weight:600;flex:0 0 auto;white-space:nowrap;">' + diffStr + '</span>';
+                    analysis += '<span style="font-size:0.68rem;color:var(--text-muted);flex:1;line-height:1.3;">' + d.note + '</span>';
+                    analysis += '</div>';
+                });
+
+                const blameSorted = Object.entries(blame).filter(([p]) => cur[p]).sort((a, b) => b[1].total - a[1].total);
+                if (blameSorted.length > 0) {
+                    analysis += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--card-border);font-size:0.78rem;">';
+                    analysis += '<div style="font-weight:600;margin-bottom:6px;">Na čo si dať pozor <span style="font-weight:400;color:var(--text-muted);font-size:0.7rem;">(' + okCount + '/' + total + ' pomerov v ideále)</span></div>';
+                    const tips = [];
+                    const topPart = blameSorted[0][0];
+                    const waistIsTop = topPart === 'waist';
+                    if (waistIsTop) tips.push('⚠ <b>Pás</b> ovplyvňuje ' + (blame.waist ? blame.waist.total : '') + ' pomerov — aj malý pokles výrazne zlepší celkové skóre. Zameraj sa najprv sem.');
+                    if (cur.waist && cur.waist > ideal.waist + 5) tips.push('⚠ Neznižuj váhu príliš agresívne (max −0.5 kg/týždeň) — pri rýchlom chudnutí strácaš aj <b>svaly</b>, čo zhoršuje ostatné pomery.');
+                    if (cur.chest && ideal.chest - cur.chest > 8) tips.push('💡 <b>Hrudník</b> +' + Math.round(ideal.chest - cur.chest) + ' cm je dlhodobý cieľ (2–3 roky). Prioritné cviky: <b>bench press</b>, <b>rozpažky</b>, <b>zhyby</b>, <b>veslovanie</b> (chrbát = polovica obvodu).');
+                    if (cur.forearm && ideal.forearm - cur.forearm > 3) tips.push('💡 <b>Predlaktia</b> rastú pomaly (šľachy). Nerob ich ako hlavný cvik — pridaj <b>farmer walks</b> a <b>dead hangs</b> na koniec tréningu. Neobetuj čas z väčších skupín.');
+                    if (cur.shoulders && ideal.shoulders - cur.shoulders > 5 && cur.waist && cur.waist > ideal.waist + 3) tips.push('💡 <b>Ramená</b>: menší pás automaticky zníži cieľ (zlatý rez). Priorita = <b>laterálne zdvihy</b> (stredný deltoid, šírka). Nepreháňaj ťažký OHP — riziko zranenia kĺbov.');
+                    if (cur.thigh && ideal.thigh - cur.thigh > 3) tips.push('💡 <b>Stehná</b>: najväčší potenciál rastu. Priorita = <b>drepy</b>, <b>leg press</b>. Reagujú rýchlo — viditeľné výsledky za 3–4 mesiace.');
+                    if (cur.thigh && cur.calf && cur.thigh > 0 && cur.calf > 0 && cur.calf / cur.thigh < 0.60) tips.push('⚠ <b>Lýtka</b> výrazne zaostávajú za stehnami — <b>calf raises</b> 4–5× týždenne, 15–25 opak. Pridaj ich na koniec každého tréningu.');
+                    if (cur.bicep && cur.chest && cur.bicep / cur.chest >= 0.34 && cur.bicep / cur.chest <= 0.38) tips.push('✓ <b>Biceps</b>/hrudník je v norme — nemusíš ho špeciálne doháňať. Nepridávaj extra bicepsové cviky, bude rásť s <b>hrudníkom</b> a <b>chrbtom</b>.');
+                    if (cur.bicep && cur.chest && cur.bicep / cur.chest < 0.34) tips.push('💡 <b>Biceps</b> zaostáva voči hrudníku. Pridaj 2–3 série <b>curls</b> a <b>hammer curls</b> na koniec upper dňa.');
+                    tips.push('⚠ Neporovnávaj sa s ideálom každý deň. Meraj raz za 2–4 týždne, ráno, rovnaké podmienky.');
+                    tips.forEach((t, i) => {
+                        analysis += '<div style="margin-bottom:4px;line-height:1.35;' + (i === 0 ? 'color:var(--text-primary);' : 'color:var(--text-muted);') + '">' + t + '</div>';
+                    });
+                    analysis += '</div>';
+
+                    const needsCut = kgToLose > 0;
+                    const last14 = records.filter(r => r.caloriesOut != null).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 14);
+                    const recDef = needsCut ? Math.min(400, Math.round(kgToLose * 100)) : 0;
+                    const protPerKg = needsCut ? 2.2 : 1.8;
+                    const recProt = Math.round(goalWeight * protPerKg);
+                    const weeklyLoss = needsCut ? (recDef * 7 / 7700).toFixed(2) : 0;
+                    const weeksToGoal = needsCut ? Math.round(kgToLose / (recDef * 7 / 7700)) : 0;
+
+                    function renderInfoSection(id, title, items, labelWidth) {
+                        let h = '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--card-border);font-size:0.78rem;">';
+                        h += '<div style="font-weight:600;margin-bottom:6px;cursor:pointer;user-select:none;" onclick="var c=document.getElementById(\'' + id + '\');c.style.display=c.style.display===\'none\'?\'\':\'none\'">' + title + ' <span style="font-size:0.65rem;color:var(--text-muted);">▼</span></div>';
+                        h += '<div id="' + id + '" style="display:none;">';
+                        items.forEach(n => {
+                            const em = n.label.match(/^(\S+)\s*(.*)/);
+                            h += '<div style="display:flex;gap:0;margin-bottom:5px;line-height:1.4;color:var(--text-muted);">';
+                            h += '<span style="flex:0 0 22px;text-align:center;">' + (em ? em[1] : '') + '</span>';
+                            h += '<span style="flex:0 0 ' + labelWidth + 'px;white-space:nowrap;font-weight:600;color:var(--text-primary);">' + (em ? em[2] : n.label) + '</span>';
+                            h += '<span style="flex:1;">' + n.text + '</span>';
+                            h += '</div>';
+                        });
+                        h += '</div></div>';
+                        return h;
+                    }
+
+                    const nutr = [];
+                    if (needsCut) {
+                        nutr.push({label: '🔥 Deficit', text: '−' + recDef + ' kcal/deň od <b>bazálu</b> + <b>aktivita</b>. Strata ~' + weeklyLoss + ' kg/týždeň → cieľ ' + goalWeight + ' kg za ~' + weeksToGoal + ' týždňov. Mierny <b>deficit</b> chráni <b>svaly</b>.'});
+                    } else {
+                        nutr.push({label: '🔥 Údržba', text: 'Si na cieľovej <b>váhe</b> — jedz na <b>údržbe</b>. V tréningové dni môžeš pridať +200 kcal.'});
+                    }
+                    nutr.push({label: '🥩 Proteín', text: '~30 % príjmu (' + protPerKg + ' g/kg = ' + recProt + ' g). Fixná potreba — nastav prvý. Max 2.5 g/kg, viac telo nevyužije. Neísť pod 1.6 g/kg — pod tým pri <b>deficite</b> strácaš <b>svaly</b>, pri cvičení neregeneruješ.' + (needsCut ? ' Pri <b>deficite</b> chráni <b>svaly</b>.' : '')});
+                    nutr.push({label: '🥑 Tuky', text: '~25 % príjmu. Neísť pod 60 g/deň — pod tým klesá <b>testosterón</b>, zhoršuje sa vstrebávanie <b>vitamínov A/D/E/K</b> a spomaľuje sa regenerácia <b>kĺbov</b>.'});
+                    nutr.push({label: '🍚 Sacharidy', text: 'Zvyšok (~45 % príjmu). Dopočítaj po <b>proteíne</b> a <b>tukoch</b>. Neísť pod 2 g/kg — pod tým nemáš <b>energiu</b> na tréning, klesá výkon a telo začne spaľovať <b>svaly</b>. Pred tréningom komplexné (ovos, ryža), po tréningu rýchle (ovocie, med).'});
+                    nutr.push({label: '💧 Voda', text: 'Min. ' + Math.round(goalWeight * 0.035 * 10) / 10 + ' l/deň, max ~5 l. Pri tréningu +0.5 l. Nad 5 l riedíš <b>elektrolyty</b> (sodík, draslík) — riziko hyponatrémie.'});
+                    nutr.push({label: '😴 Spánok', text: '7–9 hodín. Pod 6 h klesá <b>rastový hormón</b> o ~70 % a stúpa <b>kortizol</b> — telo ukladá <b>tuk</b> na <b>páse</b> a spomaľuje regeneráciu <b>svalov</b>.'});
+                    nutr.push({label: '⏱ Kreatin', text: 'Údržba 5–15 g denne, nábehovú fázu môžeš začať na 20 g/deň (5–7 dní). Zvyšuje <b>kreatinín</b> v krvi (neznamená poškodenie <b>obličiek</b>). Raz za 4–6 týždňov vysadiť na 1–2 týždne. Najpreskúmanejší <b>suplement</b> na <b>silu</b> a <b>svaly</b>.'});
+                    analysis += renderInfoSection('nutrToggle', 'Výživa pre rekompozíciu', nutr, 95);
+
+                    const health = [];
+                    health.push({label: '🥩 Timing', text: '<b>Proteín</b> rozlož na 4–5 dávok denne (30–40 g na porciu) — telo vstrebá max ~40 g naraz na <b>svalovú syntézu</b>. Najdôležitejšia dávka: do 2 h po tréningu (anabolické okno). Pred spaním <b>kazeín</b> (tvaroh) — vstrebáva sa 6–8 h, zásobuje <b>svaly</b> celú noc, nie len prvé 1–2 h ako whey.'});
+                    health.push({label: '🏋️ Tréning', text: 'Max 60–75 min silový tréning. Po 75 min stúpa <b>kortizol</b> a klesá <b>testosterón</b>. <b>Hypertrofia</b>: 3–4 série × 8–12 opakovaní pri 65–75 % maxima, pauza 60–90 s. <b>Sila</b>: 4–5 sérií × 3–6 opakovaní pri 80–90 % maxima, pauza 2–3 min.'});
+                    health.push({label: '⚠️ Pretrénovanie', text: 'Príznaky: stagnácia alebo pokles výkonu, únava aj po odpočinku, podráždenosť, časté choroby, bolesti kĺbov. Riešenie: 1 týždeň deload (50 % váh) alebo úplné voľno. Prevencia: max 4–5 tréningov/týždeň, 1 deload týždeň za každé 4–6 týždňov.'});
+                    health.push({label: '🔄 Regenerácia', text: '48 h medzi tréningami rovnakej svalovej skupiny. <b>Svaly</b> nerastú počas tréningu ale počas odpočinku. Stretching, foam roller, prechádzky — aktívna regenerácia zrýchľuje zotavenie. Studená sprcha po tréningu znižuje zápal.'});
+                    health.push({label: '😴 Málo spánku', text: 'Ak si spal pod 6 h: <b>necvič</b> ťažko — riziko zranenia stúpa, výkon klesá ~20 %. Radšej ľahký tréning (50 % váh) alebo len kardio/prechádzka. Jeden zlý spánok ≠ katastrofa, ale 3+ dni po sebe → deload.'});
+                    health.push({label: '🤔 Cvičiť/nie', text: 'Vždy lepšie niečo ako nič. Výnimka: horúčka, akútna bolesť kĺbov — vtedy úplné voľno. \"Nad krkom\" (nádcha) = môžeš ľahko. \"Pod krkom\" (kašeľ, žalúdok) = odpočívaj.'});
+                    health.push({label: '⏰ Málo času', text: 'Ak máš 20–30 min: urob len <b>komplexné</b> — <b>drepy</b>, <b>bench</b>, <b>zhyby</b>. Tri cviky po 3 série pokryjú celé telo. Izolované vynechaj — nestojí za to obetovať komplexný cvik kvôli curls. Ak máš 45 min: komplexné + 1–2 izolované na najslabšiu partiu.'});
+                    health.push({label: '😩 Únava', text: 'Zníž váhy na 60–70 % a urob len <b>komplexné</b>. Priorita: 1. <b>drepy/leg press</b> (najväčšia skupina = najväčší stimul), 2. <b>bench/dips</b> (hrudník + triceps), 3. <b>zhyby/rows</b> (chrbát + biceps). Tieto 3 cviky udržia všetko. Izolované v únave vynechaj — malý prínos, zaťažíš regeneráciu.'});
+                    health.push({label: '📊 Nesplnený deň', text: 'Sleduj <b>týždenný priemer</b>, nie denné hodnoty. Ak si jeden deň zjedol menej <b>proteínu</b> — pridaj nasledujúci deň. <b>Deficit</b> funguje rovnako — dôležitý je týždenný súčet, nie presný denný príjem. Nedobiehaj extrémne (napr. 2× deficit) — rozlož rovnomerne.'});
+                    health.push({label: '🍺 Alkohol', text: 'Blokuje <b>svalovú syntézu</b> na 24–48 h, znižuje <b>testosterón</b>, dehydratuje, zhoršuje <b>spánok</b> (aj keď zaspíš rýchlejšie). Ak piješ — aspoň nie v tréningový deň a navýš <b>proteín</b> + <b>vodu</b>.'});
+                    health.push({label: '🧘 Stres', text: 'Chronický <b>stres</b> = vysoký <b>kortizol</b> = ukladanie <b>tuku</b> na <b>páse</b> + spomalená <b>regenerácia</b>. Ak máš stresové obdobie: zníž objem tréningu, zvýš spánok, drž <b>proteín</b>. Meditácia, prechádzky v prírode, dýchacie cvičenia pomáhajú.'});
+                    analysis += renderInfoSection('healthToggle', 'Zásady a zdravie', health, 95);
+
+                    const splits = [];
+                    const needsWaistWork = cur.waist && cur.waist > ideal.waist + 5;
+                    const needsChestWork = cur.chest && ideal.chest - cur.chest > 8;
+                    splits.push({label: '🔄 Full Body', text: '3× týždenne. Každý sval 3×/týždeň. <b>+</b> Najlepšia frekvencia, ideálne pre začiatočníkov, spáli viac kalórií za tréning. <b>−</b> Dlhšie tréningy (75+ min), menej objemu na skupinu, náročné na regeneráciu.'});
+                    splits.push({label: '⬆️ Upper/Lower', text: '4× týždenne (2× upper, 2× lower). Každý sval 2×/týždeň. <b>+</b> Dobrý balans objemu a frekvencie, kratšie tréningy (60 min), dosť času na regeneráciu. <b>−</b> 4 dni v gym, lower dni bývajú náročné.'});
+                    splits.push({label: '💪 Push/Pull/Legs', text: '6× týždenne (2× každý). Každý sval 2×/týždeň. <b>+</b> Najväčší objem, najlepšie pre pokročilých, krátke tréningy (45–60 min). <b>−</b> Vyžaduje 6 dní, náročné na regeneráciu pri deficite, riziko pretrénovania.'});
+                    splits.push({label: '🎯 Pre teba', text: needsWaistWork ?
+                        '<b>Upper/Lower 4× týždenne</b> — najlepšia voľba pri deficite + budovaní svalov. Dosť frekvencie (2×/sval), priestor na kardio v off-dni, nie príliš náročné na regeneráciu.' :
+                        (needsChestWork ?
+                        '<b>Upper/Lower 4× týždenne</b> — pri údržbe/miernom surplus je to optimum. Ak máš čas na 5 dní: Upper/Lower/Upper/Lower/Upper s dôrazom na hrudník + chrbát.' :
+                        '<b>Upper/Lower 4× týždenne</b> alebo <b>Full Body 3×</b> — obe fungujú dobre pri tvojich pomeroch.')
+                    });
+                    const weekA = [
+                        {day: 'Po', type: 'Upper 1', ex: ['Bench 4×8','Dips 2×10','Zhyby 4×8','OHP 3×10','Lat. raises 3×15']},
+                        {day: 'Ut', type: 'Lower 1', ex: ['Drepy 4×8','Romanian DL 3×10','Leg press 3×12','Calf raises 4×20']},
+                        {day: 'St', type: 'Voľno', ex: ['Kardio 30–45 min (prechádzka / beh) alebo úplné voľno']},
+                        {day: 'Št', type: 'Upper 2', ex: ['Dips 3×10','Bench 3×12 (ľahšie)','Rows 4×10','OHP 3×8','Lat. raises 3×15']},
+                        {day: 'Pi', type: 'Lower 2', ex: ['Drepy 3×6 (ťažšie)','Bulg. split sq. 3×10','Leg curls 3×12','Calf raises 4×20']},
+                        {day: 'So–Ne', type: 'Voľno', ex: ['Odpočinok / ľahké kardio']}
+                    ];
+                    const weekB = [
+                        {day: 'Po', type: 'Upper 1', ex: ['Bench 3×6 (ťažšie)','Dips 3×12','Zhyby 4×10','Face pulls 3×15','Lat. raises 3×15']},
+                        {day: 'Ut', type: 'Lower 1', ex: ['Leg press 4×10','Romanian DL 4×10','Výpady 3×10','Calf raises 4×20']},
+                        {day: 'St', type: 'Voľno', ex: ['Kardio alebo úplné voľno']},
+                        {day: 'Št', type: 'Upper 2', ex: ['OHP 4×8','Bench 3×12 (ľahšie)','Rows 4×8','Dips 2×10','Lat. raises 3×15']},
+                        {day: 'Pi', type: 'Lower 2', ex: ['Drepy 4×8','Hip thrust 3×12','Leg ext. 3×12','Calf raises 4×20']},
+                        {day: 'So–Ne', type: 'Voľno', ex: ['Odpočinok / ľahké kardio']}
+                    ];
+                    const maxEx = 5;
+                    function renderWeekRows(rows) {
+                        let h = '<div style="display:flex;gap:0;margin-bottom:4px;margin-top:6px;font-weight:600;color:var(--text-primary);font-size:0.7rem;">';
+                        h += '<span style="flex:0 0 42px;">Deň</span>';
+                        h += '<span style="flex:0 0 62px;">Typ</span>';
+                        for (let i = 0; i < maxEx; i++) h += '<span style="flex:1;text-align:left;">' + (i + 1) + '. cvik</span>';
+                        h += '</div>';
+                        rows.forEach(r => {
+                            const isRest = r.type === 'Voľno';
+                            h += '<div style="display:flex;gap:0;margin-bottom:3px;line-height:1.4;color:var(--text-muted);align-items:baseline;">';
+                            h += '<span style="flex:0 0 42px;font-weight:600;color:var(--text-primary);">' + r.day + '</span>';
+                            h += '<span style="flex:0 0 62px;font-weight:500;color:' + (isRest ? 'var(--text-muted)' : 'var(--orange, #ffa726)') + ';">' + r.type + '</span>';
+                            if (isRest) {
+                                h += '<span style="flex:' + maxEx + ';font-style:italic;">' + r.ex[0] + '</span>';
+                            } else {
+                                for (let i = 0; i < maxEx; i++) {
+                                    h += '<span style="flex:1;white-space:nowrap;">' + (r.ex[i] ? r.ex[i] : '') + '</span>';
+                                }
+                            }
+                            h += '</div>';
+                        });
+                        return h;
+                    }
+                    splits.push({label: '📅 Týždeň A', text: renderWeekRows(weekA)});
+                    splits.push({label: '📅 Týždeň B', text: renderWeekRows(weekB)});
+                    const trainNotes = [];
+                    trainNotes.push({label: '🔄 Rotácia', text: 'Rotuj <b>A→B→A→B</b>. Rôzne cviky a opakovania zabraňujú stagnácii a preťažovaniu rovnakých pohybov.'});
+                    trainNotes.push({label: '🏋️ Intenzita', text: '<b>Deň 1</b> (Upper/Lower) = ťažší. Vyber váhu, pri ktorej posledné 2 opakovania sú náročné, ale zvládneš ich sám. <b>Deň 2</b> = ľahší — váha, pri ktorej ti zostávajú 3 opakovania v zálohe. Nikdy necvič do zlyhania — vždy nechaj <b>1–3 opakovania v rezerve</b>.'});
+                    trainNotes.push({label: '💪 Sila vs H', text: 'Cviky označené <b>„ťažšie"</b>: menej opakovaní (3–6), vyššia váha, dlhšie pauzy (2–3 min) — budujú <b>silu</b>. Označené <b>„ľahšie"</b>: viac opakovaní (10–12), nižšia váha, kratšie pauzy (60–90 s) — budujú <b>objem svalu</b>. Striedanie v rámci týždňa je zámerné — telo sa neadaptuje na jeden štýl.'});
+                    trainNotes.push({label: '❌ Vynechaný', text: '<b>1 deň</b> — pokračuj podľa plánu, nevynechaný tréning nerob na voľný deň. <b>2+ dni</b> — pokračuj tam, kde si skončil (nepreskakuj). Ak vynecháš celý týždeň, začni odznova s <b>−10 % váh</b> na prvý tréning.'});
+                    trainNotes.push({label: '📊 Progresia', text: 'Keď zvládneš horný koniec opakovaní vo všetkých sériách (napr. 4×8 a urobíš 4×9), <b>pridaj 2.5 kg</b> a začni odznova od spodku rozsahu. Nezvyšuj váhu aj objem naraz.'});
+                    trainNotes.push({label: '💡 Finišer', text: 'Na konci <b>každého tréningu</b>: <b>curls</b> / <b>hammer curls</b> 2×12 (upper dni) + <b>calf raises</b> 2–3×20 + <b>farmer walks</b> / <b>dead hangs</b> 2×30 s. <b>Biceps</b>, <b>lýtka</b> a <b>predlaktia</b> potrebujú frekvenciu — krátke série na záver.'});
+                    splits.push({label: '📝 Poznámky', text: trainNotes.map(n => '<div style="margin-bottom:4px;">' + n.label + ' ' + n.text + '</div>').join('')});
+                    analysis += renderInfoSection('splitToggle', 'Typ tréningu', splits, 105);
+
+                    const compound = [];
+                    compound.push({label: '🏗️ Komplexné', text: 'Zapájajú viac kĺbov a svalových skupín naraz. <b>Bench</b>, <b>drepy</b>, <b>mŕtvy ťah</b>, <b>OHP</b>, <b>zhyby</b>, <b>dips</b>, <b>veslovanie</b>. Základ tréningu — budujú celkovú silu, spaľujú viac kalórií, stimulujú viac <b>testosterónu</b> a <b>rastového hormónu</b>.'});
+                    compound.push({label: '🎯 Izolované', text: 'Jeden kĺb, jeden sval. <b>Curls</b>, <b>lateral raises</b>, <b>calf raises</b>, <b>rozpažky</b>, <b>wrist curls</b>, <b>leg extension</b>. Doplnok — cielene doberajú zaostávajúce partie. Menšia hormonálna odpoveď, menej únavné.'});
+                    compound.push({label: '📐 Pomer', text: 'Tréning by mal byť ~70 % <b>komplexné</b> + ~30 % <b>izolované</b>. Začni tréning komplexnými (keď máš energiu), konči izolovanými. Pri deficite ešte dôležitejšie — komplexné spália viac a udržia silu.'});
+                    let isoList = [];
+                    let skipList = [];
+                    if (cur.shoulders && ideal.shoulders - cur.shoulders > 3) isoList.push('<b>laterálne zdvihy</b> (stredný deltoid = šírka ramien, každý tréning 3 série)');
+                    else skipList.push('laterálne zdvihy');
+                    if (cur.calf && ideal.calf - cur.calf > 1) isoList.push('<b>calf raises</b> (lýtka zaostávajú, finišer 2–3 série × 15–25 opak. na konci tréningu)');
+                    else skipList.push('calf raises');
+                    if (cur.forearm && ideal.forearm - cur.forearm > 3) isoList.push('<b>farmer walks + dead hangs</b> (predlaktia zaostávajú, finišer 2–3 série na konci tréningu)');
+                    else skipList.push('predlakťové cviky');
+                    if (cur.bicep && cur.chest && cur.bicep / cur.chest < 0.34) isoList.push('<b>curls + hammer curls</b> (biceps zaostáva voči hrudníku, 2–3 série na konci upper dňa)');
+                    else skipList.push('extra bicepsové cviky');
+                    if (cur.chest && ideal.chest - cur.chest > 5) isoList.push('<b>rozpažky</b> (doplnok k benchu na hrudník, 2–3 série)');
+
+                    compound.push({label: '✅ Pridaj', text: isoList.length > 0 ? isoList.join('. ') + '.' : 'Všetky pomery v norme — izolované cviky nie sú nutné, stačia komplexné.'});
+                    compound.push({label: '❌ Vynechaj', text: skipList.length > 0 ?
+                        skipList.join(', ') + ' — v norme alebo rastú s komplexnými. Ušetrený čas vlož do komplexných cvikov alebo kardio.' :
+                        'Žiadna partia nie je v norme — trénuj izolované na všetky zaostávajúce.'
+                    });
+                    analysis += renderInfoSection('compoundToggle', 'Komplexné vs. izolované cviky', compound, 105);
+
+                    const freq = [];
+                    freq.push({label: 'ℹ️ Poznámka', text: 'Číslo „×/týždeň" = koľko tréningov zahŕňa prácu pre danú partiu (aj ako <b>finišer</b> na konci). Rozhodujúci je <b>celkový týždenný objem</b> (počet sérií), nie počet samostatných tréningov.'});
+                    freq.push({label: '🫁 Hrudník', text: '2× týždenne. 8–12 sérií/týždeň. Reaguje na progresívne preťažovanie — pridávaj váhu, nie série. Bench + dips pokryjú objem.'});
+                    freq.push({label: '🔙 Chrbát', text: '2× týždenne. 8–12 sérií/týždeň (priame ťahy). Zhyby + rows. Nepriamu prácu dostáva aj pri mŕtvom ťahu a RDL.'});
+                    freq.push({label: '🔺 Ramená', text: '2–4× týždenne. 12–16 sérií/týždeň. Stredný <b>deltoid</b> (šírka) znesie vysokú frekvenciu — laterálne zdvihy na konci každého tréningu.'});
+                    freq.push({label: '💪 Biceps', text: '2× týždenne. 4–6 priamych sérií/týždeň. Dostáva nepriamu prácu pri každom ťahu na <b>chrbát</b> (zhyby, rows) — spolu 10+ sérií.'});
+                    freq.push({label: '🦴 Predlaktie', text: '2–4× týždenne. <b>Finišer</b> na konci tréningu: farmer walks, dead hangs, wrist curls — 2–3 série, <b>vysoké opakovania</b> (15–25). Prevažne <b>šľachy</b>, reagujú na frekvenciu.'});
+                    freq.push({label: '🦵 Stehná', text: '2× týždenne. 10–16 sérií/týždeň. Najväčšia skupina — najdlhšia regenerácia (48–72 h). Drepy, leg press, výpady.'});
+                    freq.push({label: '🦶 Lýtka', text: '2–4× týždenne. <b>Finišer</b> na konci tréningu: calf raises 2–3 série × 15–25 opak. Geneticky limitované, veľa <b>šliach</b> — reagujú na <b>frekvenciu a objem</b>, rôzne uhly (stojky, sediace).'});
+                    analysis += renderInfoSection('freqToggle', 'Frekvencia a objem tréningu', freq, 95);
+
+                    const cw = curWeight;
+                    const strRows = [
+                        {name: 'Bench press', b: 0.5, m: 1, a: 1.25, muscles: '<b>Hrudník</b>, <b>deltoidy</b>, <b>triceps</b>'},
+                        {name: 'Drep', b: 0.75, m: 1.25, a: 1.75, muscles: '<b>Stehná</b>, <b>zadok</b>, <b>core</b>'},
+                        {name: 'Mŕtvy ťah', b: 1, m: 1.5, a: 2, muscles: '<b>Chrbát</b>, <b>stehná</b>, <b>predlaktia</b>'},
+                        {name: 'Romanian DL', b: 0.65, m: 1, a: 1.25, muscles: '<b>Zadný reťazec</b>, <b>hamstringy</b>, <b>zadok</b>'},
+                        {name: 'OHP', b: 0.35, m: 0.6, a: 0.85, muscles: '<b>Ramená</b>, <b>triceps</b>'},
+                        {name: 'Dips', reps: true, bv: '8 opak.', mv: '20 opak. / +' + Math.round(cw * 0.25) + ' kg', av: '30+ / +' + Math.round(cw * 0.5) + ' kg', muscles: '<b>Hrudník</b>, <b>triceps</b>, <b>deltoidy</b>'},
+                        {name: 'Zhyby', reps: true, bv: '5 opak.', mv: '12 opak. / +' + Math.round(cw * 0.2) + ' kg', av: '20+ / +' + Math.round(cw * 0.5) + ' kg', muscles: '<b>Chrbát</b> (lats), <b>biceps</b>, <b>predlaktia</b>'}
+                    ];
+                    let strHtml = '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--card-border);font-size:0.78rem;">';
+                    strHtml += '<div style="font-weight:600;margin-bottom:6px;cursor:pointer;user-select:none;" onclick="var c=document.getElementById(\'strengthToggle\');c.style.display=c.style.display===\'none\'?\'\':\'none\'">Silové štandardy <span style="font-size:0.65rem;color:var(--text-muted);">▼</span></div>';
+                    strHtml += '<div id="strengthToggle" style="display:none;">';
+                    strHtml += '<div style="display:flex;gap:0;margin-bottom:6px;font-weight:600;color:var(--text-primary);font-size:0.7rem;">';
+                    strHtml += '<span style="flex:0 0 100px;"></span>';
+                    strHtml += '<span style="flex:0 0 130px;text-align:right;padding-right:14px;">Začiatočník</span>';
+                    strHtml += '<span style="flex:0 0 140px;text-align:right;padding-right:14px;">Stredne</span>';
+                    strHtml += '<span style="flex:0 0 140px;text-align:right;padding-right:14px;">Pokročilý</span>';
+                    strHtml += '<span style="flex:1;padding-left:12px;">Svaly</span>';
+                    strHtml += '</div>';
+                    strRows.forEach(r => {
+                        strHtml += '<div style="display:flex;gap:0;margin-bottom:4px;line-height:1.4;color:var(--text-muted);align-items:center;">';
+                        strHtml += '<span style="flex:0 0 100px;font-weight:600;color:var(--text-primary);white-space:nowrap;">' + r.name + '</span>';
+                        if (r.reps) {
+                            strHtml += '<span style="flex:0 0 130px;text-align:right;padding-right:14px;white-space:nowrap;">' + r.bv + '</span>';
+                            strHtml += '<span style="flex:0 0 140px;text-align:right;padding-right:14px;white-space:nowrap;">' + r.mv + '</span>';
+                            strHtml += '<span style="flex:0 0 140px;text-align:right;padding-right:14px;white-space:nowrap;">' + r.av + '</span>';
+                        } else {
+                            strHtml += '<span style="flex:0 0 130px;text-align:right;padding-right:14px;white-space:nowrap;">' + r.b + '× (' + Math.round(cw * r.b) + ' kg)</span>';
+                            strHtml += '<span style="flex:0 0 140px;text-align:right;padding-right:14px;white-space:nowrap;">' + r.m + '× (' + Math.round(cw * r.m) + ' kg)</span>';
+                            strHtml += '<span style="flex:0 0 140px;text-align:right;padding-right:14px;white-space:nowrap;">' + r.a + '× (' + Math.round(cw * r.a) + ' kg)</span>';
+                        }
+                        strHtml += '<span style="flex:1;font-size:0.7rem;padding-left:12px;">' + r.muscles + '</span>';
+                        strHtml += '</div>';
+                    });
+                    strHtml += '<div style="margin-top:6px;color:var(--text-muted);line-height:1.4;">📐 <b>Pomery</b>: drep : bench : mŕtvy ťah ≈ 1.25 : 1 : 1.5. OHP ≈ 60–65 % benchu.</div>';
+                    strHtml += '</div></div>';
+                    analysis += strHtml;
+                } else {
+                    analysis += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--card-border);font-size:0.78rem;color:var(--green);">Všetky pomery v ideále! (' + okCount + '/' + total + ')</div>';
                 }
-                if (forearm) {
-                    const v = forearm / latest.chest;
-                    const ideal = 0.29;
-                    const cls = v > 0.27 && v < 0.31 ? 'ratio-ok' : v > 0.24 && v < 0.34 ? 'ratio-warn' : 'ratio-bad';
-                    const need = (ideal * latest.chest).toFixed(1);
-                    const lines = ['<strong>Ideál: 0.29</strong> (McCallum — 29% hrudníka)', 'Predlaktie: ' + forearm + ' cm | Hrudník: ' + latest.chest + ' cm'];
-                    if (v < 0.27) lines.push('➜ Predlaktia zaostávajú — cieľ: ' + need + ' cm', 'Farmer walks, wrist curls, dead hangs');
-                    else if (v > 0.31) lines.push('Predlaktia sú nadpriemerne vyvinuté!');
-                    else lines.push('Proporčné voči postave!');
-                    rc('Predlaktie / Hrudník', v.toFixed(2), cls, (v < 0.27 ? 'Zaostáva' : v > 0.31 ? 'Nad priemer' : 'Proporčný'), lines, forearm, latest.chest);
-                }
-                if (calf) {
-                    const v = calf / latest.chest;
-                    const ideal = 0.34;
-                    const cls = v > 0.32 && v < 0.36 ? 'ratio-ok' : v > 0.28 && v < 0.40 ? 'ratio-warn' : 'ratio-bad';
-                    const need = (ideal * latest.chest).toFixed(1);
-                    const lines = ['<strong>Ideál: 0.34</strong> (McCallum — 34% hrudníka)', 'Lýtko: ' + calf + ' cm | Hrudník: ' + latest.chest + ' cm'];
-                    if (v < 0.32) lines.push('➜ Lýtka zaostávajú — cieľ: ' + need + ' cm', 'Calf raises, beh do kopca, skákacie cviky');
-                    else if (v > 0.36) lines.push('Lýtka sú nadpriemerne vyvinuté!');
-                    else lines.push('Proporčné voči postave!');
-                    rc('Lýtko / Hrudník', v.toFixed(2), cls, (v < 0.32 ? 'Zaostáva' : v > 0.36 ? 'Nad priemer' : 'Proporčný'), lines, calf, latest.chest);
-                }
+                analysis += '</div>';
+            } else if (total > 0 && okCount === total) {
+                analysis = '<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px;font-size:0.8rem;color:var(--green);">Všetky proporcie v ideále! Skóre: ' + okCount + '/' + total + '</div>';
             }
-            document.getElementById('ratioCards').innerHTML = ratios;
+            document.getElementById('bodyAnalysis').innerHTML = analysis;
         }
 
         // ===== EXERCISES =====
@@ -2242,6 +2531,9 @@
             document.getElementById('actDate').valueAsDate = new Date();
             loadMeasurementsForDate();
         });
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
     </script>
 </body>
 </html>
