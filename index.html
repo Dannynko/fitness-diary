@@ -2227,26 +2227,32 @@
 
         function renderActivities() {
             const container = document.getElementById('activityLog');
-            const acts = records.filter(r => r.source === 'activity' || r.source === 'health').sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
-            if (acts.length === 0) {
+            const manual = records.filter(r => r.source === 'activity').sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+            const health = records.filter(r => r.source === 'health' && r.caloriesOut > 0).sort((a, b) => b.date.localeCompare(a.date));
+            if (manual.length === 0 && health.length === 0) {
                 container.innerHTML = '<div class="no-data" style="padding:15px;">Žiadne záznamy</div>';
                 return;
             }
-            const byDate = {};
-            acts.forEach(a => {
-                if (!byDate[a.date]) byDate[a.date] = [];
-                byDate[a.date].push(a);
-            });
-            let html = '<table class="exercise-log-table" style="width:100%;"><thead><tr><th style="text-align:left;">Dátum / Aktivita</th><th>Trvanie</th><th>Kalórie</th><th style="width:30px;"></th></tr></thead><tbody>';
-            for (const date of Object.keys(byDate).sort((a, b) => b.localeCompare(a))) {
-                html += '<tr style="background:rgba(79,195,247,0.08);"><td colspan="4" style="text-align:left;font-weight:600;">' + formatDate(date) + '</td></tr>';
-                byDate[date].forEach(a => {
-                    const name = a.source === 'health' ? '❤️ Apple Health' : (a.activityName || 'Aktivita');
-                    const del = a.source === 'health' ? '' : '<span style="color:var(--red);cursor:pointer;" onclick="deleteActivity(' + a.id + ')">&times;</span>';
-                    html += '<tr><td style="text-align:left;padding-left:20px;color:var(--text-muted);">' + name + '</td><td>' + (a.duration ? a.duration + ' min' : '-') + '</td><td>' + Math.round(a.caloriesOut) + ' kcal</td><td>' + del + '</td></tr>';
+            let html = '';
+            if (health.length > 0) {
+                html += '<div style="display:flex;flex-wrap:wrap;gap:6px 12px;margin-bottom:10px;">';
+                health.forEach(h => {
+                    html += '<span style="font-size:0.8rem;color:var(--text-muted);">❤️ ' + formatDate(h.date) + ' <strong>' + Math.round(h.caloriesOut) + '</strong> kcal</span>';
                 });
+                html += '</div>';
             }
-            html += '</tbody></table>';
+            if (manual.length > 0) {
+                const byDate = {};
+                manual.forEach(a => { if (!byDate[a.date]) byDate[a.date] = []; byDate[a.date].push(a); });
+                html += '<table class="exercise-log-table" style="width:100%;"><thead><tr><th style="text-align:left;">Dátum / Aktivita</th><th>Trvanie</th><th>Kalórie</th><th style="width:30px;"></th></tr></thead><tbody>';
+                for (const date of Object.keys(byDate).sort((a, b) => b.localeCompare(a))) {
+                    html += '<tr style="background:rgba(79,195,247,0.08);"><td colspan="4" style="text-align:left;font-weight:600;">' + formatDate(date) + '</td></tr>';
+                    byDate[date].forEach(a => {
+                        html += '<tr><td style="text-align:left;padding-left:20px;color:var(--text-muted);">' + (a.activityName || 'Aktivita') + '</td><td>' + (a.duration ? a.duration + ' min' : '-') + '</td><td>' + Math.round(a.caloriesOut) + ' kcal</td><td><span style="color:var(--red);cursor:pointer;" onclick="deleteActivity(' + a.id + ')">&times;</span></td></tr>';
+                    });
+                }
+                html += '</tbody></table>';
+            }
             container.innerHTML = html;
         }
 
