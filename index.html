@@ -1707,11 +1707,9 @@
             const editBtn = document.getElementById('measureEditBtn');
             if (m) {
                 setMeasureFields(m);
-                saveBtn.style.display = 'none';
                 editBtn.style.display = '';
             } else {
                 setMeasureFields({});
-                saveBtn.style.display = '';
                 editBtn.style.display = 'none';
             }
         }
