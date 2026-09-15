@@ -1823,6 +1823,44 @@
                 else lines.push('Ideálne proporcie rúk k trupu!');
                 rc('Biceps / Pás', v.toFixed(2), cls, (v > 0.46 && v < 0.53 ? 'Ideálny' : v < 0.46 ? 'Slabé ruky' : 'Silné ruky'), lines, bicep, latest.waist);
             }
+            if (latest.chest) {
+                const bicep = latest.bicepL || latest.bicep;
+                const forearm = latest.forearmL;
+                const calf = latest.calfL;
+                if (bicep) {
+                    const v = bicep / latest.chest;
+                    const ideal = 0.36;
+                    const cls = v > 0.34 && v < 0.38 ? 'ratio-ok' : v > 0.30 && v < 0.42 ? 'ratio-warn' : 'ratio-bad';
+                    const need = (ideal * latest.chest).toFixed(1);
+                    const lines = ['<strong>Ideál: 0.36</strong> (McCallum — 36% hrudníka)', 'Biceps: ' + bicep + ' cm | Hrudník: ' + latest.chest + ' cm'];
+                    if (v < 0.34) lines.push('➜ Bicepsy zaostávajú — cieľ: ' + need + ' cm', 'Curls, chin-ups, hammer curls');
+                    else if (v > 0.38) lines.push('Bicepsy sú nadpriemerne vyvinuté!');
+                    else lines.push('Proporčné voči postave!');
+                    rc('Biceps / Hrudník', v.toFixed(2), cls, (v < 0.34 ? 'Zaostáva' : v > 0.38 ? 'Nad priemer' : 'Proporčný'), lines, bicep, latest.chest);
+                }
+                if (forearm) {
+                    const v = forearm / latest.chest;
+                    const ideal = 0.29;
+                    const cls = v > 0.27 && v < 0.31 ? 'ratio-ok' : v > 0.24 && v < 0.34 ? 'ratio-warn' : 'ratio-bad';
+                    const need = (ideal * latest.chest).toFixed(1);
+                    const lines = ['<strong>Ideál: 0.29</strong> (McCallum — 29% hrudníka)', 'Predlaktie: ' + forearm + ' cm | Hrudník: ' + latest.chest + ' cm'];
+                    if (v < 0.27) lines.push('➜ Predlaktia zaostávajú — cieľ: ' + need + ' cm', 'Farmer walks, wrist curls, dead hangs');
+                    else if (v > 0.31) lines.push('Predlaktia sú nadpriemerne vyvinuté!');
+                    else lines.push('Proporčné voči postave!');
+                    rc('Predlaktie / Hrudník', v.toFixed(2), cls, (v < 0.27 ? 'Zaostáva' : v > 0.31 ? 'Nad priemer' : 'Proporčný'), lines, forearm, latest.chest);
+                }
+                if (calf) {
+                    const v = calf / latest.chest;
+                    const ideal = 0.34;
+                    const cls = v > 0.32 && v < 0.36 ? 'ratio-ok' : v > 0.28 && v < 0.40 ? 'ratio-warn' : 'ratio-bad';
+                    const need = (ideal * latest.chest).toFixed(1);
+                    const lines = ['<strong>Ideál: 0.34</strong> (McCallum — 34% hrudníka)', 'Lýtko: ' + calf + ' cm | Hrudník: ' + latest.chest + ' cm'];
+                    if (v < 0.32) lines.push('➜ Lýtka zaostávajú — cieľ: ' + need + ' cm', 'Calf raises, beh do kopca, skákacie cviky');
+                    else if (v > 0.36) lines.push('Lýtka sú nadpriemerne vyvinuté!');
+                    else lines.push('Proporčné voči postave!');
+                    rc('Lýtko / Hrudník', v.toFixed(2), cls, (v < 0.32 ? 'Zaostáva' : v > 0.36 ? 'Nad priemer' : 'Proporčný'), lines, calf, latest.chest);
+                }
+            }
             document.getElementById('ratioCards').innerHTML = ratios;
         }
 
