@@ -662,6 +662,7 @@
                         <input type="date" id="measureDate" onchange="loadMeasurementsForDate()" style="padding: 4px 8px; border: none; color: #fff; font-size: 0.8rem; background: transparent; outline: none; box-shadow: none;">
                     </div>
                     <button class="btn-secondary" id="measureSaveBtn" onclick="saveMeasurements()">Uložiť</button>
+                    <button class="btn-secondary" id="measureEditBtn" onclick="saveMeasurements()" style="display:none;">Upraviť</button>
                 </div>
             </div>
             <div id="latestMeasures" style="margin-bottom:10px;"></div>
@@ -855,6 +856,7 @@
             const d = el.value ? new Date(el.value) : new Date();
             d.setDate(d.getDate() + days);
             el.value = d.toISOString().split('T')[0];
+            if (el.onchange) el.onchange();
         }
 
         function spinWeight(delta) {
@@ -1701,13 +1703,16 @@
         function loadMeasurementsForDate() {
             const date = document.getElementById('measureDate').value;
             const m = measurements.find(x => x.date === date);
-            const btn = document.getElementById('measureSaveBtn');
+            const saveBtn = document.getElementById('measureSaveBtn');
+            const editBtn = document.getElementById('measureEditBtn');
             if (m) {
                 setMeasureFields(m);
-                btn.textContent = 'Upraviť';
+                saveBtn.style.display = 'none';
+                editBtn.style.display = '';
             } else {
                 setMeasureFields({});
-                btn.textContent = 'Uložiť';
+                saveBtn.style.display = '';
+                editBtn.style.display = 'none';
             }
         }
 
