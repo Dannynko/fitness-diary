@@ -1813,6 +1813,16 @@
                 else lines.push('Dobrý pomer nôh k trupu!');
                 rc('Stehno / Pás', v.toFixed(2), cls, (v > 0.70 ? 'Atletický' : v > 0.60 ? 'Priemerný' : 'Slabé nohy'), lines, thigh, latest.waist);
             }
+            if ((latest.bicepL || latest.bicep) && latest.waist) {
+                const bicep = latest.bicepL || latest.bicep;
+                const v = bicep / latest.waist;
+                const cls = v > 0.46 && v < 0.53 ? 'ratio-ok' : v > 0.40 && v < 0.58 ? 'ratio-warn' : 'ratio-bad';
+                const lines = ['<strong>Ideál: 0.46–0.53</strong> (Adonis Index)', 'Biceps: ' + bicep + ' cm | Pás: ' + latest.waist + ' cm'];
+                if (v < 0.46) lines.push('➜ Ruky zaostávajú — curls, chin-ups, hammer curls');
+                else if (v > 0.53) lines.push('Výborný rozvoj rúk voči trupu!');
+                else lines.push('Ideálne proporcie rúk k trupu!');
+                rc('Biceps / Pás', v.toFixed(2), cls, (v > 0.46 && v < 0.53 ? 'Ideálny' : v < 0.46 ? 'Slabé ruky' : 'Silné ruky'), lines, bicep, latest.waist);
+            }
             document.getElementById('ratioCards').innerHTML = ratios;
         }
 
