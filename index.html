@@ -676,12 +676,6 @@
                 <div class="measure-item" style="flex:1; min-width:70px;"><label>Lýtko</label><input type="number" id="mCalfL" step="0.5" placeholder="L"><input type="number" id="mCalfR" step="0.5" placeholder="P" style="margin-top:4px;"></div>
             </div>
             <div class="ratio-grid" id="ratioCards"></div>
-            <div style="margin-top: 10px;">
-                <table class="exercise-log-table">
-                    <thead><tr><th>Dátum</th><th>Hrudník</th><th>Pás</th><th>Ramená</th><th>Stehno L/P</th><th>Biceps L/P</th><th>Predl. L/P</th><th>Lýtko L/P</th><th></th></tr></thead>
-                    <tbody id="measureHistory"></tbody>
-                </table>
-            </div>
         </div>
 
         <!-- Výkon v cvikoch -->
@@ -1732,17 +1726,11 @@
         }
 
         function renderMeasurements() {
-            const tbody = document.getElementById('measureHistory');
             if (measurements.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="no-data" style="padding:15px;">Žiadne záznamy</td></tr>';
                 document.getElementById('ratioCards').innerHTML = '';
                 document.getElementById('latestMeasures').innerHTML = '';
                 return;
             }
-            const fmt = (l, r) => (l || '-') + ' / ' + (r || '-');
-            tbody.innerHTML = measurements.map(m =>
-                '<tr><td>' + formatDate(m.date) + '</td><td>' + (m.chest || '-') + '</td><td>' + (m.waist || '-') + '</td><td>' + (m.shoulders || '-') + '</td><td>' + fmt(m.thighL || m.thigh, m.thighR) + '</td><td>' + fmt(m.bicepL || m.bicep, m.bicepR) + '</td><td>' + fmt(m.forearmL, m.forearmR) + '</td><td>' + fmt(m.calfL, m.calfR) + '</td><td><span style="color:var(--red);cursor:pointer;" onclick="deleteMeasurement(\'' + m.date + '\')">&times;</span></td></tr>'
-            ).join('');
 
             const latest = measurements[0];
             let vals = '<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;">Posledné meranie: ' + formatDate(latest.date) + '</div>';
@@ -1761,9 +1749,9 @@
             document.getElementById('latestMeasures').innerHTML = vals;
 
             let ratios = '';
-            function rc(label, val, cls, statusText, tipLines) {
+            function rc(label, val, cls, statusText, tipLines, cmText) {
                 const tip = tipLines.join('\n');
-                ratios += '<div class="ratio-card" onclick="this.classList.toggle(\'tip-open\')"><div class="goal-label">' + label + '</div><div class="ratio-val">' + val + '</div><div class="ratio-status ' + cls + '">' + statusText + '</div><div class="ratio-tip">' + tip.replace(/\n/g, '<br>') + '</div></div>';
+                ratios += '<div class="ratio-card" onclick="this.classList.toggle(\'tip-open\')" style="text-align:left;display:flex;align-items:center;gap:10px;"><div style="font-size:0.7rem;color:var(--text-muted);white-space:nowrap;min-width:55px;">' + cmText + '</div><div style="flex:1;text-align:center;"><div class="goal-label">' + label + '</div><div class="ratio-val">' + val + '</div><div class="ratio-status ' + cls + '">' + statusText + '</div></div><div class="ratio-tip">' + tip.replace(/\n/g, '<br>') + '</div></div>';
             }
 
             if (latest.waist && latest.chest) {
@@ -1772,7 +1760,7 @@
                 const lines = ['<strong>Ideál: < 0.80</strong> (V-tvar trupu)', 'Pás: ' + latest.waist + ' cm | Hrudník: ' + latest.chest + ' cm'];
                 if (v >= 0.80) { lines.push('Problém: ' + (latest.waist > latest.chest * 0.80 ? 'pás príliš široký' : 'hrudník by mohol byť širší')); lines.push('Cieľ: pás ~' + (0.75 * latest.chest).toFixed(1) + ' cm alebo hrudník ~' + (latest.waist / 0.75).toFixed(1) + ' cm'); lines.push('➜ Bench press, rozpažky, pullover'); }
                 else lines.push('Výborný V-tvar trupu!');
-                rc('Pás / Hrudník', v.toFixed(2), cls, (v < 0.80 ? 'V-tvar' : v < 0.85 ? 'Hraničný' : 'Zamerať sa'), lines);
+                rc('Pás / Hrudník', v.toFixed(2), cls, (v < 0.80 ? 'V-tvar' : v < 0.85 ? 'Hraničný' : 'Zamerať sa'), lines, latest.waist + '<br>' + latest.chest);
             }
             if (latest.shoulders && latest.waist) {
                 const v = latest.shoulders / latest.waist;
@@ -1780,7 +1768,7 @@
                 const lines = ['<strong>Ideál: 1.618</strong> (zlatý rez / Adonisov index)', 'Ramená: ' + latest.shoulders + ' cm | Pás: ' + latest.waist + ' cm'];
                 if (v < 1.60) { lines.push('Problém: ' + (latest.waist > latest.shoulders / 1.45 ? 'pás príliš široký' : 'ramená by mohli byť širšie')); lines.push('Cieľ: ramená ~' + (1.618 * latest.waist).toFixed(1) + ' cm alebo pás ~' + (latest.shoulders / 1.618).toFixed(1) + ' cm'); lines.push('➜ OHP, lateral raises, deficit kalórií'); }
                 else lines.push('Blízko zlatého rezu!');
-                rc('Ramená / Pás', v.toFixed(2), cls, (v > 1.60 ? 'Výborne' : v > 1.45 ? 'Priemerný' : 'Nízky'), lines);
+                rc('Ramená / Pás', v.toFixed(2), cls, (v > 1.60 ? 'Výborne' : v > 1.45 ? 'Priemerný' : 'Nízky'), lines, latest.shoulders + '<br>' + latest.waist);
             }
             if (latest.chest && latest.waist) {
                 const v = latest.chest / latest.waist;
@@ -1788,7 +1776,7 @@
                 const lines = ['<strong>Ideál: > 1.20</strong> (atletický)', 'Hrudník: ' + latest.chest + ' cm | Pás: ' + latest.waist + ' cm'];
                 if (v < 1.15) { lines.push('Problém: ' + (latest.waist >= latest.chest ? 'pás väčší než hrudník' : 'hrudník nedostatočne široký')); lines.push('Cieľ: hrudník ~' + (latest.waist * 1.20).toFixed(1) + ' cm alebo pás ~' + (latest.chest / 1.20).toFixed(1) + ' cm'); lines.push('➜ Bench press, kliky, rozpažky'); }
                 else lines.push('Atletický pomer!');
-                rc('Hrudník / Pás', v.toFixed(2), cls, (v > 1.15 ? 'Atletický' : v > 1.05 ? 'Priemerný' : 'Zamerať sa'), lines);
+                rc('Hrudník / Pás', v.toFixed(2), cls, (v > 1.15 ? 'Atletický' : v > 1.05 ? 'Priemerný' : 'Zamerať sa'), lines, latest.chest + '<br>' + latest.waist);
             }
             if ((latest.bicepL || latest.bicep) && latest.forearmL) {
                 const bicep = latest.bicepL || latest.bicep;
@@ -1798,7 +1786,7 @@
                 const lines = ['<strong>Ideál: 0.70–0.80</strong>', 'Biceps: ' + bicep + ' cm | Predlaktie: ' + forearm + ' cm'];
                 if (v < 0.70) lines.push('➜ Predlaktia sú slabý článok — farmer walks, wrist curls');
                 else lines.push('Proporcie horných končatín sú vyrovnané');
-                rc('Predlaktie / Biceps', v.toFixed(2), cls, (v > 0.70 ? 'Vyrovnané' : v > 0.60 ? 'Priemerný' : 'Slabé predl.'), lines);
+                rc('Predlaktie / Biceps', v.toFixed(2), cls, (v > 0.70 ? 'Vyrovnané' : v > 0.60 ? 'Priemerný' : 'Slabé predl.'), lines, forearm + '<br>' + bicep);
             }
             if ((latest.thighL || latest.thigh) && latest.calfL) {
                 const thigh = latest.thighL || latest.thigh;
@@ -1808,7 +1796,7 @@
                 const lines = ['<strong>Ideál: 0.60–0.70</strong>', 'Stehno: ' + thigh + ' cm | Lýtko: ' + calf + ' cm'];
                 if (v < 0.60) lines.push('➜ Lýtka sú slabý článok — calf raises, beh do kopca');
                 else lines.push('Dolné končatiny sú proporčné');
-                rc('Lýtko / Stehno', v.toFixed(2), cls, (v > 0.60 ? 'Proporčné' : v > 0.50 ? 'Priemerný' : 'Slabé lýtka'), lines);
+                rc('Lýtko / Stehno', v.toFixed(2), cls, (v > 0.60 ? 'Proporčné' : v > 0.50 ? 'Priemerný' : 'Slabé lýtka'), lines, calf + '<br>' + thigh);
             }
             document.getElementById('ratioCards').innerHTML = ratios;
         }
