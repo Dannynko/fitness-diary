@@ -652,7 +652,13 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <h2 style="margin: 0; border: none; padding: 0;">Telesné miery</h2>
                 <div style="display: flex; gap: 6px; align-items: center;">
-                    <input type="date" id="measureDate" style="padding: 4px 8px; border: none; border-radius: 6px; background: rgba(255,255,255,0.1); color: #fff; font-size: 0.8rem;">
+                    <div class="date-input-wrap">
+                        <div class="spin-btns">
+                            <span onclick="spinDate('measureDate', 1)">&#9650;</span>
+                            <span onclick="spinDate('measureDate', -1)">&#9660;</span>
+                        </div>
+                        <input type="date" id="measureDate" style="padding: 4px 8px; border: none; color: #fff; font-size: 0.8rem; background: transparent; outline: none; box-shadow: none;">
+                    </div>
                     <button class="btn-secondary" onclick="saveMeasurements()">Uložiť</button>
                 </div>
             </div>
@@ -1462,6 +1468,9 @@
                 d.setDate(d.getDate() + delta);
             }
             goalDate = d.toISOString().split('T')[0];
+            document.getElementById('weightDate').value = goalDate;
+            document.getElementById('actDate').value = goalDate;
+            document.getElementById('measureDate').value = goalDate;
             updateGoals();
             renderDailyRecords();
             renderWeeklyRecords();
