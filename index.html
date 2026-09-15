@@ -669,7 +669,6 @@
             <div class="measure-grid">
                 <div class="measure-item"><label>Hrudník (cm)</label><input type="number" id="mChest" step="0.5" placeholder="0"></div>
                 <div class="measure-item"><label>Pás (cm)</label><input type="number" id="mWaist" step="0.5" placeholder="0"></div>
-                <div class="measure-item"><label>Boky (cm)</label><input type="number" id="mHips" step="0.5" placeholder="0"></div>
                 <div class="measure-item"><label>Ramená (cm)</label><input type="number" id="mShoulders" step="0.5" placeholder="0"></div>
                 <div class="measure-item"><label>Stehno L (cm)</label><input type="number" id="mThighL" step="0.5" placeholder="0"></div>
                 <div class="measure-item"><label>Stehno P (cm)</label><input type="number" id="mThighR" step="0.5" placeholder="0"></div>
@@ -683,7 +682,7 @@
             <div class="ratio-grid" id="ratioCards"></div>
             <div style="margin-top: 10px;">
                 <table class="exercise-log-table">
-                    <thead><tr><th>Dátum</th><th>Hrudník</th><th>Pás</th><th>Boky</th><th>Ramená</th><th>Stehno L/P</th><th>Biceps L/P</th><th>Predl. L/P</th><th>Lýtko L/P</th><th></th></tr></thead>
+                    <thead><tr><th>Dátum</th><th>Hrudník</th><th>Pás</th><th>Ramená</th><th>Stehno L/P</th><th>Biceps L/P</th><th>Predl. L/P</th><th>Lýtko L/P</th><th></th></tr></thead>
                     <tbody id="measureHistory"></tbody>
                 </table>
             </div>
@@ -1672,7 +1671,7 @@
             return {
                 chest: parseFloat(document.getElementById('mChest').value) || 0,
                 waist: parseFloat(document.getElementById('mWaist').value) || 0,
-                hips: parseFloat(document.getElementById('mHips').value) || 0,
+
                 shoulders: parseFloat(document.getElementById('mShoulders').value) || 0,
                 thighL: parseFloat(document.getElementById('mThighL').value) || 0,
                 thighR: parseFloat(document.getElementById('mThighR').value) || 0,
@@ -1688,7 +1687,7 @@
         function setMeasureFields(m) {
             document.getElementById('mChest').value = m.chest || '';
             document.getElementById('mWaist').value = m.waist || '';
-            document.getElementById('mHips').value = m.hips || '';
+
             document.getElementById('mShoulders').value = m.shoulders || '';
             document.getElementById('mThighL').value = m.thighL || m.thigh || '';
             document.getElementById('mThighR').value = m.thighR || '';
@@ -1739,14 +1738,14 @@
         function renderMeasurements() {
             const tbody = document.getElementById('measureHistory');
             if (measurements.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="no-data" style="padding:15px;">Žiadne záznamy</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="no-data" style="padding:15px;">Žiadne záznamy</td></tr>';
                 document.getElementById('ratioCards').innerHTML = '';
                 document.getElementById('latestMeasures').innerHTML = '';
                 return;
             }
             const fmt = (l, r) => (l || '-') + ' / ' + (r || '-');
             tbody.innerHTML = measurements.map(m =>
-                '<tr><td>' + formatDate(m.date) + '</td><td>' + (m.chest || '-') + '</td><td>' + (m.waist || '-') + '</td><td>' + (m.hips || '-') + '</td><td>' + (m.shoulders || '-') + '</td><td>' + fmt(m.thighL || m.thigh, m.thighR) + '</td><td>' + fmt(m.bicepL || m.bicep, m.bicepR) + '</td><td>' + fmt(m.forearmL, m.forearmR) + '</td><td>' + fmt(m.calfL, m.calfR) + '</td><td><span style="color:var(--red);cursor:pointer;" onclick="deleteMeasurement(\'' + m.date + '\')">&times;</span></td></tr>'
+                '<tr><td>' + formatDate(m.date) + '</td><td>' + (m.chest || '-') + '</td><td>' + (m.waist || '-') + '</td><td>' + (m.shoulders || '-') + '</td><td>' + fmt(m.thighL || m.thigh, m.thighR) + '</td><td>' + fmt(m.bicepL || m.bicep, m.bicepR) + '</td><td>' + fmt(m.forearmL, m.forearmR) + '</td><td>' + fmt(m.calfL, m.calfR) + '</td><td><span style="color:var(--red);cursor:pointer;" onclick="deleteMeasurement(\'' + m.date + '\')">&times;</span></td></tr>'
             ).join('');
 
             const latest = measurements[0];
@@ -1754,7 +1753,7 @@
             vals += '<div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:0.8rem;">';
             if (latest.chest) vals += '<span>Hrudník <strong>' + latest.chest + '</strong></span>';
             if (latest.waist) vals += '<span>Pás <strong>' + latest.waist + '</strong></span>';
-            if (latest.hips) vals += '<span>Boky <strong>' + latest.hips + '</strong></span>';
+
             if (latest.shoulders) vals += '<span>Ramená <strong>' + latest.shoulders + '</strong></span>';
             const tL = latest.thighL || latest.thigh, tR = latest.thighR;
             if (tL) vals += '<span>Stehno <strong>' + tL + (tR ? '/' + tR : '') + '</strong></span>';
@@ -1770,15 +1769,7 @@
                 const tip = tipLines.join('\n');
                 ratios += '<div class="ratio-card" onclick="this.classList.toggle(\'tip-open\')"><div class="goal-label">' + label + '</div><div class="ratio-val">' + val + '</div><div class="ratio-status ' + cls + '">' + statusText + '</div><div class="ratio-tip">' + tip.replace(/\n/g, '<br>') + '</div></div>';
             }
-            if (latest.waist && latest.hips) {
-                const v = latest.waist / latest.hips;
-                const cls = v < 0.90 ? 'ratio-ok' : v < 0.95 ? 'ratio-warn' : 'ratio-bad';
-                const lines = ['<strong>Ideál: < 0.90</strong> (muži)', 'Pás: ' + latest.waist + ' cm | Boky: ' + latest.hips + ' cm'];
-                if (v >= 0.90) { lines.push('Cieľový pás: ~' + (0.85 * latest.hips).toFixed(1) + ' cm'); lines.push('➜ Zameraj sa na: deficit kalórií, kardio'); }
-                else lines.push('Si v ideálnom rozsahu!');
-                lines.push('Vysoký pomer = riziko srdcovo-cievnych chorôb');
-                rc('Pás / Boky', v.toFixed(2), cls, (v < 0.90 ? 'OK' : v < 0.95 ? 'Hraničný' : 'Vysoký'), lines);
-            }
+
             if (latest.waist && latest.chest) {
                 const v = latest.waist / latest.chest;
                 const cls = v < 0.80 ? 'ratio-ok' : v < 0.85 ? 'ratio-warn' : 'ratio-bad';
