@@ -296,7 +296,7 @@
         .measure-item label { font-size: 0.75rem; margin-bottom: 3px; }
         .measure-item input { width: 100%; padding: 4px 6px; font-size: 0.8rem; }
 
-        .ratio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; margin-top: 10px; overflow: visible; position: relative; z-index: 10; }
+        .ratio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 10px; overflow: visible; position: relative; z-index: 10; }
         .ratio-card { background: rgba(255,255,255,0.03); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; position: relative; }
         .ratio-card .ratio-tip { display: none; position: absolute; left: 0; top: 100%; z-index: 9999; background: var(--bg-primary); border: 1px solid var(--card-border); border-radius: 8px; padding: 10px; font-size: 0.75rem; text-align: left; white-space: pre-line; color: var(--text-primary); min-width: 240px; max-width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); margin-top: 4px; }
         .ratio-card:hover .ratio-tip, .ratio-card.tip-open .ratio-tip { display: block; }
@@ -1751,7 +1751,7 @@
             let ratios = '';
             function rc(label, val, cls, statusText, tipLines, cmText) {
                 const tip = tipLines.join('\n');
-                ratios += '<div class="ratio-card" onclick="this.classList.toggle(\'tip-open\')" style="display:flex;align-items:center;"><div style="font-size:0.7rem;color:var(--text-muted);white-space:nowrap;width:55px;text-align:left;">' + cmText + '</div><div style="flex:1;text-align:center;"><div class="goal-label">' + label + '</div><div class="ratio-val">' + val + '</div><div class="ratio-status ' + cls + '">' + statusText + '</div></div><div style="width:55px;"></div><div class="ratio-tip">' + tip.replace(/\n/g, '<br>') + '</div></div>';
+                ratios += '<div class="ratio-card" onclick="this.classList.toggle(\'tip-open\')" style="display:flex;align-items:center;"><div style="font-size:0.65rem;color:var(--text-muted);white-space:nowrap;width:30px;text-align:left;">' + cmText + '</div><div style="flex:1;text-align:center;"><div class="goal-label">' + label + '</div><div class="ratio-val">' + val + '</div><div class="ratio-status ' + cls + '">' + statusText + '</div></div><div style="width:30px;"></div><div class="ratio-tip">' + tip.replace(/\n/g, '<br>') + '</div></div>';
             }
 
             if (latest.waist && latest.chest) {
