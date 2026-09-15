@@ -1801,6 +1801,26 @@
                 else lines.push('Dolné končatiny sú proporčné');
                 rc('Lýtko / Stehno', v.toFixed(2), cls, (v > 0.60 ? 'Proporčné' : v > 0.50 ? 'Priemerný' : 'Slabé lýtka'), lines, calf, thigh);
             }
+            if ((latest.bicepL || latest.bicep) && latest.calfL) {
+                const bicep = latest.bicepL || latest.bicep;
+                const calf = latest.calfL;
+                const v = bicep / calf;
+                const cls = v > 0.90 && v < 1.10 ? 'ratio-ok' : v > 0.80 && v < 1.20 ? 'ratio-warn' : 'ratio-bad';
+                const lines = ['<strong>Ideál: ~1.00</strong> (rovnaký obvod)', 'Biceps: ' + bicep + ' cm | Lýtko: ' + calf + ' cm'];
+                if (v < 0.90) lines.push('➜ Bicepsy zaostávajú — curls, chin-ups');
+                else if (v > 1.10) lines.push('➜ Lýtka zaostávajú — calf raises, beh do kopca');
+                else lines.push('Vyrovnané proporcie horná/dolná!');
+                rc('Biceps / Lýtko', v.toFixed(2), cls, (v > 0.90 && v < 1.10 ? 'Vyrovnané' : 'Nevyrovnané'), lines, bicep, calf);
+            }
+            if ((latest.thighL || latest.thigh) && latest.waist) {
+                const thigh = latest.thighL || latest.thigh;
+                const v = thigh / latest.waist;
+                const cls = v > 0.70 ? 'ratio-ok' : v > 0.60 ? 'ratio-warn' : 'ratio-bad';
+                const lines = ['<strong>Ideál: ~0.75</strong> (Steve Reeves)', 'Stehno: ' + thigh + ' cm | Pás: ' + latest.waist + ' cm'];
+                if (v < 0.70) lines.push('➜ Nohy zaostávajú — drepy, leg press, výpady');
+                else lines.push('Dobrý pomer nôh k trupu!');
+                rc('Stehno / Pás', v.toFixed(2), cls, (v > 0.70 ? 'Atletický' : v > 0.60 ? 'Priemerný' : 'Slabé nohy'), lines, thigh, latest.waist);
+            }
             document.getElementById('ratioCards').innerHTML = ratios;
         }
 
