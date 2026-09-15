@@ -2237,9 +2237,8 @@
             if (health.length > 0) {
                 html += '<div style="margin-bottom:10px;font-size:0.8rem;">';
                 health.forEach(h => {
-                    html += '<div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--card-border);">';
-                    html += '<span style="color:var(--text-muted);">❤️ ' + formatDate(h.date) + '</span>';
-                    html += '<span><strong>' + Math.round(h.caloriesOut) + '</strong> kcal</span>';
+                    html += '<div style="padding:3px 0;border-bottom:1px solid var(--card-border);color:var(--text-muted);">';
+                    html += '❤️ ' + formatDate(h.date) + ' — <strong>' + Math.round(h.caloriesOut) + '</strong> kcal';
                     html += '</div>';
                 });
                 html += '</div>';
