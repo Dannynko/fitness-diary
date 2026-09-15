@@ -254,8 +254,8 @@
         thead tr th:first-child { border-radius: 8px 0 0 8px; }
         thead tr th:last-child { border-radius: 0 8px 8px 0; }
         th:nth-child(n+2):nth-child(-n+7), td:nth-child(n+2):nth-child(-n+7) { text-align: right; }
-        th:nth-child(4), td:nth-child(4) { padding-right: 18px; }
-        th:nth-child(5), td:nth-child(5) { padding-left: 10px; }
+        th:nth-child(4), td:nth-child(4) { padding-right: 14px; }
+        th:nth-child(5), td:nth-child(5) { padding-left: 8px; }
         tr:hover { background: rgba(255, 255, 255, 0.05); }
         .positive { color: var(--green); }
         .negative { color: var(--red); }
@@ -1063,9 +1063,9 @@
                     <td>${d.protein.toFixed(1)} g</td>
                     <td>${d.carbs.toFixed(1)} g</td>
                     <td>${d.fat.toFixed(1)} g</td>
-                    <td>${d.caloriesIn.toFixed(0)}</td>
-                    <td>${d.caloriesOut.toFixed(0)}</td>
-                    <td class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(0)}</td>
+                    <td>${d.caloriesIn.toFixed(0)} kcal</td>
+                    <td>${d.caloriesOut.toFixed(0)} kcal</td>
+                    <td class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(0)} kcal</td>
                     <td>${dayRecords.length > 0 ? '<span style="color:var(--red);cursor:pointer;font-size:1.1rem;font-weight:700;display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;" onclick="event.stopPropagation();deleteRecordsByDate(\'' + date + '\',this)">&times;</span>' : ''}</td>
                 </tr>`;
                 if (hasItems) {
@@ -1153,9 +1153,9 @@
                     <td>${w.protein.toFixed(1)} g</td>
                     <td>${w.carbs.toFixed(1)} g</td>
                     <td>${w.fat.toFixed(1)} g</td>
-                    <td>${w.caloriesIn.toFixed(0)}</td>
-                    <td>${w.caloriesOut.toFixed(0)}</td>
-                    <td class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(0)}</td>
+                    <td>${w.caloriesIn.toFixed(0)} kcal</td>
+                    <td>${w.caloriesOut.toFixed(0)} kcal</td>
+                    <td class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(0)} kcal</td>
                     <td></td>
                 </tr>`;
             }).join('');
