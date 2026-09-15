@@ -296,12 +296,12 @@
         .measure-item label { font-size: 0.75rem; margin-bottom: 3px; }
         .measure-item input { width: 100%; padding: 4px 6px; font-size: 0.8rem; }
 
-        .ratio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 10px; overflow: visible; position: relative; z-index: 10; }
+        .ratio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px; margin-top: 10px; overflow: visible; position: relative; z-index: 10; }
         .ratio-card { background: rgba(255,255,255,0.03); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; position: relative; }
         .ratio-card .ratio-tip { display: none; position: absolute; left: 0; top: 100%; z-index: 9999; background: var(--bg-primary); border: 1px solid var(--card-border); border-radius: 8px; padding: 10px; font-size: 0.75rem; text-align: left; white-space: pre-line; color: var(--text-primary); min-width: 240px; max-width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); margin-top: 4px; }
         .ratio-card:hover .ratio-tip, .ratio-card.tip-open .ratio-tip { display: block; }
         .ratio-val { font-size: 1.2rem; font-weight: 700; margin: 4px 0; }
-        .ratio-status { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; display: inline-block; }
+        .ratio-status { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; display: inline-block; white-space: nowrap; }
         .ratio-ok { background: rgba(102,187,106,0.2); color: var(--green); }
         .ratio-warn { background: rgba(255,167,38,0.2); color: var(--orange); }
         .ratio-bad { background: rgba(239,83,80,0.2); color: var(--red); }
