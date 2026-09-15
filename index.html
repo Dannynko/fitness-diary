@@ -297,7 +297,9 @@
         .measure-item input { width: 100%; padding: 4px 6px; font-size: 0.8rem; }
 
         .ratio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 10px; }
-        .ratio-card { background: rgba(255,255,255,0.03); border-radius: 8px; padding: 10px; text-align: center; }
+        .ratio-card { background: rgba(255,255,255,0.03); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; position: relative; }
+        .ratio-card .ratio-tip { display: none; position: absolute; left: 0; top: 100%; z-index: 10; background: var(--bg-primary); border: 1px solid var(--card-border); border-radius: 8px; padding: 10px; font-size: 0.75rem; text-align: left; white-space: pre-line; color: var(--text-primary); min-width: 240px; max-width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); margin-top: 4px; }
+        .ratio-card:hover .ratio-tip, .ratio-card.tip-open .ratio-tip { display: block; }
         .ratio-val { font-size: 1.2rem; font-weight: 700; margin: 4px 0; }
         .ratio-status { font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; display: inline-block; }
         .ratio-ok { background: rgba(102,187,106,0.2); color: var(--green); }
@@ -657,11 +659,12 @@
                             <span onclick="spinDate('measureDate', 1)">&#9650;</span>
                             <span onclick="spinDate('measureDate', -1)">&#9660;</span>
                         </div>
-                        <input type="date" id="measureDate" style="padding: 4px 8px; border: none; color: #fff; font-size: 0.8rem; background: transparent; outline: none; box-shadow: none;">
+                        <input type="date" id="measureDate" onchange="loadMeasurementsForDate()" style="padding: 4px 8px; border: none; color: #fff; font-size: 0.8rem; background: transparent; outline: none; box-shadow: none;">
                     </div>
-                    <button class="btn-secondary" onclick="saveMeasurements()">Uložiť</button>
+                    <button class="btn-secondary" id="measureSaveBtn" onclick="saveMeasurements()">Uložiť</button>
                 </div>
             </div>
+            <div id="latestMeasures" style="margin-bottom:10px;"></div>
             <div class="measure-grid">
                 <div class="measure-item"><label>Hrudník (cm)</label><input type="number" id="mChest" step="0.5" placeholder="0"></div>
                 <div class="measure-item"><label>Pás (cm)</label><input type="number" id="mWaist" step="0.5" placeholder="0"></div>
@@ -1471,6 +1474,7 @@
             document.getElementById('weightDate').value = goalDate;
             document.getElementById('actDate').value = goalDate;
             document.getElementById('measureDate').value = goalDate;
+            loadMeasurementsForDate();
             updateGoals();
             renderDailyRecords();
             renderWeeklyRecords();
@@ -1662,11 +1666,8 @@
         // ===== MEASUREMENTS =====
         let measurements = JSON.parse(localStorage.getItem('bodyMeasurements')) || [];
 
-        function saveMeasurements() {
-            const date = document.getElementById('measureDate').value;
-            if (!date) { showToast('Zadaj dátum', true); return; }
-            const m = {
-                date,
+        function getMeasureFields() {
+            return {
                 chest: parseFloat(document.getElementById('mChest').value) || 0,
                 waist: parseFloat(document.getElementById('mWaist').value) || 0,
                 hips: parseFloat(document.getElementById('mHips').value) || 0,
@@ -1680,12 +1681,47 @@
                 calfL: parseFloat(document.getElementById('mCalfL').value) || 0,
                 calfR: parseFloat(document.getElementById('mCalfR').value) || 0
             };
+        }
+
+        function setMeasureFields(m) {
+            document.getElementById('mChest').value = m.chest || '';
+            document.getElementById('mWaist').value = m.waist || '';
+            document.getElementById('mHips').value = m.hips || '';
+            document.getElementById('mShoulders').value = m.shoulders || '';
+            document.getElementById('mThighL').value = m.thighL || m.thigh || '';
+            document.getElementById('mThighR').value = m.thighR || '';
+            document.getElementById('mBicepL').value = m.bicepL || m.bicep || '';
+            document.getElementById('mBicepR').value = m.bicepR || '';
+            document.getElementById('mForearmL').value = m.forearmL || '';
+            document.getElementById('mForearmR').value = m.forearmR || '';
+            document.getElementById('mCalfL').value = m.calfL || '';
+            document.getElementById('mCalfR').value = m.calfR || '';
+        }
+
+        function loadMeasurementsForDate() {
+            const date = document.getElementById('measureDate').value;
+            const m = measurements.find(x => x.date === date);
+            const btn = document.getElementById('measureSaveBtn');
+            if (m) {
+                setMeasureFields(m);
+                btn.textContent = 'Upraviť';
+            } else {
+                setMeasureFields({});
+                btn.textContent = 'Uložiť';
+            }
+        }
+
+        function saveMeasurements() {
+            const date = document.getElementById('measureDate').value;
+            if (!date) { showToast('Zadaj dátum', true); return; }
+            const m = { date, ...getMeasureFields() };
             const existing = measurements.findIndex(x => x.date === date);
             if (existing >= 0) measurements[existing] = m; else measurements.push(m);
             measurements.sort((a, b) => b.date.localeCompare(a.date));
             localStorage.setItem('bodyMeasurements', JSON.stringify(measurements));
             renderMeasurements();
-            showToast('Miery uložené');
+            document.getElementById('measureSaveBtn').textContent = 'Upraviť';
+            showToast(existing >= 0 ? 'Miery aktualizované' : 'Miery uložené');
             scheduleSync();
         }
 
@@ -1693,14 +1729,16 @@
             measurements = measurements.filter(m => m.date !== date);
             localStorage.setItem('bodyMeasurements', JSON.stringify(measurements));
             renderMeasurements();
+            loadMeasurementsForDate();
             scheduleSync();
         }
 
         function renderMeasurements() {
             const tbody = document.getElementById('measureHistory');
             if (measurements.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="no-data" style="padding:15px;">Žiadne záznamy</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="no-data" style="padding:15px;">Žiadne záznamy</td></tr>';
                 document.getElementById('ratioCards').innerHTML = '';
+                document.getElementById('latestMeasures').innerHTML = '';
                 return;
             }
             const fmt = (l, r) => (l || '-') + ' / ' + (r || '-');
@@ -1709,25 +1747,78 @@
             ).join('');
 
             const latest = measurements[0];
+            let vals = '<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;">Posledné meranie: ' + formatDate(latest.date) + '</div>';
+            vals += '<div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:0.8rem;">';
+            if (latest.chest) vals += '<span>Hrudník <strong>' + latest.chest + '</strong></span>';
+            if (latest.waist) vals += '<span>Pás <strong>' + latest.waist + '</strong></span>';
+            if (latest.hips) vals += '<span>Boky <strong>' + latest.hips + '</strong></span>';
+            if (latest.shoulders) vals += '<span>Ramená <strong>' + latest.shoulders + '</strong></span>';
+            const tL = latest.thighL || latest.thigh, tR = latest.thighR;
+            if (tL) vals += '<span>Stehno <strong>' + tL + (tR ? '/' + tR : '') + '</strong></span>';
+            const bL = latest.bicepL || latest.bicep, bR = latest.bicepR;
+            if (bL) vals += '<span>Biceps <strong>' + bL + (bR ? '/' + bR : '') + '</strong></span>';
+            if (latest.forearmL) vals += '<span>Predl. <strong>' + latest.forearmL + (latest.forearmR ? '/' + latest.forearmR : '') + '</strong></span>';
+            if (latest.calfL) vals += '<span>Lýtko <strong>' + latest.calfL + (latest.calfR ? '/' + latest.calfR : '') + '</strong></span>';
+            vals += '</div>';
+            document.getElementById('latestMeasures').innerHTML = vals;
+
             let ratios = '';
+            function rc(label, val, cls, statusText, tipLines) {
+                const tip = tipLines.join('\n');
+                ratios += '<div class="ratio-card" onclick="this.classList.toggle(\'tip-open\')"><div class="goal-label">' + label + '</div><div class="ratio-val">' + val + '</div><div class="ratio-status ' + cls + '">' + statusText + '</div><div class="ratio-tip">' + tip.replace(/\n/g, '<br>') + '</div></div>';
+            }
             if (latest.waist && latest.hips) {
-                const whr = (latest.waist / latest.hips).toFixed(2);
-                const whrOk = whr < 0.90;
-                ratios += '<div class="ratio-card"><div class="goal-label">Pás / Boky</div><div class="ratio-val">' + whr + '</div><div class="ratio-status ' + (whrOk ? 'ratio-ok' : whr < 0.95 ? 'ratio-warn' : 'ratio-bad') + '">' + (whrOk ? 'OK (< 0.90)' : whr < 0.95 ? 'Hraničný' : 'Vysoký (> 0.95)') + '</div></div>';
+                const v = latest.waist / latest.hips;
+                const cls = v < 0.90 ? 'ratio-ok' : v < 0.95 ? 'ratio-warn' : 'ratio-bad';
+                const lines = ['<strong>Ideál: < 0.90</strong> (muži)', 'Pás: ' + latest.waist + ' cm | Boky: ' + latest.hips + ' cm'];
+                if (v >= 0.90) { lines.push('Cieľový pás: ~' + (0.85 * latest.hips).toFixed(1) + ' cm'); lines.push('➜ Zameraj sa na: deficit kalórií, kardio'); }
+                else lines.push('Si v ideálnom rozsahu!');
+                lines.push('Vysoký pomer = riziko srdcovo-cievnych chorôb');
+                rc('Pás / Boky', v.toFixed(2), cls, (v < 0.90 ? 'OK' : v < 0.95 ? 'Hraničný' : 'Vysoký'), lines);
             }
             if (latest.waist && latest.chest) {
-                const wcr = (latest.waist / latest.chest).toFixed(2);
-                const wcrOk = wcr < 0.80;
-                ratios += '<div class="ratio-card"><div class="goal-label">Pás / Hrudník</div><div class="ratio-val">' + wcr + '</div><div class="ratio-status ' + (wcrOk ? 'ratio-ok' : wcr < 0.85 ? 'ratio-warn' : 'ratio-bad') + '">' + (wcrOk ? 'OK (< 0.80)' : wcr < 0.85 ? 'Hraničný' : 'Vysoký (> 0.85)') + '</div></div>';
+                const v = latest.waist / latest.chest;
+                const cls = v < 0.80 ? 'ratio-ok' : v < 0.85 ? 'ratio-warn' : 'ratio-bad';
+                const lines = ['<strong>Ideál: < 0.80</strong> (V-tvar trupu)', 'Pás: ' + latest.waist + ' cm | Hrudník: ' + latest.chest + ' cm'];
+                if (v >= 0.80) { lines.push('Problém: ' + (latest.waist > latest.chest * 0.80 ? 'pás príliš široký' : 'hrudník by mohol byť širší')); lines.push('Cieľ: pás ~' + (0.75 * latest.chest).toFixed(1) + ' cm alebo hrudník ~' + (latest.waist / 0.75).toFixed(1) + ' cm'); lines.push('➜ Bench press, rozpažky, pullover'); }
+                else lines.push('Výborný V-tvar trupu!');
+                rc('Pás / Hrudník', v.toFixed(2), cls, (v < 0.80 ? 'V-tvar' : v < 0.85 ? 'Hraničný' : 'Zamerať sa'), lines);
             }
             if (latest.shoulders && latest.waist) {
-                const swr = (latest.shoulders / latest.waist).toFixed(2);
-                const swrOk = swr > 1.60;
-                ratios += '<div class="ratio-card"><div class="goal-label">Ramená / Pás</div><div class="ratio-val">' + swr + '</div><div class="ratio-status ' + (swrOk ? 'ratio-ok' : swr > 1.45 ? 'ratio-warn' : 'ratio-bad') + '">' + (swrOk ? 'Výborne (> 1.6)' : swr > 1.45 ? 'Priemerný' : 'Nízky (< 1.45)') + '</div></div>';
+                const v = latest.shoulders / latest.waist;
+                const cls = v > 1.60 ? 'ratio-ok' : v > 1.45 ? 'ratio-warn' : 'ratio-bad';
+                const lines = ['<strong>Ideál: 1.618</strong> (zlatý rez / Adonisov index)', 'Ramená: ' + latest.shoulders + ' cm | Pás: ' + latest.waist + ' cm'];
+                if (v < 1.60) { lines.push('Problém: ' + (latest.waist > latest.shoulders / 1.45 ? 'pás príliš široký' : 'ramená by mohli byť širšie')); lines.push('Cieľ: ramená ~' + (1.618 * latest.waist).toFixed(1) + ' cm alebo pás ~' + (latest.shoulders / 1.618).toFixed(1) + ' cm'); lines.push('➜ OHP, lateral raises, deficit kalórií'); }
+                else lines.push('Blízko zlatého rezu!');
+                rc('Ramená / Pás', v.toFixed(2), cls, (v > 1.60 ? 'Výborne' : v > 1.45 ? 'Priemerný' : 'Nízky'), lines);
             }
             if (latest.chest && latest.waist) {
-                const cwr = (latest.chest / latest.waist).toFixed(2);
-                ratios += '<div class="ratio-card"><div class="goal-label">Hrudník / Pás</div><div class="ratio-val">' + cwr + '</div><div class="ratio-status ' + (cwr > 1.15 ? 'ratio-ok' : cwr > 1.05 ? 'ratio-warn' : 'ratio-bad') + '">' + (cwr > 1.15 ? 'Atletický' : cwr > 1.05 ? 'Priemerný' : 'Zamerať sa') + '</div></div>';
+                const v = latest.chest / latest.waist;
+                const cls = v > 1.15 ? 'ratio-ok' : v > 1.05 ? 'ratio-warn' : 'ratio-bad';
+                const lines = ['<strong>Ideál: > 1.20</strong> (atletický)', 'Hrudník: ' + latest.chest + ' cm | Pás: ' + latest.waist + ' cm'];
+                if (v < 1.15) { lines.push('Problém: ' + (latest.waist >= latest.chest ? 'pás väčší než hrudník' : 'hrudník nedostatočne široký')); lines.push('Cieľ: hrudník ~' + (latest.waist * 1.20).toFixed(1) + ' cm alebo pás ~' + (latest.chest / 1.20).toFixed(1) + ' cm'); lines.push('➜ Bench press, kliky, rozpažky'); }
+                else lines.push('Atletický pomer!');
+                rc('Hrudník / Pás', v.toFixed(2), cls, (v > 1.15 ? 'Atletický' : v > 1.05 ? 'Priemerný' : 'Zamerať sa'), lines);
+            }
+            if ((latest.bicepL || latest.bicep) && latest.forearmL) {
+                const bicep = latest.bicepL || latest.bicep;
+                const forearm = latest.forearmL;
+                const v = forearm / bicep;
+                const cls = v > 0.70 ? 'ratio-ok' : v > 0.60 ? 'ratio-warn' : 'ratio-bad';
+                const lines = ['<strong>Ideál: 0.70–0.80</strong>', 'Biceps: ' + bicep + ' cm | Predlaktie: ' + forearm + ' cm'];
+                if (v < 0.70) lines.push('➜ Predlaktia sú slabý článok — farmer walks, wrist curls');
+                else lines.push('Proporcie horných končatín sú vyrovnané');
+                rc('Predlaktie / Biceps', v.toFixed(2), cls, (v > 0.70 ? 'Vyrovnané' : v > 0.60 ? 'Priemerný' : 'Slabé predl.'), lines);
+            }
+            if ((latest.thighL || latest.thigh) && latest.calfL) {
+                const thigh = latest.thighL || latest.thigh;
+                const calf = latest.calfL;
+                const v = calf / thigh;
+                const cls = v > 0.60 ? 'ratio-ok' : v > 0.50 ? 'ratio-warn' : 'ratio-bad';
+                const lines = ['<strong>Ideál: 0.60–0.70</strong>', 'Stehno: ' + thigh + ' cm | Lýtko: ' + calf + ' cm'];
+                if (v < 0.60) lines.push('➜ Lýtka sú slabý článok — calf raises, beh do kopca');
+                else lines.push('Dolné končatiny sú proporčné');
+                rc('Lýtko / Stehno', v.toFixed(2), cls, (v > 0.60 ? 'Proporčné' : v > 0.50 ? 'Priemerný' : 'Slabé lýtka'), lines);
             }
             document.getElementById('ratioCards').innerHTML = ratios;
         }
@@ -2108,6 +2199,7 @@
             document.getElementById('measureDate').valueAsDate = new Date();
             document.getElementById('exDate').valueAsDate = new Date();
             document.getElementById('actDate').valueAsDate = new Date();
+            loadMeasurementsForDate();
         });
     </script>
 </body>
