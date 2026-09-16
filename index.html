@@ -441,6 +441,89 @@
             .form-grid { grid-template-columns: 1fr; }
             .summary-cards { grid-template-columns: 1fr; }
         }
+        .main-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 3px;
+        }
+        .main-tab {
+            flex: 1;
+            padding: 10px 0;
+            text-align: center;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .main-tab.active {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+        .main-tab:hover:not(.active) {
+            background: rgba(255,255,255,0.08);
+        }
+        /* AI Chat */
+        .chat-fab {
+            position: fixed; bottom: 20px; right: 20px; width: 52px; height: 52px;
+            border-radius: 50%; background: var(--accent); border: none; color: var(--bg-primary);
+            font-size: 1.4rem; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            z-index: 1100; display: flex; align-items: center; justify-content: center;
+            transition: transform 0.2s;
+        }
+        .chat-fab:hover { transform: scale(1.1); }
+        .chat-panel {
+            display: none; position: fixed; bottom: 80px; right: 20px;
+            width: 380px; max-height: 520px; background: var(--bg-secondary);
+            border: 1px solid var(--card-border); border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 1100;
+            flex-direction: column; overflow: hidden;
+        }
+        .chat-panel.open { display: flex; }
+        .chat-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px; border-bottom: 1px solid var(--card-border);
+        }
+        .chat-header h3 { margin: 0; font-size: 0.9rem; }
+        .chat-messages {
+            flex: 1; overflow-y: auto; padding: 12px 16px;
+            display: flex; flex-direction: column; gap: 8px;
+            min-height: 200px; max-height: 350px;
+        }
+        .chat-msg {
+            max-width: 85%; padding: 8px 12px; border-radius: 12px;
+            font-size: 0.8rem; line-height: 1.5; word-wrap: break-word;
+        }
+        .chat-msg.user {
+            align-self: flex-end; background: var(--accent); color: var(--bg-primary);
+            border-bottom-right-radius: 4px;
+        }
+        .chat-msg.ai {
+            align-self: flex-start; background: rgba(255,255,255,0.08); color: var(--text-primary);
+            border-bottom-left-radius: 4px;
+        }
+        .chat-input-wrap {
+            display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--card-border);
+        }
+        .chat-input-wrap input {
+            flex: 1; padding: 8px 12px; border: none; border-radius: 8px;
+            background: rgba(255,255,255,0.08); color: #fff; font-size: 0.8rem; outline: none;
+        }
+        .chat-input-wrap button {
+            padding: 8px 14px; border: none; border-radius: 8px;
+            background: var(--accent); color: var(--bg-primary); font-weight: 600;
+            cursor: pointer; font-size: 0.8rem;
+        }
+        .chat-typing { font-size: 0.75rem; color: var(--text-muted); padding: 4px 12px; font-style: italic; }
+        @media (max-width: 480px) {
+            .chat-panel { width: calc(100% - 20px); right: 10px; bottom: 75px; }
+        }
         .delete-confirm {
             background: rgba(255,70,70,0.2) !important;
             border-radius: 4px;
@@ -461,6 +544,12 @@
             <h1>Fitness Diary</h1>
         </header>
         <div id="ktImportStatus"></div>
+        <div class="main-tabs">
+            <button class="main-tab active" data-tab="Strava" onclick="switchTab('Strava')">Výživa</button>
+            <button class="main-tab" data-tab="Trening" onclick="switchTab('Trening')">Tréning</button>
+            <button class="main-tab" data-tab="Telo" onclick="switchTab('Telo')">Postava</button>
+        </div>
+        <div id="stravaSummary">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
             <span id="periodLabel" style="font-size:0.75rem; color:var(--text-muted);"></span>
             <div style="display:flex; gap:6px;">
@@ -492,8 +581,10 @@
                 <div class="value" id="currentWeight">-</div>
             </div>
         </div>
+        </div>
 
-        <div class="card">
+        <div id="tabStrava">
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px;">
             <div style="display:grid; grid-template-columns:1fr auto 1fr; align-items:center; margin-bottom:14px;">
                 <h2 style="margin:0; border:none; padding:0; justify-self:start;">Záznamy</h2>
                 <div style="display:flex; align-items:center; gap:10px; justify-self:center;">
@@ -597,7 +688,7 @@
         </div>
 
 
-        <div class="card">
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px; margin-top:16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;">
                 <h2 style="margin: 0; border: none; padding: 0;">Vývoj váhy</h2>
                 <div style="display: flex; align-items: center; gap: 6px;">
@@ -625,7 +716,7 @@
 
 
         <!-- Spálené kalórie -->
-        <div class="card">
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px; margin-top:16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;">
                 <h2 style="margin: 0; border: none; padding: 0;">Spálené kalórie</h2>
             </div>
@@ -652,9 +743,42 @@
             </div>
             <div id="activityLog"></div>
         </div>
+        </div><!-- /tabStrava -->
 
+        <div id="tabTrening" style="display:none;">
+        <!-- Výkon v cvikoch -->
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h2 style="margin: 0; border: none; padding: 0;">Výkon v cvikoch</h2>
+            </div>
+            <div class="exercise-entry">
+                <input type="date" id="exDate" style="width: 130px;">
+                <select id="exName">
+                    <option value="Drep">Drep</option>
+                    <option value="Bench press">Bench press</option>
+                    <option value="Mŕtvy ťah">Mŕtvy ťah</option>
+                    <option value="OHP">OHP</option>
+                    <option value="Dips">Dips</option>
+                    <option value="Lateral raises">Lateral raises</option>
+                    <option value="Biceps curl">Biceps curl</option>
+                    <option value="Zhyby">Zhyby</option>
+                    <option value="Iné">Iné</option>
+                </select>
+                <input type="number" id="exSets" placeholder="Série" style="width: 55px;" min="1">
+                <span style="color: var(--text-muted);">×</span>
+                <input type="number" id="exReps" placeholder="Opakovania" style="width: 55px;" min="1">
+                <span style="color: var(--text-muted);">×</span>
+                <input type="number" id="exWeight" placeholder="kg" style="width: 55px;" step="0.5" min="0">
+                <button class="btn-secondary" onclick="addExercise()">Pridať</button>
+            </div>
+            <div id="exerciseLog"></div>
+        </div>
+        <div id="trainingAnalysis"></div>
+        </div><!-- /tabTrening -->
+
+        <div id="tabTelo" style="display:none;">
         <!-- Telesné miery -->
-        <div class="card" style="position:relative; z-index:20;">
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px; position:relative; z-index:20;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <h2 style="margin: 0; border: none; padding: 0;">Telesné miery</h2>
                 <div style="display: flex; gap: 6px; align-items: center;">
@@ -687,35 +811,7 @@
             <div id="bodyAnalysis" style="margin-top:10px;"></div>
         </div>
 
-        <!-- Výkon v cvikoch -->
-        <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <h2 style="margin: 0; border: none; padding: 0;">Výkon v cvikoch</h2>
-            </div>
-            <div class="exercise-entry">
-                <input type="date" id="exDate" style="width: 130px;">
-                <select id="exName">
-                    <option value="Drep">Drep</option>
-                    <option value="Bench press">Bench press</option>
-                    <option value="Mŕtvy ťah">Mŕtvy ťah</option>
-                    <option value="OHP">OHP</option>
-                    <option value="Dips">Dips</option>
-                    <option value="Lateral raises">Lateral raises</option>
-                    <option value="Biceps curl">Biceps curl</option>
-                    <option value="Zhyby">Zhyby</option>
-                    <option value="Iné">Iné</option>
-                </select>
-                <input type="number" id="exSets" placeholder="Série" style="width: 55px;" min="1">
-                <span style="color: var(--text-muted);">×</span>
-                <input type="number" id="exReps" placeholder="Opakovania" style="width: 55px;" min="1">
-                <span style="color: var(--text-muted);">×</span>
-                <input type="number" id="exWeight" placeholder="kg" style="width: 55px;" step="0.5" min="0">
-                <button class="btn-secondary" onclick="addExercise()">Pridať</button>
-            </div>
-            <div id="exerciseLog"></div>
-        </div>
-
-        <div class="card">
+        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px; margin-top:16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <h2 style="margin: 0; border: none; padding: 0;">Cloud Sync</h2>
                 <div style="display:flex; gap:8px; align-items:center;">
@@ -734,6 +830,10 @@
                         <input type="text" id="syncGistId" placeholder="ffe6105f...">
                     </div>
                 </div>
+                <div class="form-group" style="margin-bottom:8px;">
+                    <label>Apple Health koeficient <span style="font-weight:normal;color:var(--text-muted);font-size:0.7rem;">(hodinky nadhodnocujú — 0.70 = −30 %)</span></label>
+                    <input type="number" id="healthCalCoef" min="0.3" max="1.0" step="0.05" value="0.70" style="width:80px;">
+                </div>
                 <div style="display:flex; gap:10px; align-items:center;">
                     <button class="btn-secondary" onclick="saveSyncSettings()">Uložiť</button>
                     <a href="https://github.com/settings/tokens/new?scopes=gist&description=Fitness+Diary+Sync" target="_blank" style="font-size:0.75rem; color:var(--accent);">Vytvoriť token &#8594;</a>
@@ -746,6 +846,41 @@
             <button class="btn-secondary" onclick="openHelp()" style="font-size: 0.8rem; padding: 6px 14px;">Dokumentácia</button>
             <button class="btn-secondary" onclick="exportData()" style="font-size: 0.8rem; padding: 6px 14px;">Export JSON</button>
             <button class="btn-secondary" onclick="document.getElementById('importFile').click()" style="font-size: 0.8rem; padding: 6px 14px;">Import JSON</button>
+        </div>
+        </div><!-- /tabTelo -->
+    </div>
+
+    <!-- AI Chat -->
+    <button class="chat-fab" onclick="toggleChat()" title="AI Asistent">💬</button>
+    <div class="chat-panel" id="chatPanel">
+        <div class="chat-header">
+            <h3>AI Asistent</h3>
+            <div style="display:flex;gap:6px;align-items:center;">
+                <span style="font-size:0.65rem;color:var(--text-muted);cursor:pointer;" onclick="toggleChatSettings()">⚙</span>
+                <span style="cursor:pointer;font-size:1.1rem;color:var(--text-muted);" onclick="toggleChat()">✕</span>
+            </div>
+        </div>
+        <div id="chatSettings" style="display:none;padding:10px 16px;border-bottom:1px solid var(--card-border);font-size:0.75rem;">
+            <div style="margin-bottom:6px;">
+                <label style="font-size:0.7rem;color:var(--text-muted);">API URL</label>
+                <input type="text" id="chatApiUrl" placeholder="https://..." style="width:100%;padding:4px 8px;border:none;border-radius:6px;background:rgba(255,255,255,0.08);color:#fff;font-size:0.75rem;">
+            </div>
+            <div style="margin-bottom:6px;">
+                <label style="font-size:0.7rem;color:var(--text-muted);">API kľúč</label>
+                <input type="password" id="chatApiKey" placeholder="sk-..." style="width:100%;padding:4px 8px;border:none;border-radius:6px;background:rgba(255,255,255,0.08);color:#fff;font-size:0.75rem;">
+            </div>
+            <div style="margin-bottom:6px;">
+                <label style="font-size:0.7rem;color:var(--text-muted);">Model</label>
+                <input type="text" id="chatModel" placeholder="claude-sonnet-5" style="width:100%;padding:4px 8px;border:none;border-radius:6px;background:rgba(255,255,255,0.08);color:#fff;font-size:0.75rem;">
+            </div>
+            <button class="btn-secondary" onclick="saveChatSettings()" style="font-size:0.7rem;padding:4px 10px;margin-top:4px;">Uložiť</button>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <div class="chat-msg ai">Ahoj! Som tvoj fitness asistent. Poznám tvoje dáta — pýtaj sa na výživu, tréning, proporcie alebo čokoľvek.</div>
+        </div>
+        <div class="chat-input-wrap">
+            <input type="text" id="chatInput" placeholder="Napíš správu..." onkeydown="if(event.key==='Enter')sendChat()">
+            <button onclick="sendChat()">▶</button>
         </div>
     </div>
 
@@ -989,6 +1124,17 @@
 
         let summaryPeriod = 'day';
 
+        function switchTab(tabName) {
+            ['Strava','Trening','Telo'].forEach(t => {
+                const el = document.getElementById('tab' + t);
+                if (el) el.style.display = t === tabName ? 'block' : 'none';
+            });
+            document.querySelectorAll('.main-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tabName));
+            const sum = document.getElementById('stravaSummary');
+            if (sum) sum.style.display = tabName === 'Strava' ? 'block' : 'none';
+            localStorage.setItem('activeTab', tabName);
+        }
+
         function setPeriod(p) {
             summaryPeriod = p;
             document.getElementById('periodDay').className = 'tab' + (p === 'day' ? ' active' : '');
@@ -1154,6 +1300,29 @@
             if (html === '') {
                 html = '<tr><td colspan="8" class="no-data">Žiadne záznamy pre ' + formatDate(datesToShow[0]) + '</td></tr>';
             }
+            if (summaryPeriod === 'week' && datesToShow.length > 1) {
+                let tP = 0, tC = 0, tF = 0, tIn = 0, tOut = 0, days = 0;
+                for (const date of datesToShow) {
+                    const dr = records.filter(r => r.date === date && r.source !== 'weight');
+                    if (dr.length === 0) continue;
+                    days++;
+                    dr.forEach(r => { tP += r.protein; tC += r.carbs; tF += r.fat; tIn += r.caloriesIn; tOut += r.caloriesOut; });
+                }
+                if (days > 0) {
+                    const totalOut = tOut + goals.bazal * days;
+                    const diff = tIn - totalOut;
+                    const cls = diff > 0 ? 'negative' : diff < 0 ? 'positive' : 'neutral';
+                    html += '<tr style="border-top:2px solid var(--accent);font-weight:600;">';
+                    html += '<td>Spolu (' + days + ' dní)</td>';
+                    html += '<td>' + tP.toFixed(1) + ' g</td>';
+                    html += '<td>' + tC.toFixed(1) + ' g</td>';
+                    html += '<td>' + tF.toFixed(1) + ' g</td>';
+                    html += '<td>' + tIn.toFixed(0) + ' kcal</td>';
+                    html += '<td>' + totalOut.toFixed(0) + ' kcal</td>';
+                    html += '<td class="' + cls + '">' + (diff > 0 ? '+' : '') + diff.toFixed(0) + ' kcal</td>';
+                    html += '<td></td></tr>';
+                }
+            }
             tbody.innerHTML = html;
         }
 
@@ -1189,7 +1358,9 @@
                 if (r.source !== 'weight') g.days.add(r.date);
             });
 
-            tbody.innerHTML = Object.keys(grouped).sort((a, b) => b.localeCompare(a)).map(weekStart => {
+            const weeks = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+            let mP = 0, mC = 0, mF = 0, mIn = 0, mOut = 0, mDays = 0;
+            let rowsHtml = weeks.map(weekStart => {
                 const w = grouped[weekStart];
                 const end = new Date(weekStart);
                 end.setDate(end.getDate() + 6);
@@ -1198,6 +1369,7 @@
                 const diff = w.caloriesIn - wTotalOut;
                 const cls = diff > 0 ? 'negative' : diff < 0 ? 'positive' : 'neutral';
                 const wn = getWeekNumber(weekStart);
+                mP += w.protein; mC += w.carbs; mF += w.fat; mIn += w.caloriesIn; mOut += wTotalOut; mDays += daysCount;
                 return `<tr>
                     <td>${formatDate(weekStart)} – ${formatDate(end.toISOString().split('T')[0])} (T${wn})</td>
                     <td>${w.protein.toFixed(1)} g</td>
@@ -1209,6 +1381,20 @@
                     <td></td>
                 </tr>`;
             }).join('');
+            if (weeks.length > 1) {
+                const mDiff = mIn - mOut;
+                const mCls = mDiff > 0 ? 'negative' : mDiff < 0 ? 'positive' : 'neutral';
+                rowsHtml += '<tr style="border-top:2px solid var(--accent);font-weight:600;">';
+                rowsHtml += '<td>Spolu (' + mDays + ' dní)</td>';
+                rowsHtml += '<td>' + mP.toFixed(1) + ' g</td>';
+                rowsHtml += '<td>' + mC.toFixed(1) + ' g</td>';
+                rowsHtml += '<td>' + mF.toFixed(1) + ' g</td>';
+                rowsHtml += '<td>' + mIn.toFixed(0) + ' kcal</td>';
+                rowsHtml += '<td>' + mOut.toFixed(0) + ' kcal</td>';
+                rowsHtml += '<td class="' + mCls + '">' + (mDiff > 0 ? '+' : '') + mDiff.toFixed(0) + ' kcal</td>';
+                rowsHtml += '<td></td></tr>';
+            }
+            tbody.innerHTML = rowsHtml;
         }
 
         let chartPeriod = 'days';
@@ -1745,6 +1931,8 @@
             if (measurements.length === 0) {
                 document.getElementById('ratioCards').innerHTML = '';
                 document.getElementById('bodyAnalysis').innerHTML = '';
+                const trainingEl2 = document.getElementById('trainingAnalysis');
+                if (trainingEl2) trainingEl2.innerHTML = '';
                 return;
             }
 
@@ -1877,6 +2065,7 @@
             const okCount = ratioResults.filter(r => r.cls === 'ratio-ok').length;
             const total = ratioResults.length;
             let analysis = '';
+            let trainingContent = '';
 
             function partDetail(p, diff) {
                 const ad = Math.abs(diff);
@@ -1913,7 +2102,7 @@
             const hasParts = ['waist','chest','shoulders','bicep','forearm','thigh','calf'].filter(p => cur[p]);
 
             if (hasParts.length >= 2) {
-                analysis = '<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px;font-size:0.8rem;">';
+                analysis = '<div style="margin-top:12px;font-size:0.8rem;">';
                 analysis += '<div style="font-weight:600;margin-bottom:10px;">Cieľové miery pre ' + H + ' cm <span style="font-weight:400;color:var(--text-muted);font-size:0.7rem;">(vzájomne konzistentné — všetky pomery v ideále)</span></div>';
 
                 hasParts.forEach(p => {
@@ -2021,55 +2210,291 @@
                         '<b>Upper/Lower 4× týždenne</b> alebo <b>Full Body 3×</b> — obe fungujú dobre pri tvojich pomeroch.')
                     });
                     const weekA = [
-                        {day: 'Po', type: 'Upper 1', ex: ['Bench 4×8','Dips 2×10','Zhyby 4×8','OHP 3×10','Lat. raises 3×15']},
-                        {day: 'Ut', type: 'Lower 1', ex: ['Drepy 4×8','Romanian DL 3×10','Leg press 3×12','Calf raises 4×20']},
-                        {day: 'St', type: 'Voľno', ex: ['Kardio 30–45 min (prechádzka / beh) alebo úplné voľno']},
-                        {day: 'Št', type: 'Upper 2', ex: ['Dips 3×10','Bench 3×12 (ľahšie)','Rows 4×10','OHP 3×8','Lat. raises 3×15']},
-                        {day: 'Pi', type: 'Lower 2', ex: ['Drepy 3×6 (ťažšie)','Bulg. split sq. 3×10','Leg curls 3×12','Calf raises 4×20']},
-                        {day: 'So–Ne', type: 'Voľno', ex: ['Odpočinok / ľahké kardio']}
+                        {day: 'Pondelok', type: 'Upper 1', ex: [
+                            {name: 'Bench', sets: '3×6', pct: '~80%', tag: 'C'},
+                            {name: 'Pull-up', sets: '4×8', pct: '', tag: 'C'},
+                            {name: 'Dips', sets: '3×10', pct: '', tag: 'C'},
+                            {name: 'Bent row', sets: '3×10', pct: '', tag: 'C'},
+                            {name: 'OHP', sets: '3×12', pct: '~60%', tag: 'C'},
+                            {name: 'Lat. raise', sets: '3×15', pct: '', tag: 'I'},
+                            {name: 'Rear delt', sets: '2×15', pct: '', tag: 'I'},
+                            {name: 'Curls', sets: '2×12', pct: '', tag: 'I'}
+                        ]},
+                        {day: 'Utorok', type: 'Lower 1', ex: [
+                            {name: 'Drep', sets: '3×6', pct: '~80%', tag: 'C'},
+                            {name: 'Romanian DL', sets: '3×10', pct: '', tag: 'C'},
+                            {name: 'Výpady', sets: '3×12', pct: '', tag: 'C'},
+                            {name: 'Calf raise stoj', sets: '4×20', pct: '', tag: 'I'}
+                        ]},
+                        {day: 'Streda', type: 'Voľno', ex: [{name: 'Kardio 30–45 min alebo úplné voľno', sets: '', pct: '', tag: ''}]},
+                        {day: 'Štvrtok', type: 'Upper 2', ex: [
+                            {name: 'Incline bench', sets: '3×12', pct: '~60%', tag: 'C'},
+                            {name: 'Chin-up', sets: '3×10', pct: '', tag: 'C'},
+                            {name: 'DB fly', sets: '3×15', pct: '', tag: 'I'},
+                            {name: 'Cable row', sets: '4×10', pct: '', tag: 'C'},
+                            {name: 'OHP', sets: '3×6', pct: '~80%', tag: 'C'},
+                            {name: 'Triceps pushdown', sets: '2×12', pct: '', tag: 'I'},
+                            {name: 'Lat. raise', sets: '3×15', pct: '', tag: 'I'}
+                        ]},
+                        {day: 'Piatok', type: 'Lower 2', ex: [
+                            {name: 'Drep', sets: '3×12', pct: '~60%', tag: 'C'},
+                            {name: 'Bulg. split sq.', sets: '3×10', pct: '', tag: 'C'},
+                            {name: 'Leg curl', sets: '3×12', pct: '', tag: 'I'},
+                            {name: 'Calf raise sed', sets: '4×20', pct: '', tag: 'I'}
+                        ]},
+                        {day: 'Sobota', type: 'Voľno', ex: [{name: 'Kardio alebo úplné voľno', sets: '', pct: '', tag: ''}]},
+                        {day: 'Nedeľa', type: 'Voľno', ex: [{name: 'Úplné voľno', sets: '', pct: '', tag: ''}]}
                     ];
                     const weekB = [
-                        {day: 'Po', type: 'Upper 1', ex: ['Bench 3×6 (ťažšie)','Dips 3×12','Zhyby 4×10','Face pulls 3×15','Lat. raises 3×15']},
-                        {day: 'Ut', type: 'Lower 1', ex: ['Leg press 4×10','Romanian DL 4×10','Výpady 3×10','Calf raises 4×20']},
-                        {day: 'St', type: 'Voľno', ex: ['Kardio alebo úplné voľno']},
-                        {day: 'Št', type: 'Upper 2', ex: ['OHP 4×8','Bench 3×12 (ľahšie)','Rows 4×8','Dips 2×10','Lat. raises 3×15']},
-                        {day: 'Pi', type: 'Lower 2', ex: ['Drepy 4×8','Hip thrust 3×12','Leg ext. 3×12','Calf raises 4×20']},
-                        {day: 'So–Ne', type: 'Voľno', ex: ['Odpočinok / ľahké kardio']}
+                        {day: 'Pondelok', type: 'Upper 1', ex: [
+                            {name: 'Bench', sets: '3×12', pct: '~60%', tag: 'C'},
+                            {name: 'Cable row', sets: '4×10', pct: '', tag: 'C'},
+                            {name: 'Dips', sets: '3×10', pct: '', tag: 'C'},
+                            {name: 'Pull-up', sets: '3×8', pct: '', tag: 'C'},
+                            {name: 'OHP', sets: '3×6', pct: '~80%', tag: 'C'},
+                            {name: 'Lat. raise', sets: '3×15', pct: '', tag: 'I'},
+                            {name: 'Rear delt', sets: '2×15', pct: '', tag: 'I'},
+                            {name: 'Curls', sets: '2×12', pct: '', tag: 'I'}
+                        ]},
+                        {day: 'Utorok', type: 'Lower 1', ex: [
+                            {name: 'Bulg. split sq.', sets: '4×10', pct: '', tag: 'C'},
+                            {name: 'Romanian DL', sets: '4×10', pct: '', tag: 'C'},
+                            {name: 'Výpady', sets: '3×10', pct: '', tag: 'C'},
+                            {name: 'Calf raise stoj', sets: '4×20', pct: '', tag: 'I'}
+                        ]},
+                        {day: 'Streda', type: 'Voľno', ex: [{name: 'Kardio alebo úplné voľno', sets: '', pct: '', tag: ''}]},
+                        {day: 'Štvrtok', type: 'Upper 2', ex: [
+                            {name: 'Incline bench', sets: '3×6', pct: '~80%', tag: 'C'},
+                            {name: 'Chin-up', sets: '4×10', pct: '', tag: 'C'},
+                            {name: 'DB fly', sets: '3×15', pct: '', tag: 'I'},
+                            {name: 'Bent row', sets: '3×10', pct: '', tag: 'C'},
+                            {name: 'OHP', sets: '3×12', pct: '~60%', tag: 'C'},
+                            {name: 'Triceps pushdown', sets: '2×12', pct: '', tag: 'I'},
+                            {name: 'Lat. raise', sets: '3×15', pct: '', tag: 'I'}
+                        ]},
+                        {day: 'Piatok', type: 'Lower 2', ex: [
+                            {name: 'Drep', sets: '3×12', pct: '~60%', tag: 'C'},
+                            {name: 'Hip thrust', sets: '3×12', pct: '', tag: 'C'},
+                            {name: 'Leg ext.', sets: '3×12', pct: '', tag: 'I'},
+                            {name: 'Calf raise stoj', sets: '4×20', pct: '', tag: 'I'}
+                        ]},
+                        {day: 'Sobota', type: 'Voľno', ex: [{name: 'Kardio alebo úplné voľno', sets: '', pct: '', tag: ''}]},
+                        {day: 'Nedeľa', type: 'Voľno', ex: [{name: 'Úplné voľno', sets: '', pct: '', tag: ''}]}
                     ];
-                    const maxEx = 5;
-                    function renderWeekRows(rows) {
-                        let h = '<div style="display:flex;gap:0;margin-bottom:4px;margin-top:6px;font-weight:600;color:var(--text-primary);font-size:0.7rem;">';
-                        h += '<span style="flex:0 0 42px;">Deň</span>';
-                        h += '<span style="flex:0 0 62px;">Typ</span>';
-                        for (let i = 0; i < maxEx; i++) h += '<span style="flex:1;text-align:left;">' + (i + 1) + '. cvik</span>';
-                        h += '</div>';
-                        rows.forEach(r => {
-                            const isRest = r.type === 'Voľno';
-                            h += '<div style="display:flex;gap:0;margin-bottom:3px;line-height:1.4;color:var(--text-muted);align-items:baseline;">';
-                            h += '<span style="flex:0 0 42px;font-weight:600;color:var(--text-primary);">' + r.day + '</span>';
-                            h += '<span style="flex:0 0 62px;font-weight:500;color:' + (isRest ? 'var(--text-muted)' : 'var(--orange, #ffa726)') + ';">' + r.type + '</span>';
-                            if (isRest) {
-                                h += '<span style="flex:' + maxEx + ';font-style:italic;">' + r.ex[0] + '</span>';
-                            } else {
-                                for (let i = 0; i < maxEx; i++) {
-                                    h += '<span style="flex:1;white-space:nowrap;">' + (r.ex[i] ? r.ex[i] : '') + '</span>';
+                    const exColors = {
+                        'Bench': '#ef5350', 'Incline': '#ef5350', 'Dips': '#ef5350', 'DB': '#ef5350',
+                        'OHP': '#ffa726', 'Lat.': '#ffa726', 'Rear delt': '#ffa726',
+                        'Pull-up': '#4fc3f7', 'Chin-up': '#4fc3f7', 'Bent': '#4fc3f7', 'Cable row': '#4fc3f7',
+                        'Drep': '#66bb6a', 'Bulg.': '#66bb6a', 'Výpady': '#66bb6a', 'Leg ext': '#66bb6a',
+                        'Romanian': '#ab47bc', 'Leg curl': '#ab47bc', 'Hip thrust': '#ab47bc',
+                        'Calf': '#78909c',
+                        'Tri': '#e0e0e0',
+                        'Curls': '#e91e63'
+                    };
+                    function getExColor(name) {
+                        for (const k in exColors) { if (name.startsWith(k)) return exColors[k]; }
+                        return 'var(--text-muted)';
+                    }
+                    function renderWeekRows(days) {
+                        const trainDays = days.filter(d => d.type !== 'Voľno');
+                        const restDays = days.filter(d => d.type === 'Voľno');
+                        const maxEx = Math.max(...trainDays.map(d => d.ex.length));
+                        let h = '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">';
+                        h += '<table style="width:100%;border-collapse:separate;border-spacing:0;font-size:0.65rem;">';
+                        h += '<thead><tr>';
+                        h += '<th style="padding:6px 0 4px;border-bottom:2px solid var(--accent);background:rgba(255,255,255,0.03);width:1%;white-space:nowrap;"></th>';
+                        trainDays.forEach(d => {
+                            h += '<th style="padding:6px 4px 4px 20px;text-align:left;border-bottom:2px solid var(--accent);background:rgba(255,255,255,0.03);">';
+                            h += '<div style="font-weight:700;color:var(--text-primary);font-size:0.75rem;">' + d.day + '</div>';
+                            h += '<div style="font-weight:600;color:var(--accent);font-size:0.58rem;">' + d.type + '</div>';
+                            h += '</th>';
+                        });
+                        h += '</tr></thead><tbody>';
+                        for (let i = 0; i < maxEx; i++) {
+                            h += '<tr>';
+                            h += '<td style="padding:4px 8px 4px 0;vertical-align:middle;text-align:right;color:var(--text-muted);font-size:0.65rem;font-weight:600;width:1%;white-space:nowrap;border-bottom:1px solid rgba(255,255,255,0.04);">' + (i + 1) + '.</td>';
+                            trainDays.forEach(d => {
+                                const e = d.ex[i];
+                                if (e) {
+                                    const c = getExColor(e.name);
+                                    h += '<td style="padding:4px 4px 4px 20px;vertical-align:top;border-bottom:1px solid rgba(255,255,255,0.04);text-align:left;">';
+                                    h += '<div style="color:' + c + ';font-weight:600;line-height:1.3;">' + e.name + '</div>';
+                                    h += '<div style="color:var(--text-muted);font-size:0.58rem;line-height:1.2;">' + e.sets;
+                                    if (e.pct) h += ' ' + e.pct;
+                                    h += '</div></td>';
+                                } else {
+                                    h += '<td style="padding:4px 3px;border-bottom:1px solid rgba(255,255,255,0.04);"></td>';
                                 }
-                            }
-                            h += '</div>';
+                            });
+                            h += '</tr>';
+                        }
+                        h += '</tbody></table></div>';
+                        restDays.forEach(r => {
+                            h += '<div style="padding:3px 0;font-size:0.62rem;color:var(--text-muted);font-style:italic;">' + r.day + ': ' + r.ex[0].name + '</div>';
                         });
                         return h;
                     }
-                    splits.push({label: '📅 Týždeň A', text: renderWeekRows(weekA)});
-                    splits.push({label: '📅 Týždeň B', text: renderWeekRows(weekB)});
+                    // --- Tréningový plán ---
+                    let myPlan = '';
+
+                    // --- Plán A: Push/Pull/Legs ---
+                    myPlan += '<details open style="margin-bottom:8px;"><summary style="cursor:pointer;font-weight:600;font-size:0.85rem;margin-bottom:8px;">Plán A: Push / Pull / Legs</summary>';
+                    myPlan += '<div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:10px;line-height:1.5;">5 dní, väčší fokus na partiu za session. DUP v rámci týždňa — Push 1 ťažký bench + ľahký OHP, Push 2 naopak. Legs 1× týždenne.</div>';
+                    const pplWeek = [
+                        {day: 'Pondelok', type: 'Push 1', ex: [
+                            {name: 'Bench', sets: '3×6', pct: '~80%', tag: 'C'},
+                            {name: 'Dips', sets: '3×10', pct: '', tag: 'C'},
+                            {name: 'OHP', sets: '3×12', pct: '~60%', tag: 'C'},
+                            {name: 'DB fly', sets: '3×15', pct: '', tag: 'I'},
+                            {name: 'Lat. raise', sets: '3×15', pct: '', tag: 'I'},
+                            {name: 'Triceps pushdown', sets: '2×12', pct: '', tag: 'I'}
+                        ]},
+                        {day: 'Utorok', type: 'Pull 1', ex: [
+                            {name: 'Pull-up', sets: '4×8', pct: '', tag: 'C'},
+                            {name: 'Bent row', sets: '3×10', pct: '', tag: 'C'},
+                            {name: 'Cable row', sets: '3×12', pct: '', tag: 'C'},
+                            {name: 'Rear delt', sets: '3×15', pct: '', tag: 'I'},
+                            {name: 'Curls', sets: '3×12', pct: '', tag: 'I'}
+                        ]},
+                        {day: 'Streda', type: 'Legs', ex: [
+                            {name: 'Drep', sets: '4×8', pct: '~70%', tag: 'C'},
+                            {name: 'Romanian DL', sets: '3×10', pct: '', tag: 'C'},
+                            {name: 'Bulg. split sq.', sets: '3×10', pct: '', tag: 'C'},
+                            {name: 'Leg curl', sets: '3×12', pct: '', tag: 'I'},
+                            {name: 'Calf raise', sets: '4×20', pct: '', tag: 'I'}
+                        ]},
+                        {day: 'Štvrtok', type: 'Push 2', ex: [
+                            {name: 'Incline bench', sets: '3×12', pct: '~60%', tag: 'C'},
+                            {name: 'Dips', sets: '3×10', pct: '', tag: 'C'},
+                            {name: 'OHP', sets: '3×6', pct: '~80%', tag: 'C'},
+                            {name: 'DB fly', sets: '3×15', pct: '', tag: 'I'},
+                            {name: 'Lat. raise', sets: '3×15', pct: '', tag: 'I'},
+                            {name: 'Triceps pushdown', sets: '2×12', pct: '', tag: 'I'}
+                        ]},
+                        {day: 'Piatok', type: 'Pull 2', ex: [
+                            {name: 'Chin-up', sets: '4×10', pct: '', tag: 'C'},
+                            {name: 'Cable row', sets: '4×10', pct: '', tag: 'C'},
+                            {name: 'Bent row', sets: '3×10', pct: '', tag: 'C'},
+                            {name: 'Rear delt', sets: '2×15', pct: '', tag: 'I'},
+                            {name: 'Curls', sets: '2×12', pct: '', tag: 'I'}
+                        ]},
+                        {day: 'Sobota', type: 'Voľno', ex: [{name: 'Kardio alebo úplné voľno', sets: '', pct: '', tag: ''}]},
+                        {day: 'Nedeľa', type: 'Voľno', ex: [{name: 'Úplné voľno', sets: '', pct: '', tag: ''}]}
+                    ];
+                    myPlan += renderWeekRows(pplWeek);
+
+                    const volDataA = [
+                        {name: 'Hrudník', color: '#ef5350', sets: '18', rec: '10–16', exs: ['Bench 3 x', 'Incline 3 x', 'Dips 6 x', 'DB fly 6 x']},
+                        {name: 'Chrbát', color: '#4fc3f7', sets: '21', rec: '10–20', exs: ['Zhyby 8 x', 'Bent row 6 x', 'Cable row 7 x']},
+                        {name: 'Ramená', color: '#ffa726', sets: '17', rec: '12–20', exs: ['OHP 6 x', 'Lat raise 6 x', 'Rear delt 5 x']},
+                        {name: 'Triceps', color: '#e0e0e0', sets: '4+', rec: '4–8', exs: ['Pushdown 4 x', '+ nepriamo']},
+                        {name: 'Biceps', color: '#e91e63', sets: '5+', rec: '4–8', exs: ['Curls 5 x', '+ nepriamo']},
+                        {name: 'Quady', color: '#66bb6a', sets: '7', rec: '10–16', exs: ['Drep 4 x', 'Bulg split 3 x']},
+                        {name: 'Hamstringy', color: '#ab47bc', sets: '6', rec: '6–10', exs: ['Romanian DL 3 x', 'Leg curl 3 x']},
+                        {name: 'Lýtka', color: '#78909c', sets: '4', rec: '8–16', exs: ['Calf raise 4 x']}
+                    ];
+                    const maxVExA = Math.max(...volDataA.map(v => v.exs.length));
+                    myPlan += '<div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);">';
+                    myPlan += '<div style="font-weight:600;margin-bottom:8px;font-size:0.78rem;color:var(--accent);">Týždenný objem (série/týždeň)</div>';
+                    myPlan += '<div style="display:grid;grid-template-columns:auto auto auto repeat(' + maxVExA + ', auto);font-size:0.63rem;line-height:1.4;row-gap:2px;column-gap:10px;justify-content:start;">';
+                    myPlan += '<span style="color:var(--text-muted);font-size:0.56rem;"></span>';
+                    myPlan += '<span style="color:var(--text-muted);font-size:0.56rem;text-align:right;">Série</span>';
+                    myPlan += '<span style="color:var(--text-muted);font-size:0.56rem;">Odp.</span>';
+                    myPlan += '<span style="color:var(--text-muted);font-size:0.56rem;grid-column:span ' + maxVExA + ';">Cviky</span>';
+                    volDataA.forEach(v => {
+                        myPlan += '<span style="color:' + v.color + ';font-weight:600;white-space:nowrap;">● ' + v.name + '</span>';
+                        myPlan += '<span style="font-weight:700;color:var(--text-primary);text-align:right;">' + v.sets + '</span>';
+                        myPlan += '<span style="color:var(--text-muted);white-space:nowrap;font-size:0.56rem;">(' + v.rec + ')</span>';
+                        for (let i = 0; i < maxVExA; i++) {
+                            const pipe = i > 0 && v.exs[i] ? '<span style="color:rgba(255,255,255,0.15);">|</span>&nbsp;&nbsp; ' : '';
+                            myPlan += '<span style="color:var(--text-muted);white-space:nowrap;">' + pipe + (v.exs[i] || '') + '</span>';
+                        }
+                    });
+                    myPlan += '</div></div>';
+
+                    myPlan += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:0.68rem;">';
+                    myPlan += '<span style="color:#ef5350;">● Hrudník</span>';
+                    myPlan += '<span style="color:#ffa726;">● Ramená</span>';
+                    myPlan += '<span style="color:#4fc3f7;">● Chrbát</span>';
+                    myPlan += '<span style="color:#66bb6a;">● Quady</span>';
+                    myPlan += '<span style="color:#ab47bc;">● Hamstringy</span>';
+                    myPlan += '<span style="color:#78909c;">● Lýtka</span>';
+                    myPlan += '<span style="color:#e0e0e0;">● Triceps</span>';
+                    myPlan += '<span style="color:#e91e63;">● Biceps</span>';
+                    myPlan += '</div>';
+
+                    myPlan += '</details>';
+
+                    // --- Plán B: Upper/Lower ---
+                    myPlan += '<details style="margin-top:16px;margin-bottom:8px;padding-top:16px;border-top:2px solid var(--accent);"><summary style="cursor:pointer;font-weight:600;font-size:0.85rem;margin-bottom:8px;">Plán B: Upper / Lower — rotácia A → B → A → B</summary>';
+                    myPlan += '<div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:10px;line-height:1.5;">4 dni, celý upper alebo lower za session. DUP cez 2-týždňovú rotáciu A/B.</div>';
+                    myPlan += '<div style="font-weight:600;margin-top:12px;margin-bottom:4px;font-size:0.78rem;color:var(--accent);">Týždeň A</div>';
+                    myPlan += renderWeekRows(weekA);
+                    myPlan += '<div style="font-weight:600;margin-top:18px;margin-bottom:4px;font-size:0.78rem;color:var(--accent);">Týždeň B</div>';
+                    myPlan += renderWeekRows(weekB);
+
+                    myPlan += '<div style="font-weight:600;margin-top:14px;margin-bottom:4px;font-size:0.78rem;color:var(--accent);">Finišer</div>';
+                    myPlan += '<div style="font-size:0.75rem;color:var(--text-muted);line-height:1.7;">';
+                    myPlan += '<b>Lower dni:</b> farmer walks / dead hangs 2×30 s';
+                    myPlan += '</div>';
+                    myPlan += '<div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);">';
+                    myPlan += '<div style="font-weight:600;margin-bottom:8px;font-size:0.78rem;color:var(--accent);">Týždenný objem (série/týždeň)</div>';
+                    const volData = [
+                        {name: 'Hrudník', color: '#ef5350', sets: '12', rec: '10–16', exs: ['Bench 3 x', 'Incline 3 x', 'Dips 3 x', 'DB fly 3 x']},
+                        {name: 'Chrbát', color: '#4fc3f7', sets: '14', rec: '10–20', exs: ['Zhyby 7 x', 'Rows 7 x']},
+                        {name: 'Ramená', color: '#ffa726', sets: '14', rec: '12–20', exs: ['OHP 6 x', 'Lat raise 6 x', 'Rear delt 2 x']},
+                        {name: 'Triceps', color: '#e0e0e0', sets: '2+', rec: '4–8', exs: ['Pushdown 2 x', '+ nepriamo']},
+                        {name: 'Biceps', color: '#e91e63', sets: '2+', rec: '4–8', exs: ['Curls 2 x', '+ nepriamo']},
+                        {name: 'Quady', color: '#66bb6a', sets: '12–13', rec: '10–16', exs: ['Drep 3-6 x', 'Split/Výpady 6-7 x']},
+                        {name: 'Hamstringy', color: '#ab47bc', sets: '6–7', rec: '6–10', exs: ['Romanian DL 3-4 x', 'Leg curl/Thrust 3 x']},
+                        {name: 'Lýtka', color: '#78909c', sets: '8', rec: '8–16', exs: ['Calf raises 8 x']}
+                    ];
+                    const maxVEx = Math.max(...volData.map(v => v.exs.length));
+                    myPlan += '<div style="display:grid;grid-template-columns:auto auto auto repeat(' + maxVEx + ', auto);font-size:0.63rem;line-height:1.4;row-gap:2px;column-gap:10px;justify-content:start;">';
+                    myPlan += '<span style="color:var(--text-muted);font-size:0.56rem;"></span>';
+                    myPlan += '<span style="color:var(--text-muted);font-size:0.56rem;text-align:right;">Série</span>';
+                    myPlan += '<span style="color:var(--text-muted);font-size:0.56rem;">Odp.</span>';
+                    myPlan += '<span style="color:var(--text-muted);font-size:0.56rem;grid-column:span ' + maxVEx + ';">Cviky</span>';
+                    volData.forEach(v => {
+                        myPlan += '<span style="color:' + v.color + ';font-weight:600;white-space:nowrap;">● ' + v.name + '</span>';
+                        myPlan += '<span style="font-weight:700;color:var(--text-primary);text-align:right;">' + v.sets + '</span>';
+                        myPlan += '<span style="color:var(--text-muted);white-space:nowrap;font-size:0.56rem;">(' + v.rec + ')</span>';
+                        for (let i = 0; i < maxVEx; i++) {
+                            const pipe = i > 0 && v.exs[i] ? '<span style="color:rgba(255,255,255,0.15);">|</span>&nbsp;&nbsp; ' : '';
+                            myPlan += '<span style="color:var(--text-muted);white-space:nowrap;">' + pipe + (v.exs[i] || '') + '</span>';
+                        }
+                    });
+                    myPlan += '</div>';
+                    myPlan += '</div>';
+                    myPlan += '</details>';
+                    myPlan += '<details style="margin-top:14px;">';
+                    myPlan += '<summary style="font-weight:600;font-size:0.78rem;color:var(--accent);cursor:pointer;">Čo znamenajú percentá?</summary>';
+                    myPlan += '<div style="font-size:0.75rem;color:var(--text-muted);line-height:1.7;margin-top:8px;">';
+                    myPlan += '<b>~80 %</b> (3×6) — sila. Ťažká váha, málo opakovaní, pauza 2–3 min.<br>';
+                    myPlan += '<b>~60 %</b> (3×12) — hypertrofia. Ľahšia váha, viac opakovaní, pauza 60–90 s.<br>';
+                    myPlan += 'Striedanie v rámci týždňa (<b>DUP</b>) je zámerné — telo sa neadaptuje na jeden štýl.';
+                    myPlan += '</div>';
                     const trainNotes = [];
                     trainNotes.push({label: '🔄 Rotácia', text: 'Rotuj <b>A→B→A→B</b>. Rôzne cviky a opakovania zabraňujú stagnácii a preťažovaniu rovnakých pohybov.'});
-                    trainNotes.push({label: '🏋️ Intenzita', text: '<b>Deň 1</b> (Upper/Lower) = ťažší. Vyber váhu, pri ktorej posledné 2 opakovania sú náročné, ale zvládneš ich sám. <b>Deň 2</b> = ľahší — váha, pri ktorej ti zostávajú 3 opakovania v zálohe. Nikdy necvič do zlyhania — vždy nechaj <b>1–3 opakovania v rezerve</b>.'});
-                    trainNotes.push({label: '💪 Sila vs H', text: 'Cviky označené <b>„ťažšie"</b>: menej opakovaní (3–6), vyššia váha, dlhšie pauzy (2–3 min) — budujú <b>silu</b>. Označené <b>„ľahšie"</b>: viac opakovaní (10–12), nižšia váha, kratšie pauzy (60–90 s) — budujú <b>objem svalu</b>. Striedanie v rámci týždňa je zámerné — telo sa neadaptuje na jeden štýl.'});
+                    trainNotes.push({label: '🏋️ Intenzita', text: 'Nikdy necvič do zlyhania — vždy nechaj <b>1–3 opakovania v rezerve</b>. Percentá sú orientačné — dôležité je, aby posledné 2 opakovania boli náročné, ale zvládnuteľné.'});
                     trainNotes.push({label: '❌ Vynechaný', text: '<b>1 deň</b> — pokračuj podľa plánu, nevynechaný tréning nerob na voľný deň. <b>2+ dni</b> — pokračuj tam, kde si skončil (nepreskakuj). Ak vynecháš celý týždeň, začni odznova s <b>−10 % váh</b> na prvý tréning.'});
                     trainNotes.push({label: '📊 Progresia', text: 'Keď zvládneš horný koniec opakovaní vo všetkých sériách (napr. 4×8 a urobíš 4×9), <b>pridaj 2.5 kg</b> a začni odznova od spodku rozsahu. Nezvyšuj váhu aj objem naraz.'});
-                    trainNotes.push({label: '💡 Finišer', text: 'Na konci <b>každého tréningu</b>: <b>curls</b> / <b>hammer curls</b> 2×12 (upper dni) + <b>calf raises</b> 2–3×20 + <b>farmer walks</b> / <b>dead hangs</b> 2×30 s. <b>Biceps</b>, <b>lýtka</b> a <b>predlaktia</b> potrebujú frekvenciu — krátke série na záver.'});
-                    splits.push({label: '📝 Poznámky', text: trainNotes.map(n => '<div style="margin-bottom:4px;">' + n.label + ' ' + n.text + '</div>').join('')});
-                    analysis += renderInfoSection('splitToggle', 'Typ tréningu', splits, 105);
+                    myPlan += '<div style="margin-top:12px;">';
+                    trainNotes.forEach(n => {
+                        const em = n.label.match(/^(\S+)\s*(.*)/);
+                        myPlan += '<div style="display:flex;gap:0;margin-bottom:5px;line-height:1.4;color:var(--text-muted);">';
+                        myPlan += '<span style="flex:0 0 22px;text-align:center;">' + (em ? em[1] : '') + '</span>';
+                        myPlan += '<span style="flex:0 0 95px;white-space:nowrap;font-weight:600;color:var(--text-primary);">' + (em ? em[2] : n.label) + '</span>';
+                        myPlan += '<span style="flex:1;">' + n.text + '</span>';
+                        myPlan += '</div>';
+                    });
+                    myPlan += '</div>';
+                    myPlan += '</details>';
+                    trainingContent += myPlan;
+
+                    // --- Typ tréningu (alternatívy, zatvorené) ---
+                    splits.push({label: '🔀 Kedy meniť', text: 'Ak stagnuješ 4+ týždňov napriek správnej progresii, spánku a výžive — skús zmeniť split. Ak máš čas len na 3 dni: <b>Full Body</b>. Ak máš 6 dní: <b>Push/Pull/Legs</b>. Ak si spokojný a progres ide — <b>nemeň nič</b>.'});
+                    trainingContent += renderInfoSection('splitToggle', 'Alternatívne tréningové programy', splits, 105);
 
                     const compound = [];
                     compound.push({label: '🏗️ Komplexné', text: 'Zapájajú viac kĺbov a svalových skupín naraz. <b>Bench</b>, <b>drepy</b>, <b>mŕtvy ťah</b>, <b>OHP</b>, <b>zhyby</b>, <b>dips</b>, <b>veslovanie</b>. Základ tréningu — budujú celkovú silu, spaľujú viac kalórií, stimulujú viac <b>testosterónu</b> a <b>rastového hormónu</b>.'});
@@ -2092,7 +2517,7 @@
                         skipList.join(', ') + ' — v norme alebo rastú s komplexnými. Ušetrený čas vlož do komplexných cvikov alebo kardio.' :
                         'Žiadna partia nie je v norme — trénuj izolované na všetky zaostávajúce.'
                     });
-                    analysis += renderInfoSection('compoundToggle', 'Komplexné vs. izolované cviky', compound, 105);
+                    trainingContent += renderInfoSection('compoundToggle', 'Komplexné vs. izolované cviky', compound, 105);
 
                     const freq = [];
                     freq.push({label: 'ℹ️ Poznámka', text: 'Číslo „×/týždeň" = koľko tréningov zahŕňa prácu pre danú partiu (aj ako <b>finišer</b> na konci). Rozhodujúci je <b>celkový týždenný objem</b> (počet sérií), nie počet samostatných tréningov.'});
@@ -2103,11 +2528,11 @@
                     freq.push({label: '🦴 Predlaktie', text: '2–4× týždenne. <b>Finišer</b> na konci tréningu: farmer walks, dead hangs, wrist curls — 2–3 série, <b>vysoké opakovania</b> (15–25). Prevažne <b>šľachy</b>, reagujú na frekvenciu.'});
                     freq.push({label: '🦵 Stehná', text: '2× týždenne. 10–16 sérií/týždeň. Najväčšia skupina — najdlhšia regenerácia (48–72 h). Drepy, leg press, výpady.'});
                     freq.push({label: '🦶 Lýtka', text: '2–4× týždenne. <b>Finišer</b> na konci tréningu: calf raises 2–3 série × 15–25 opak. Geneticky limitované, veľa <b>šliach</b> — reagujú na <b>frekvenciu a objem</b>, rôzne uhly (stojky, sediace).'});
-                    analysis += renderInfoSection('freqToggle', 'Frekvencia a objem tréningu', freq, 95);
+                    trainingContent += renderInfoSection('freqToggle', 'Frekvencia a objem tréningu', freq, 95);
 
                     const cw = curWeight;
                     const strRows = [
-                        {name: 'Bench press', b: 0.5, m: 1, a: 1.25, muscles: '<b>Hrudník</b>, <b>deltoidy</b>, <b>triceps</b>'},
+                        {name: 'Bench', b: 0.5, m: 1, a: 1.25, muscles: '<b>Hrudník</b>, <b>deltoidy</b>, <b>triceps</b>'},
                         {name: 'Drep', b: 0.75, m: 1.25, a: 1.75, muscles: '<b>Stehná</b>, <b>zadok</b>, <b>core</b>'},
                         {name: 'Mŕtvy ťah', b: 1, m: 1.5, a: 2, muscles: '<b>Chrbát</b>, <b>stehná</b>, <b>predlaktia</b>'},
                         {name: 'Romanian DL', b: 0.65, m: 1, a: 1.25, muscles: '<b>Zadný reťazec</b>, <b>hamstringy</b>, <b>zadok</b>'},
@@ -2142,15 +2567,23 @@
                     });
                     strHtml += '<div style="margin-top:6px;color:var(--text-muted);line-height:1.4;">📐 <b>Pomery</b>: drep : bench : mŕtvy ťah ≈ 1.25 : 1 : 1.5. OHP ≈ 60–65 % benchu.</div>';
                     strHtml += '</div></div>';
-                    analysis += strHtml;
+                    trainingContent += strHtml;
                 } else {
                     analysis += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--card-border);font-size:0.78rem;color:var(--green);">Všetky pomery v ideále! (' + okCount + '/' + total + ')</div>';
                 }
                 analysis += '</div>';
             } else if (total > 0 && okCount === total) {
-                analysis = '<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px;font-size:0.8rem;color:var(--green);">Všetky proporcie v ideále! Skóre: ' + okCount + '/' + total + '</div>';
+                analysis = '<div style="margin-top:12px;font-size:0.8rem;color:var(--green);">Všetky proporcie v ideále! Skóre: ' + okCount + '/' + total + '</div>';
             }
             document.getElementById('bodyAnalysis').innerHTML = analysis;
+            const trainingEl = document.getElementById('trainingAnalysis');
+            if (trainingEl) {
+                if (trainingContent) {
+                    trainingEl.innerHTML = '<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px;margin-top:16px;"><h2 style="margin:0 0 8px 0;border:none;padding:0;">Tréningový plán</h2><div style="font-size:0.8rem;">' + trainingContent + '</div></div>';
+                } else {
+                    trainingEl.innerHTML = '';
+                }
+            }
         }
 
         // ===== EXERCISES =====
@@ -2240,7 +2673,14 @@
                     html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(239,83,80,0.08);border-left:3px solid var(--red);border-radius:6px;">';
                     html += '<span>❤️</span>';
                     html += '<span style="color:var(--text-muted);min-width:90px;">' + formatDate(h.date) + '</span>';
-                    html += '<span><strong>' + Math.round(h.caloriesOut) + '</strong> kcal</span>';
+                    html += '<span><strong>' + Math.round(h.caloriesOut) + '</strong> kcal';
+                    if (h.rawCalories && h.rawCalories !== h.caloriesOut) {
+                        html += ' <span style="color:var(--text-muted);font-size:0.7rem;">(Watch: ' + Math.round(h.rawCalories) + ')</span>';
+                    }
+                    html += '</span>';
+                    if (h.exerciseMinutes > 0) {
+                        html += '<span style="color:var(--green);font-size:0.75rem;">🏋️ ' + Math.round(h.exerciseMinutes) + ' min</span>';
+                    }
                     html += '</div>';
                 });
                 html += '</div>';
@@ -2271,11 +2711,17 @@
             };
         }
 
+        function getHealthCalCoef() {
+            return parseFloat(localStorage.getItem('healthCalCoef')) || 0.70;
+        }
+
         function saveSyncSettings() {
             const token = document.getElementById('syncToken').value.trim();
             const gistId = document.getElementById('syncGistId').value.trim() || GIST_ID_DEFAULT;
+            const coef = parseFloat(document.getElementById('healthCalCoef').value) || 0.70;
             localStorage.setItem('ghSyncToken', token);
             localStorage.setItem('ghSyncGistId', gistId);
+            localStorage.setItem('healthCalCoef', Math.max(0.3, Math.min(1.0, coef)));
             showToast('Sync nastavenia uložené');
         }
 
@@ -2322,7 +2768,8 @@
                             });
                             if (imported > 0) {
                                 saveRecords();
-                                showToast('Apple Health: ' + imported + ' dní importovaných (' + hiDays.map(d => Math.round(d.activeCalories || 0) + ' kcal').join(', ') + ')');
+                                const coef = getHealthCalCoef();
+                                showToast('Apple Health: ' + imported + ' dní (' + hiDays.map(d => Math.round((d.activeCalories || 0) * coef) + ' kcal').join(', ') + ')');
                             }
                             await fetch('https://api.github.com/gists/' + config.gistId, {
                                 method: 'PATCH',
@@ -2458,12 +2905,14 @@
             if (show) {
                 document.getElementById('syncToken').value = localStorage.getItem('ghSyncToken') || '';
                 document.getElementById('syncGistId').value = localStorage.getItem('ghSyncGistId') || GIST_ID_DEFAULT;
+                document.getElementById('healthCalCoef').value = getHealthCalCoef();
             }
         }
 
         // ===== APPLE HEALTH IMPORT =====
         function processHealthDay(day) {
             day.activeCalories = parseFloat(day.activeCalories) || 0;
+            if (day.exerciseMinutes) day.exerciseMinutes = parseFloat(day.exerciseMinutes) || 0;
             if (day.steps) day.steps = parseFloat(day.steps) || 0;
             if (day.sleepHours) day.sleepHours = parseFloat(day.sleepHours) || 0;
             let healthData = JSON.parse(localStorage.getItem('healthData') || '[]');
@@ -2472,16 +2921,23 @@
             localStorage.setItem('healthData', JSON.stringify(healthData));
 
             if (day.activeCalories > 0) {
+                const coef = getHealthCalCoef();
+                const rawCal = day.activeCalories;
+                const adjCal = Math.round(rawCal * coef);
                 const existing = records.find(r => r.date === day.date && r.source === 'health');
                 if (existing) {
-                    existing.caloriesOut = day.activeCalories;
+                    existing.caloriesOut = adjCal;
+                    existing.rawCalories = rawCal;
+                    existing.exerciseMinutes = day.exerciseMinutes || 0;
                 } else {
                     records.push({
                         id: 'health-' + day.date,
                         date: day.date,
                         foodName: '',
                         caloriesIn: 0,
-                        caloriesOut: day.activeCalories,
+                        caloriesOut: adjCal,
+                        rawCalories: rawCal,
+                        exerciseMinutes: day.exerciseMinutes || 0,
                         protein: 0,
                         carbs: 0,
                         fat: 0,
@@ -2545,11 +3001,168 @@
             renderHealthInfo();
         };
 
+        // --- AI Chat ---
+        let chatHistory = [];
+
+        function toggleChat() {
+            document.getElementById('chatPanel').classList.toggle('open');
+            if (document.getElementById('chatPanel').classList.contains('open')) {
+                document.getElementById('chatInput').focus();
+            }
+        }
+
+        function toggleChatSettings() {
+            const s = document.getElementById('chatSettings');
+            s.style.display = s.style.display === 'none' ? 'block' : 'none';
+            if (s.style.display === 'block') {
+                const defaults = {url: 'https://ai-dev-llm-gw.np-apps.k8s.sk.o2', key: 'sk-nJA7KBCWsMF8AjzNFg75wA', model: 'claude-sonnet-5'};
+                const cfg = Object.assign({}, defaults, JSON.parse(localStorage.getItem('chatConfig') || '{}'));
+                document.getElementById('chatApiUrl').value = cfg.url;
+                document.getElementById('chatApiKey').value = cfg.key;
+                document.getElementById('chatModel').value = cfg.model;
+            }
+        }
+
+        function saveChatSettings() {
+            const cfg = {
+                url: document.getElementById('chatApiUrl').value.trim(),
+                key: document.getElementById('chatApiKey').value.trim(),
+                model: document.getElementById('chatModel').value.trim()
+            };
+            localStorage.setItem('chatConfig', JSON.stringify(cfg));
+            document.getElementById('chatSettings').style.display = 'none';
+            showToast('Chat nastavenia uložené');
+        }
+
+        function gatherFitnessContext() {
+            const ctx = [];
+            const w = document.getElementById('currentWeight')?.textContent;
+            if (w && w !== '-') ctx.push('Aktuálna váha: ' + w + ' kg');
+            const goal = localStorage.getItem('goalWeight');
+            if (goal) ctx.push('Cieľová váha: ' + goal + ' kg');
+            const h = localStorage.getItem('userHeight');
+            if (h) ctx.push('Výška: ' + h + ' cm');
+
+            const meals = JSON.parse(localStorage.getItem('meals') || '[]');
+            const today = new Date().toISOString().slice(0, 10);
+            const todayMeals = meals.filter(m => m.date === today);
+            if (todayMeals.length > 0) {
+                const totCal = todayMeals.reduce((s, m) => s + (m.calories || 0), 0);
+                const totProt = todayMeals.reduce((s, m) => s + (m.protein || 0), 0);
+                ctx.push('Dnešný príjem: ' + totCal + ' kcal, ' + totProt + ' g bielkovín (' + todayMeals.length + ' jedál)');
+            }
+
+            const weights = JSON.parse(localStorage.getItem('weights') || '[]');
+            if (weights.length > 0) {
+                const last5 = weights.slice(-5);
+                ctx.push('Posledné váhy: ' + last5.map(w => w.date + ': ' + w.weight + ' kg').join(', '));
+            }
+
+            const exercises = JSON.parse(localStorage.getItem('exercises') || '[]');
+            if (exercises.length > 0) {
+                const last5 = exercises.slice(-5);
+                ctx.push('Posledné cvičenia: ' + last5.map(e => e.date + ' ' + e.name + ' ' + e.sets + '×' + e.reps + '×' + e.weight + 'kg').join(', '));
+            }
+
+            const measures = JSON.parse(localStorage.getItem('measurements') || '[]');
+            if (measures.length > 0) {
+                const last = measures[measures.length - 1];
+                const parts = [];
+                if (last.shoulders) parts.push('ramená: ' + last.shoulders);
+                if (last.chest) parts.push('hrudník: ' + last.chest);
+                if (last.waist) parts.push('pás: ' + last.waist);
+                if (last.bicepL) parts.push('biceps: ' + last.bicepL + '/' + last.bicepR);
+                if (last.thighL) parts.push('stehno: ' + last.thighL + '/' + last.thighR);
+                if (last.calfL) parts.push('lýtko: ' + last.calfL + '/' + last.calfR);
+                if (parts.length) ctx.push('Posledné miery (' + last.date + '): ' + parts.join(', ') + ' cm');
+            }
+
+            return ctx.join('\n');
+        }
+
+        async function sendChat() {
+            const input = document.getElementById('chatInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+            input.value = '';
+
+            const defaults = {url: 'https://ai-dev-llm-gw.np-apps.k8s.sk.o2', key: 'sk-nJA7KBCWsMF8AjzNFg75wA', model: 'claude-sonnet-5'};
+            const cfg = Object.assign({}, defaults, JSON.parse(localStorage.getItem('chatConfig') || '{}'));
+            if (!cfg.url || !cfg.key) {
+                toggleChatSettings();
+                showToast('Najprv nastav API URL a kľúč');
+                return;
+            }
+
+            const msgDiv = document.getElementById('chatMessages');
+            msgDiv.innerHTML += '<div class="chat-msg user">' + escapeHtml(msg) + '</div>';
+            msgDiv.scrollTop = msgDiv.scrollHeight;
+
+            chatHistory.push({role: 'user', content: msg});
+
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'chat-typing';
+            typingDiv.textContent = 'Premýšľam...';
+            msgDiv.appendChild(typingDiv);
+            msgDiv.scrollTop = msgDiv.scrollHeight;
+
+            const systemPrompt = 'Si fitness asistent v slovenčine. Používateľ má Fitness Diary appku. Tu sú jeho aktuálne dáta:\n' + gatherFitnessContext() + '\n\nOdpovedaj stručne, konkrétne a po slovensky. Používaj dáta na personalizované rady.';
+
+            try {
+                const url = cfg.url.replace(/\/+$/, '') + '/v1/messages';
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': cfg.key,
+                        'anthropic-version': '2023-06-01'
+                    },
+                    body: JSON.stringify({
+                        model: cfg.model || 'claude-sonnet-5',
+                        max_tokens: 1024,
+                        system: systemPrompt,
+                        messages: chatHistory
+                    })
+                });
+
+                if (!res.ok) {
+                    const errText = await res.text();
+                    throw new Error(res.status + ': ' + errText.slice(0, 200));
+                }
+
+                const data = await res.json();
+                const reply = data.content?.[0]?.text || 'Bez odpovede.';
+
+                typingDiv.remove();
+                chatHistory.push({role: 'assistant', content: reply});
+
+                const replyDiv = document.createElement('div');
+                replyDiv.className = 'chat-msg ai';
+                replyDiv.innerHTML = reply.replace(/\n/g, '<br>');
+                msgDiv.appendChild(replyDiv);
+                msgDiv.scrollTop = msgDiv.scrollHeight;
+            } catch (e) {
+                typingDiv.remove();
+                const errDiv = document.createElement('div');
+                errDiv.className = 'chat-msg ai';
+                errDiv.style.color = 'var(--red)';
+                errDiv.textContent = 'Chyba: ' + e.message;
+                msgDiv.appendChild(errDiv);
+                msgDiv.scrollTop = msgDiv.scrollHeight;
+                chatHistory.pop();
+            }
+        }
+
+        function escapeHtml(t) {
+            return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('measureDate').valueAsDate = new Date();
             document.getElementById('exDate').valueAsDate = new Date();
             document.getElementById('actDate').valueAsDate = new Date();
             loadMeasurementsForDate();
+            switchTab(localStorage.getItem('activeTab') || 'Strava');
         });
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js');
