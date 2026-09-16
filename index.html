@@ -1109,8 +1109,10 @@
             if (_pendingDelete && !e.target.closest('[data-pending-delete]')) resetDeleteConfirm();
         });
 
+        const _deletedIds = new Set();
         function deleteRecord(id) {
-            records = records.filter(r => r.id !== id);
+            _deletedIds.add(String(id));
+            records = records.filter(r => String(r.id) !== String(id));
             saveRecords();
             renderAll();
             showToast('Záznam zmazaný');
@@ -1300,7 +1302,7 @@
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.fat.toFixed(1) + ' g</td>';
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.caloriesIn.toFixed(1) + ' kcal</td>';
                             rows += '<td colspan="2" style="' + sb + bg + '"></td>';
-                            rows += '<td style="' + sb + bg + 'text-align:center;"><span style="color:var(--red);cursor:pointer;font-size:0.9rem;font-weight:700;opacity:0.6;" onclick="event.stopPropagation();deleteRecord(' + (r.id || 0) + ')">&times;</span></td>';
+                            rows += '<td style="' + sb + bg + 'text-align:center;"><span style="color:var(--red);cursor:pointer;font-size:0.9rem;font-weight:700;opacity:0.6;" onclick="event.stopPropagation();deleteRecord(\'' + r.id + '\')">&times;</span></td>';
                             rows += '</tr>';
                         }
                     }
@@ -2822,8 +2824,8 @@
                 }
 
                 const localNonKt = localData.records.filter(r => r.source !== 'kt');
-                const remoteKt = (remoteData.records || []).filter(r => r.source === 'kt');
-                const remoteNonKt = (remoteData.records || []).filter(r => r.source !== 'kt');
+                const remoteKt = (remoteData.records || []).filter(r => r.source === 'kt' && !_deletedIds.has(String(r.id)));
+                const remoteNonKt = (remoteData.records || []).filter(r => r.source !== 'kt' && !_deletedIds.has(String(r.id)));
                 const allRecords = [...remoteKt, ...localNonKt, ...remoteNonKt];
                 let mergedRecords = dedup(allRecords, r => r.ktId || r.id || (r.date + (r.foodName||'') + (r.source||'')));
 
@@ -2901,6 +2903,7 @@
                     }
                 }
 
+                _deletedIds.clear();
                 localStorage.setItem('lastSyncTime', new Date().toISOString());
                 updateSyncStatus();
                 showToast('Synchronizované (' + mergedRecords.length + ' záznamov)');
