@@ -3146,30 +3146,44 @@
             msgDiv.appendChild(typingDiv);
             msgDiv.scrollTop = msgDiv.scrollHeight;
 
-            // Search for nutrition data from Open Food Facts
+            // Search for nutrition data from Open Food Facts + web
             let nutritionContext = '';
             let offProducts = [];
             try {
-                const foodWords = msg.replace(/zjedol|jedol|som|si|dal|dala|obed|raňajky|večera|snack|som mal|mala|dostal|jedla|g\b|ml\b|\d+/gi, '').trim();
+                const foodWords = msg.replace(/zjedol|jedol|som|si|dal|dala|obed|raňajky|večera|snack|som mal|mala|dostal|jedla|zapíš|pridaj|celé|cele|balenie|porcia/gi, '').replace(/\b\d+(g|ml|ks)?\b/gi, '').trim();
                 if (foodWords.length > 2) {
-                    const searchTerms = foodWords.split(/[,\s]+/).filter(w => w.length > 2).slice(0, 3);
                     const results = [];
-                    for (const term of searchTerms) {
+                    const seen = new Set();
+                    function addProduct(p) {
+                        const n = p.nutriments || {};
+                        if (!p.product_name || !n['energy-kcal_100g']) return;
+                        const key = (p.product_name + (p.brands||'')).toLowerCase();
+                        if (seen.has(key)) return;
+                        seen.add(key);
+                        const img = p.image_front_small_url || p.image_url || '';
+                        const brand = p.brands || '';
+                        offProducts.push({name: p.product_name, brand: brand, img: img, kcal100: Math.round(n['energy-kcal_100g']), protein: +(n.proteins_100g||0).toFixed(1), carbs: +(n.carbohydrates_100g||0).toFixed(1), fat: +(n.fat_100g||0).toFixed(1)});
+                        results.push((brand ? brand + ' ' : '') + p.product_name + ': ' + Math.round(n['energy-kcal_100g']) + ' kcal/100g, B: ' + (n.proteins_100g || 0).toFixed(1) + 'g, S: ' + (n.carbohydrates_100g || 0).toFixed(1) + 'g, T: ' + (n.fat_100g || 0).toFixed(1) + 'g');
+                    }
+                    async function offSearch(q) {
                         try {
-                            const offRes = await fetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms=' + encodeURIComponent(term) + '&json=1&page_size=3&fields=product_name,brands,nutriments,image_front_small_url,image_url');
-                            if (offRes.ok) {
-                                const offData = await offRes.json();
-                                (offData.products || []).forEach(p => {
-                                    const n = p.nutriments || {};
-                                    if (p.product_name && n['energy-kcal_100g']) {
-                                        const img = p.image_front_small_url || p.image_url || '';
-                                        const brand = p.brands || '';
-                                        offProducts.push({name: p.product_name, brand: brand, img: img, kcal100: Math.round(n['energy-kcal_100g']), protein: +(n.proteins_100g||0).toFixed(1), carbs: +(n.carbohydrates_100g||0).toFixed(1), fat: +(n.fat_100g||0).toFixed(1)});
-                                        results.push((brand ? brand + ' ' : '') + p.product_name + ': ' + Math.round(n['energy-kcal_100g']) + ' kcal/100g, B: ' + (n.proteins_100g || 0).toFixed(1) + 'g, S: ' + (n.carbohydrates_100g || 0).toFixed(1) + 'g, T: ' + (n.fat_100g || 0).toFixed(1) + 'g');
-                                    }
-                                });
-                            }
+                            const r = await fetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms=' + encodeURIComponent(q) + '&json=1&page_size=5&fields=product_name,brands,nutriments,image_front_small_url,image_url');
+                            if (r.ok) { const d = await r.json(); (d.products || []).forEach(addProduct); }
                         } catch(e) {}
+                    }
+                    // 1) Full phrase search
+                    await offSearch(foodWords);
+                    // 2) If few results, try meaningful sub-phrases
+                    if (results.length < 3) {
+                        const parts = foodWords.split(/\s*[-–,+]\s*/).map(s => s.trim()).filter(s => s.length > 2);
+                        if (parts.length > 1) {
+                            await Promise.all(parts.slice(0, 3).map(p => offSearch(p)));
+                        } else {
+                            const words = foodWords.split(/\s+/).filter(w => w.length > 2);
+                            if (words.length > 2) {
+                                await offSearch(words.slice(0, 3).join(' '));
+                            }
+                        }
                     }
                     if (results.length > 0) {
                         nutritionContext = '\n\nVýživové dáta z databázy (Open Food Facts):\n' + results.join('\n');
@@ -3179,7 +3193,7 @@
 
             typingDiv.textContent = 'Premýšľam...';
 
-            const systemPrompt = 'Si fitness a výživový asistent zabudovaný v appke Fitness Diary. Odpovedaj po slovensky, stručne a konkrétne. Máš prístup k výživovým databázam a internetovým zdrojom.\n\nÚdaje používateľa:\n' + gatherFitnessContext() + nutritionContext + '\n\nAk používateľ spomína jedlo (napr. "zjedol som 200g kuracích pŕs", "dal som si jogurt", "obed: kuracie s ryžou"), urob toto:\n1. Použi výživové dáta z databázy vyššie (ak sú k dispozícii) alebo svoje znalosti\n2. Uveď prehľadne výživové hodnoty — kcal na 100g a celkové kcal, bielkoviny, sacharidy, tuky\n3. Na konci odpovede pridaj PRESNE tento JSON blok pre KAŽDÚ položku jedla:\n[FOOD]{\"name\":\"názov\",\"grams\":hmotnosť,\"kcal100\":kcal_na_100g,\"calories\":celkové_kcal,\"protein\":bielkoviny_g,\"carbs\":sacharidy_g,\"fat\":tuky_g}[/FOOD]\nPríklad: [FOOD]{\"name\":\"Kuracie prsia\",\"grams\":200,\"kcal100\":110,\"calories\":220,\"protein\":46,\"carbs\":0,\"fat\":2.6}[/FOOD]\nAk nepoznáš hmotnosť, opýtaj sa. JSON blok je povinný pri každom jedle.';
+            const systemPrompt = 'Si fitness a výživový asistent zabudovaný v appke Fitness Diary. Odpovedaj po slovensky, stručne a konkrétne. Máš prístup k výživovým databázam a internetovým zdrojom. NIKDY nehovor, že nemáš prístup k internetu alebo databázam.\n\nÚdaje používateľa:\n' + gatherFitnessContext() + nutritionContext + '\n\nAk používateľ spomína jedlo alebo produkt (napr. "zjedol som 200g kuracích pŕs", "tesco chicken breast ready meal", "obed: kuracie s ryžou"), urob toto:\n1. Použi výživové dáta z databázy vyššie ak sú k dispozícii a zodpovedajú produktu\n2. Ak databáza nemá presný produkt, VŽDY použi svoje znalosti o výživových hodnotách bežných potravín a produktov. Poznáš výživové hodnoty tisícov produktov vrátane značkových (Tesco, Rajo, Lidl atď.). NIKDY nehovor, že nemáš údaje — vždy poskytni aspoň odhad.\n3. Pri hotových jedlách (ready meals) a zmiešaných jedlách odhadni výživové hodnoty podľa typického zloženia (napr. kuracie s ryžou a zeleninou = cca 130-150 kcal/100g)\n4. Uveď prehľadne: kcal na 100g, celkové kcal, bielkoviny, sacharidy, tuky\n5. Na konci odpovede pridaj PRESNE tento JSON blok pre KAŽDÚ položku jedla:\n[FOOD]{\"name\":\"názov\",\"grams\":hmotnosť,\"kcal100\":kcal_na_100g,\"calories\":celkové_kcal,\"protein\":bielkoviny_g,\"carbs\":sacharidy_g,\"fat\":tuky_g}[/FOOD]\nPríklad: [FOOD]{\"name\":\"Kuracie prsia\",\"grams\":200,\"kcal100\":110,\"calories\":220,\"protein\":46,\"carbs\":0,\"fat\":2.6}[/FOOD]\nAk nepoznáš presnú hmotnosť a používateľ neuviedol, použi štandardnú veľkosť balenia alebo porcie. JSON blok je POVINNÝ pri každom jedle — vždy ho pridaj.';
 
             try {
                 const baseUrl = cfg.url.replace(/\/+$/, '');
