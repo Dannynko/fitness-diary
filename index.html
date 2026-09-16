@@ -3011,6 +3011,7 @@
 
         // --- AI Chat ---
         let chatHistory = [];
+        let chatFoodQueue = [];
 
         function toggleChat() {
             document.getElementById('chatPanel').classList.toggle('open');
@@ -3187,7 +3188,9 @@
                 msgDiv.appendChild(replyDiv);
 
                 if (foodItems.length > 0) {
-                    foodItems.forEach((food, idx) => {
+                    foodItems.forEach(food => {
+                        const qi = chatFoodQueue.length;
+                        chatFoodQueue.push(food);
                         const cardDiv = document.createElement('div');
                         cardDiv.className = 'chat-msg ai';
                         cardDiv.style.cssText = 'background:rgba(102,187,106,0.1);border:1px solid rgba(102,187,106,0.3);padding:10px;';
@@ -3199,7 +3202,7 @@
                             + '<span><b>' + food.carbs + '</b>g S</span>'
                             + '<span><b>' + food.fat + '</b>g T</span>'
                             + '</div>'
-                            + '<button class="btn-secondary" style="font-size:0.72rem;padding:4px 12px;" onclick="addFoodFromChat(this,' + JSON.stringify(JSON.stringify(food)) + ')">Pridať do denníka</button>';
+                            + '<button class="btn-secondary" style="font-size:0.72rem;padding:4px 12px;" onclick="addFoodFromChat(this,' + qi + ')">Pridať do denníka</button>';
                         msgDiv.appendChild(cardDiv);
                     });
                 }
@@ -3216,8 +3219,9 @@
             }
         }
 
-        function addFoodFromChat(btn, foodJson) {
-            const food = JSON.parse(foodJson);
+        function addFoodFromChat(btn, idx) {
+            const food = chatFoodQueue[idx];
+            if (!food) return;
             const today = new Date().toISOString().slice(0, 10);
             records.push({
                 id: Date.now(),
