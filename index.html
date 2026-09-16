@@ -1127,7 +1127,6 @@
             renderWeightChart();
             renderActivities();
             updateTodaySummary();
-            restoreOpenDetails();
         }
 
         let summaryPeriod = 'day';
@@ -1261,7 +1260,7 @@
                 const cls = diff > 0 ? 'negative' : diff < 0 ? 'positive' : 'neutral';
                 const hasItems = d.items.length > 0;
                 html += `<tr${hasItems ? ' style="cursor:pointer" onclick="toggleDetail(\'' + date + '\')"' : ''}>
-                    <td>${hasItems ? '<span id="arrow-' + date + '" style="display:inline-block;font-size:0.7rem;margin-right:4px;transition:transform 0.2s;">&#9654;</span>' : ''}${formatDate(date, true)} ${hasItems ? '<span style="font-size:0.7rem;color:var(--text-muted);">(' + d.items.length + ')</span>' : ''}</td>
+                    <td>${hasItems ? '<span id="arrow-' + date + '" style="display:inline-block;font-size:0.7rem;margin-right:4px;transition:transform 0.2s;' + (_openDetails.has(date) ? 'transform:rotate(90deg);' : '') + '">&#9654;</span>' : ''}${formatDate(date, true)} ${hasItems ? '<span style="font-size:0.7rem;color:var(--text-muted);">(' + d.items.length + ')</span>' : ''}</td>
                     <td>${d.protein.toFixed(1)} g</td>
                     <td>${d.carbs.toFixed(1)} g</td>
                     <td>${d.fat.toFixed(1)} g</td>
@@ -1278,6 +1277,8 @@
                         byMeal[m].push(r);
                     });
                     let rows = '';
+                    const isOpen = _openDetails.has(date);
+                    const detailDisplay = isOpen ? '' : 'display:none;';
                     const bg = 'background:rgba(255,255,255,0.02);';
                     const bl = 'border-left:3px solid var(--accent);';
                     const sb = 'border-bottom:1px solid rgba(255,255,255,0.04);';
@@ -1287,12 +1288,12 @@
                         const mProt = mItems.reduce((s, r) => s + r.protein, 0);
                         const mCals = mItems.reduce((s, r) => s + r.caloriesIn, 0);
                         const mProtRatio = mCals > 0 ? (mProt / mCals * 100).toFixed(1) : 0;
-                        rows += '<tr class="detail-row-' + date + '" style="display:none;"><td colspan="8" style="padding:3px 3px 1px 20px;border-bottom:none;' + bl + bg + '"><strong style="color:var(--accent);font-size:0.7rem;">' + meal + '</strong><span style="font-size:0.65rem;color:var(--text-muted);margin-left:8px;">' + mProt.toFixed(0) + ' g bielk. · ' + mCals.toFixed(0) + ' kcal (' + mProtRatio + ' g/100 kcal)</span></td></tr>';
+                        rows += '<tr class="detail-row-' + date + '" style="' + detailDisplay + '"><td colspan="8" style="padding:3px 3px 1px 20px;border-bottom:none;' + bl + bg + '"><strong style="color:var(--accent);font-size:0.7rem;">' + meal + '</strong><span style="font-size:0.65rem;color:var(--text-muted);margin-left:8px;">' + mProt.toFixed(0) + ' g bielk. · ' + mCals.toFixed(0) + ' kcal (' + mProtRatio + ' g/100 kcal)</span></td></tr>';
                         for (const r of mItems) {
                             const name = r.foodName || r.ktId || '?';
                             const amt = r.amount || '';
                             const label = name + (amt ? ' <span style="font-size:0.65rem;color:var(--text-muted);margin-left:6px;">(' + amt + ')</span>' : '');
-                            rows += '<tr class="detail-row-' + date + '" style="display:none;font-size:0.7rem;color:var(--text-muted);line-height:1.2;">';
+                            rows += '<tr class="detail-row-' + date + '" style="' + detailDisplay + 'font-size:0.7rem;color:var(--text-muted);line-height:1.2;">';
                             rows += '<td style="padding:4px 3px 4px 24px;' + sb + bl + bg + 'text-align:left;color:var(--text);">' + label + '</td>';
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.protein.toFixed(1) + ' g</td>';
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.carbs.toFixed(1) + ' g</td>';
