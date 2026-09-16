@@ -3106,7 +3106,7 @@
             msgDiv.appendChild(typingDiv);
             msgDiv.scrollTop = msgDiv.scrollHeight;
 
-            const systemPrompt = 'Si fitness asistent v slovenčine. Používateľ má Fitness Diary appku. Tu sú jeho aktuálne dáta:\n' + gatherFitnessContext() + '\n\nOdpovedaj stručne, konkrétne a po slovensky. Používaj dáta na personalizované rady.';
+            const systemPrompt = 'Si fitness asistent v slovenčine. Používateľ má Fitness Diary appku. Tu sú jeho aktuálne dáta:\n' + gatherFitnessContext() + '\n\nOdpovedaj stručne, konkrétne a po slovensky. Používaj dáta na personalizované rady.\n\nAk používateľ spomína jedlo, ktoré zjedol (napr. "zjedol som 200g kuracích pŕs s ryžou", "dal som si jogurt", "obed: kuracie s brokolicou"), odhadni výživové hodnoty z tvojich znalostí o kalorických tabuľkách. Uveď hodnoty na 100g aj celkové. Na konci odpovede pridaj PRESNE tento JSON blok (jeden pre každú položku jedla, môže byť viac blokov ak je viac položiek):\n[FOOD]{\"name\":\"názov jedla\",\"grams\":hmotnosť,\"kcal100\":kcal_na_100g,\"calories\":celkové_kcal,\"protein\":bielkoviny_g,\"carbs\":sacharidy_g,\"fat\":tuky_g}[/FOOD]\nNapríklad pre 200g kuracích pŕs: [FOOD]{\"name\":\"Kuracie prsia\",\"grams\":200,\"kcal100\":110,\"calories\":220,\"protein\":46,\"carbs\":0,\"fat\":2.6}[/FOOD]\nAk si nie si istý hmotnosťou, opýtaj sa. Vždy uveď hodnoty pred JSON blokom ako prehľadný text.';
 
             try {
                 const url = cfg.url.replace(/\/+$/, '') + '/v1/messages';
@@ -3136,10 +3136,37 @@
                 typingDiv.remove();
                 chatHistory.push({role: 'assistant', content: reply});
 
+                const foodItems = [];
+                let displayReply = reply;
+                const foodRx = /\[FOOD\](.*?)\[\/FOOD\]/g;
+                let fm;
+                while ((fm = foodRx.exec(reply)) !== null) {
+                    try { foodItems.push(JSON.parse(fm[1])); } catch(e) {}
+                }
+                displayReply = displayReply.replace(/\[FOOD\].*?\[\/FOOD\]/g, '').trim();
+
                 const replyDiv = document.createElement('div');
                 replyDiv.className = 'chat-msg ai';
-                replyDiv.innerHTML = reply.replace(/\n/g, '<br>');
+                replyDiv.innerHTML = displayReply.replace(/\n/g, '<br>');
                 msgDiv.appendChild(replyDiv);
+
+                if (foodItems.length > 0) {
+                    foodItems.forEach((food, idx) => {
+                        const cardDiv = document.createElement('div');
+                        cardDiv.className = 'chat-msg ai';
+                        cardDiv.style.cssText = 'background:rgba(102,187,106,0.1);border:1px solid rgba(102,187,106,0.3);padding:10px;';
+                        cardDiv.innerHTML = '<div style="font-weight:600;margin-bottom:4px;">' + escapeHtml(food.name) + ' (' + food.grams + 'g)</div>'
+                            + '<div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:6px;">' + food.kcal100 + ' kcal/100g</div>'
+                            + '<div style="display:flex;gap:12px;font-size:0.75rem;margin-bottom:8px;">'
+                            + '<span><b>' + food.calories + '</b> kcal</span>'
+                            + '<span><b>' + food.protein + '</b>g B</span>'
+                            + '<span><b>' + food.carbs + '</b>g S</span>'
+                            + '<span><b>' + food.fat + '</b>g T</span>'
+                            + '</div>'
+                            + '<button class="btn-secondary" style="font-size:0.72rem;padding:4px 12px;" onclick="addFoodFromChat(this,' + JSON.stringify(JSON.stringify(food)) + ')">Pridať do denníka</button>';
+                        msgDiv.appendChild(cardDiv);
+                    });
+                }
                 msgDiv.scrollTop = msgDiv.scrollHeight;
             } catch (e) {
                 typingDiv.remove();
@@ -3151,6 +3178,30 @@
                 msgDiv.scrollTop = msgDiv.scrollHeight;
                 chatHistory.pop();
             }
+        }
+
+        function addFoodFromChat(btn, foodJson) {
+            const food = JSON.parse(foodJson);
+            const today = new Date().toISOString().slice(0, 10);
+            records.push({
+                id: Date.now(),
+                date: today,
+                foodName: food.name + ' (' + food.grams + 'g)',
+                protein: food.protein || 0,
+                carbs: food.carbs || 0,
+                fat: food.fat || 0,
+                caloriesIn: food.calories || 0,
+                caloriesOut: 0,
+                weight: 0,
+                source: 'chat',
+                amount: food.grams + 'g'
+            });
+            saveRecords();
+            renderAll();
+            btn.textContent = 'Pridané ✓';
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            showToast(food.name + ' pridané do denníka');
         }
 
         function escapeHtml(t) {
