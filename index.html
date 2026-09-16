@@ -1110,12 +1110,26 @@
         });
 
         const _deletedIds = new Set();
-        function deleteRecord(id) {
-            _deletedIds.add(String(id));
-            records = records.filter(r => String(r.id) !== String(id));
-            saveRecords();
-            renderAll();
-            showToast('Záznam zmazaný');
+        function deleteRecord(id, el) {
+            const key = 'rec:' + id;
+            if (_pendingDelete === key) {
+                clearTimeout(_deleteTimer);
+                _deletedIds.add(String(id));
+                records = records.filter(r => String(r.id) !== String(id));
+                saveRecords();
+                renderAll();
+                showToast('Záznam zmazaný');
+                _pendingDelete = null;
+                return;
+            }
+            if (_pendingDelete) resetDeleteConfirm();
+            _pendingDelete = key;
+            const row = el.closest('tr');
+            if (row) {
+                row.classList.add('delete-confirm');
+                row.dataset.pendingDelete = '1';
+            }
+            _deleteTimer = setTimeout(resetDeleteConfirm, 2000);
         }
 
         function saveRecords() {
@@ -1302,7 +1316,7 @@
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.fat.toFixed(1) + ' g</td>';
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.caloriesIn.toFixed(1) + ' kcal</td>';
                             rows += '<td colspan="2" style="' + sb + bg + '"></td>';
-                            rows += '<td style="' + sb + bg + 'text-align:center;"><span style="color:var(--red);cursor:pointer;font-size:0.9rem;font-weight:700;opacity:0.6;" onclick="event.stopPropagation();deleteRecord(\'' + r.id + '\')">&times;</span></td>';
+                            rows += '<td style="' + sb + bg + 'text-align:center;"><span style="color:var(--red);cursor:pointer;font-size:0.9rem;font-weight:700;opacity:0.6;" onclick="event.stopPropagation();deleteRecord(\'' + r.id + '\',this)">&times;</span></td>';
                             rows += '</tr>';
                         }
                     }
