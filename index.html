@@ -3117,6 +3117,7 @@
 
             // Search for nutrition data from Open Food Facts
             let nutritionContext = '';
+            let offProducts = [];
             try {
                 const foodWords = msg.replace(/zjedol|jedol|som|si|dal|dala|obed|raňajky|večera|snack|som mal|mala|dostal|jedla|g\b|ml\b|\d+/gi, '').trim();
                 if (foodWords.length > 2) {
@@ -3124,13 +3125,16 @@
                     const results = [];
                     for (const term of searchTerms) {
                         try {
-                            const offRes = await fetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms=' + encodeURIComponent(term) + '&json=1&page_size=2&fields=product_name,nutriments');
+                            const offRes = await fetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms=' + encodeURIComponent(term) + '&json=1&page_size=3&fields=product_name,brands,nutriments,image_front_small_url,image_url');
                             if (offRes.ok) {
                                 const offData = await offRes.json();
                                 (offData.products || []).forEach(p => {
                                     const n = p.nutriments || {};
                                     if (p.product_name && n['energy-kcal_100g']) {
-                                        results.push(p.product_name + ': ' + Math.round(n['energy-kcal_100g']) + ' kcal/100g, B: ' + (n.proteins_100g || 0).toFixed(1) + 'g, S: ' + (n.carbohydrates_100g || 0).toFixed(1) + 'g, T: ' + (n.fat_100g || 0).toFixed(1) + 'g');
+                                        const img = p.image_front_small_url || p.image_url || '';
+                                        const brand = p.brands || '';
+                                        offProducts.push({name: p.product_name, brand: brand, img: img, kcal100: Math.round(n['energy-kcal_100g']), protein: +(n.proteins_100g||0).toFixed(1), carbs: +(n.carbohydrates_100g||0).toFixed(1), fat: +(n.fat_100g||0).toFixed(1)});
+                                        results.push((brand ? brand + ' ' : '') + p.product_name + ': ' + Math.round(n['energy-kcal_100g']) + ' kcal/100g, B: ' + (n.proteins_100g || 0).toFixed(1) + 'g, S: ' + (n.carbohydrates_100g || 0).toFixed(1) + 'g, T: ' + (n.fat_100g || 0).toFixed(1) + 'g');
                                     }
                                 });
                             }
@@ -3220,10 +3224,37 @@
                     foodItems.forEach(food => {
                         const qi = chatFoodQueue.length;
                         chatFoodQueue.push(food);
+                        // Match OFF product by name similarity
+                        let matchImg = '';
+                        let matchBrand = '';
+                        const fLow = food.name.toLowerCase();
+                        for (const op of offProducts) {
+                            if (op.name.toLowerCase().includes(fLow) || fLow.includes(op.name.toLowerCase()) || (op.brand && fLow.includes(op.brand.toLowerCase()))) {
+                                matchImg = op.img;
+                                matchBrand = op.brand;
+                                break;
+                            }
+                        }
+                        if (!matchImg) {
+                            const words = fLow.split(/\s+/);
+                            for (const op of offProducts) {
+                                const opLow = (op.brand + ' ' + op.name).toLowerCase();
+                                if (words.some(w => w.length > 3 && opLow.includes(w))) {
+                                    matchImg = op.img;
+                                    matchBrand = op.brand;
+                                    break;
+                                }
+                            }
+                        }
                         const cardDiv = document.createElement('div');
                         cardDiv.className = 'chat-msg ai';
-                        cardDiv.style.cssText = 'background:rgba(102,187,106,0.1);border:1px solid rgba(102,187,106,0.3);padding:10px;';
-                        cardDiv.innerHTML = '<div style="font-weight:600;margin-bottom:4px;">' + escapeHtml(food.name) + ' (' + food.grams + 'g)</div>'
+                        cardDiv.style.cssText = 'background:rgba(102,187,106,0.1);border:1px solid rgba(102,187,106,0.3);padding:10px;max-width:95%;';
+                        let imgHtml = matchImg ? '<img src="' + escapeHtml(matchImg) + '" style="width:56px;height:56px;object-fit:contain;border-radius:6px;background:rgba(255,255,255,0.1);flex:0 0 56px;" onerror="this.style.display=\'none\'">' : '';
+                        let sourceHtml = matchImg ? '<div style="font-size:0.6rem;color:var(--text-muted);margin-top:4px;">zdroj: Open Food Facts' + (matchBrand ? ' · ' + escapeHtml(matchBrand) : '') + '</div>' : '';
+                        cardDiv.innerHTML = '<div style="display:flex;gap:10px;align-items:flex-start;">'
+                            + imgHtml
+                            + '<div style="flex:1;">'
+                            + '<div style="font-weight:600;margin-bottom:4px;">' + escapeHtml(food.name) + ' (' + food.grams + 'g)</div>'
                             + '<div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:6px;">' + food.kcal100 + ' kcal/100g</div>'
                             + '<div style="display:flex;gap:12px;font-size:0.75rem;margin-bottom:8px;">'
                             + '<span><b>' + food.calories + '</b> kcal</span>'
@@ -3231,7 +3262,9 @@
                             + '<span><b>' + food.carbs + '</b>g S</span>'
                             + '<span><b>' + food.fat + '</b>g T</span>'
                             + '</div>'
-                            + '<button class="btn-secondary" style="font-size:0.72rem;padding:4px 12px;" onclick="addFoodFromChat(this,' + qi + ')">Pridať do denníka</button>';
+                            + '<button class="btn-secondary" style="font-size:0.72rem;padding:4px 12px;" onclick="addFoodFromChat(this,' + qi + ')">Pridať do denníka</button>'
+                            + sourceHtml
+                            + '</div></div>';
                         msgDiv.appendChild(cardDiv);
                     });
                 }
