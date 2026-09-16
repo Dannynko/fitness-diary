@@ -3111,11 +3111,40 @@
 
             const typingDiv = document.createElement('div');
             typingDiv.className = 'chat-typing';
-            typingDiv.textContent = 'Premýšľam...';
+            typingDiv.textContent = 'Hľadám výživové hodnoty...';
             msgDiv.appendChild(typingDiv);
             msgDiv.scrollTop = msgDiv.scrollHeight;
 
-            const systemPrompt = 'Si fitness a výživový asistent zabudovaný v appke Fitness Diary. Odpovedaj po slovensky, stručne a konkrétne.\n\nDÔLEŽITÉ: Máš rozsiahle znalosti o výživových hodnotách potravín z kalorických tabuliek. NIKDY nehovor, že nemáš prístup k internetu, databázam alebo kalorických tabuľkám. Jednoducho použi svoje znalosti a uveď hodnoty. Si expert na výživu.\n\nÚdaje používateľa:\n' + gatherFitnessContext() + '\n\nAk používateľ spomína jedlo (napr. "zjedol som 200g kuracích pŕs", "dal som si jogurt", "obed: kuracie s ryžou"), urob toto:\n1. Uveď prehľadne výživové hodnoty — kcal na 100g a celkové kcal, bielkoviny, sacharidy, tuky\n2. Na konci odpovede pridaj PRESNE tento JSON blok pre KAŽDÚ položku jedla:\n[FOOD]{\"name\":\"názov\",\"grams\":hmotnosť,\"kcal100\":kcal_na_100g,\"calories\":celkové_kcal,\"protein\":bielkoviny_g,\"carbs\":sacharidy_g,\"fat\":tuky_g}[/FOOD]\nPríklad: [FOOD]{\"name\":\"Kuracie prsia\",\"grams\":200,\"kcal100\":110,\"calories\":220,\"protein\":46,\"carbs\":0,\"fat\":2.6}[/FOOD]\nAk nepoznáš hmotnosť, opýtaj sa. JSON blok je povinný pri každom jedle.';
+            // Search for nutrition data from Open Food Facts
+            let nutritionContext = '';
+            try {
+                const foodWords = msg.replace(/zjedol|jedol|som|si|dal|dala|obed|raňajky|večera|snack|som mal|mala|dostal|jedla|g\b|ml\b|\d+/gi, '').trim();
+                if (foodWords.length > 2) {
+                    const searchTerms = foodWords.split(/[,\s]+/).filter(w => w.length > 2).slice(0, 3);
+                    const results = [];
+                    for (const term of searchTerms) {
+                        try {
+                            const offRes = await fetch('https://world.openfoodfacts.org/cgi/search.pl?search_terms=' + encodeURIComponent(term) + '&json=1&page_size=2&fields=product_name,nutriments');
+                            if (offRes.ok) {
+                                const offData = await offRes.json();
+                                (offData.products || []).forEach(p => {
+                                    const n = p.nutriments || {};
+                                    if (p.product_name && n['energy-kcal_100g']) {
+                                        results.push(p.product_name + ': ' + Math.round(n['energy-kcal_100g']) + ' kcal/100g, B: ' + (n.proteins_100g || 0).toFixed(1) + 'g, S: ' + (n.carbohydrates_100g || 0).toFixed(1) + 'g, T: ' + (n.fat_100g || 0).toFixed(1) + 'g');
+                                    }
+                                });
+                            }
+                        } catch(e) {}
+                    }
+                    if (results.length > 0) {
+                        nutritionContext = '\n\nVýživové dáta z databázy (Open Food Facts):\n' + results.join('\n');
+                    }
+                }
+            } catch(e) {}
+
+            typingDiv.textContent = 'Premýšľam...';
+
+            const systemPrompt = 'Si fitness a výživový asistent zabudovaný v appke Fitness Diary. Odpovedaj po slovensky, stručne a konkrétne. Máš prístup k výživovým databázam a internetovým zdrojom.\n\nÚdaje používateľa:\n' + gatherFitnessContext() + nutritionContext + '\n\nAk používateľ spomína jedlo (napr. "zjedol som 200g kuracích pŕs", "dal som si jogurt", "obed: kuracie s ryžou"), urob toto:\n1. Použi výživové dáta z databázy vyššie (ak sú k dispozícii) alebo svoje znalosti\n2. Uveď prehľadne výživové hodnoty — kcal na 100g a celkové kcal, bielkoviny, sacharidy, tuky\n3. Na konci odpovede pridaj PRESNE tento JSON blok pre KAŽDÚ položku jedla:\n[FOOD]{\"name\":\"názov\",\"grams\":hmotnosť,\"kcal100\":kcal_na_100g,\"calories\":celkové_kcal,\"protein\":bielkoviny_g,\"carbs\":sacharidy_g,\"fat\":tuky_g}[/FOOD]\nPríklad: [FOOD]{\"name\":\"Kuracie prsia\",\"grams\":200,\"kcal100\":110,\"calories\":220,\"protein\":46,\"carbs\":0,\"fat\":2.6}[/FOOD]\nAk nepoznáš hmotnosť, opýtaj sa. JSON blok je povinný pri každom jedle.';
 
             try {
                 const baseUrl = cfg.url.replace(/\/+$/, '');
