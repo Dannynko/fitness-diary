@@ -3117,29 +3117,57 @@
             const systemPrompt = 'Si fitness asistent v slovenčine. Používateľ má Fitness Diary appku. Tu sú jeho aktuálne dáta:\n' + gatherFitnessContext() + '\n\nOdpovedaj stručne, konkrétne a po slovensky. Používaj dáta na personalizované rady.\n\nAk používateľ spomína jedlo, ktoré zjedol (napr. "zjedol som 200g kuracích pŕs s ryžou", "dal som si jogurt", "obed: kuracie s brokolicou"), odhadni výživové hodnoty z tvojich znalostí o kalorických tabuľkách. Uveď hodnoty na 100g aj celkové. Na konci odpovede pridaj PRESNE tento JSON blok (jeden pre každú položku jedla, môže byť viac blokov ak je viac položiek):\n[FOOD]{\"name\":\"názov jedla\",\"grams\":hmotnosť,\"kcal100\":kcal_na_100g,\"calories\":celkové_kcal,\"protein\":bielkoviny_g,\"carbs\":sacharidy_g,\"fat\":tuky_g}[/FOOD]\nNapríklad pre 200g kuracích pŕs: [FOOD]{\"name\":\"Kuracie prsia\",\"grams\":200,\"kcal100\":110,\"calories\":220,\"protein\":46,\"carbs\":0,\"fat\":2.6}[/FOOD]\nAk si nie si istý hmotnosťou, opýtaj sa. Vždy uveď hodnoty pred JSON blokom ako prehľadný text.';
 
             try {
-                const url = cfg.url.replace(/\/+$/, '') + '/v1/messages';
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-api-key': cfg.key,
-                        'anthropic-version': '2023-06-01'
-                    },
-                    body: JSON.stringify({
-                        model: cfg.model || 'claude-sonnet-5',
-                        max_tokens: 1024,
-                        system: systemPrompt,
-                        messages: chatHistory
-                    })
-                });
+                const baseUrl = cfg.url.replace(/\/+$/, '');
+                let reply = '';
+                let apiOk = false;
 
-                if (!res.ok) {
-                    const errText = await res.text();
-                    throw new Error(res.status + ': ' + errText.slice(0, 200));
+                // Try Anthropic format first
+                try {
+                    const res = await fetch(baseUrl + '/v1/messages', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-api-key': cfg.key,
+                            'Authorization': 'Bearer ' + cfg.key,
+                            'anthropic-version': '2023-06-01'
+                        },
+                        body: JSON.stringify({
+                            model: cfg.model || 'claude-sonnet-5',
+                            max_tokens: 1024,
+                            system: systemPrompt,
+                            messages: chatHistory
+                        })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        reply = data.content?.[0]?.text || data.choices?.[0]?.message?.content || '';
+                        if (reply) apiOk = true;
+                    }
+                } catch(e) {}
+
+                // Fallback: OpenAI format
+                if (!apiOk) {
+                    const res2 = await fetch(baseUrl + '/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + cfg.key
+                        },
+                        body: JSON.stringify({
+                            model: cfg.model || 'claude-sonnet-5',
+                            max_tokens: 1024,
+                            messages: [{role: 'system', content: systemPrompt}, ...chatHistory]
+                        })
+                    });
+                    if (!res2.ok) {
+                        const errText = await res2.text();
+                        throw new Error(res2.status + ': ' + errText.slice(0, 200));
+                    }
+                    const data2 = await res2.json();
+                    reply = data2.choices?.[0]?.message?.content || data2.content?.[0]?.text || '';
                 }
 
-                const data = await res.json();
-                const reply = data.content?.[0]?.text || 'Bez odpovede.';
+                if (!reply) throw new Error('Prázdna odpoveď z API');
 
                 typingDiv.remove();
                 chatHistory.push({role: 'assistant', content: reply});
