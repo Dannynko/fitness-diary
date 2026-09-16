@@ -1,4 +1,4 @@
-const CACHE = 'fitness-diary-v5';
+const CACHE = 'fitness-diary-v6';
 const ASSETS = ['./index.html', './manifest.json'];
 
 self.addEventListener('install', e => {

@@ -1109,6 +1109,13 @@
             if (_pendingDelete && !e.target.closest('[data-pending-delete]')) resetDeleteConfirm();
         });
 
+        function deleteRecord(id) {
+            records = records.filter(r => r.id !== id);
+            saveRecords();
+            renderAll();
+            showToast('Záznam zmazaný');
+        }
+
         function saveRecords() {
             localStorage.setItem('calorieRecords', JSON.stringify(records));
             scheduleSync();
@@ -1245,7 +1252,7 @@
                     d.fat += r.fat;
                     d.caloriesIn += r.caloriesIn;
                     d.caloriesOut += r.caloriesOut;
-                    if (r.foodName || r.source === 'kt') d.items.push(r);
+                    if (r.foodName || r.source === 'kt' || r.source === 'chat') d.items.push(r);
                 });
 
                 const totalOut = d.caloriesOut + goals.bazal;
@@ -1290,7 +1297,8 @@
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.carbs.toFixed(1) + ' g</td>';
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.fat.toFixed(1) + ' g</td>';
                             rows += '<td style="padding:4px 3px;' + ra + sb + bg + '">' + r.caloriesIn.toFixed(1) + ' kcal</td>';
-                            rows += '<td colspan="3" style="' + sb + bg + '"></td>';
+                            rows += '<td colspan="2" style="' + sb + bg + '"></td>';
+                            rows += '<td style="' + sb + bg + 'text-align:center;"><span style="color:var(--red);cursor:pointer;font-size:0.9rem;font-weight:700;opacity:0.6;" onclick="event.stopPropagation();deleteRecord(' + (r.id || 0) + ')">&times;</span></td>';
                             rows += '</tr>';
                         }
                     }
