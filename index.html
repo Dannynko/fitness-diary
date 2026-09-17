@@ -3146,11 +3146,67 @@
             msgDiv.appendChild(typingDiv);
             msgDiv.scrollTop = msgDiv.scrollHeight;
 
-            // Search for nutrition data from Open Food Facts + web
+            // Search for nutrition data from Open Food Facts + web + URL scraping
             let nutritionContext = '';
             let offProducts = [];
             try {
-                const foodWords = msg.replace(/zjedol|jedol|som|si|dal|dala|obed|raňajky|večera|snack|som mal|mala|dostal|jedla|zapíš|pridaj|celé|cele|balenie|porcia/gi, '').replace(/\b\d+(g|ml|ks)?\b/gi, '').trim();
+                // 1) If message contains a URL, try to scrape nutritional data from it
+                const urlMatch = msg.match(/https?:\/\/[^\s]+/i);
+                if (urlMatch) {
+                    typingDiv.textContent = 'Sťahujem údaje z odkazu...';
+                    const proxies = [
+                        u => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u),
+                        u => 'https://corsproxy.io/?' + encodeURIComponent(u)
+                    ];
+                    for (const proxy of proxies) {
+                        try {
+                            const r = await fetch(proxy(urlMatch[0]), {signal: AbortSignal.timeout(8000)});
+                            if (r.ok) {
+                                const html = await r.text();
+                                const extractNutrition = (h) => {
+                                    const vals = {};
+                                    const patterns = [
+                                        [/energy.*?(\d+[\.,]?\d*)\s*kcal/i, 'kcal'],
+                                        [/energ.*?hodnota.*?(\d+[\.,]?\d*)\s*kcal/i, 'kcal'],
+                                        [/kalóri[eí].*?(\d+[\.,]?\d*)/i, 'kcal'],
+                                        [/(\d+[\.,]?\d*)\s*kcal/i, 'kcal'],
+                                        [/protein.*?(\d+[\.,]?\d*)\s*g/i, 'protein'],
+                                        [/bielkovin.*?(\d+[\.,]?\d*)\s*g/i, 'protein'],
+                                        [/bílkovin.*?(\d+[\.,]?\d*)\s*g/i, 'protein'],
+                                        [/carbohydrate.*?(\d+[\.,]?\d*)\s*g/i, 'carbs'],
+                                        [/sachari.*?(\d+[\.,]?\d*)\s*g/i, 'carbs'],
+                                        [/uhlohydrát.*?(\d+[\.,]?\d*)\s*g/i, 'carbs'],
+                                        [/fat[^t].*?(\d+[\.,]?\d*)\s*g/i, 'fat'],
+                                        [/tuk.*?(\d+[\.,]?\d*)\s*g/i, 'fat'],
+                                    ];
+                                    for (const [rx, key] of patterns) {
+                                        if (!vals[key]) {
+                                            const m = h.match(rx);
+                                            if (m) vals[key] = parseFloat(m[1].replace(',', '.'));
+                                        }
+                                    }
+                                    return vals;
+                                };
+                                const scraped = extractNutrition(html);
+                                const titleM = html.match(/<title[^>]*>([^<]+)/i);
+                                const prodName = titleM ? titleM[1].replace(/\s*[-|–].*/,'').trim() : '';
+                                if (scraped.kcal) {
+                                    nutritionContext = '\n\nVýživové údaje zo stránky (' + urlMatch[0].split('/')[2] + '):\n'
+                                        + (prodName ? 'Produkt: ' + prodName + '\n' : '')
+                                        + 'Energia: ' + scraped.kcal + ' kcal/100g'
+                                        + (scraped.protein ? ', Bielkoviny: ' + scraped.protein + 'g' : '')
+                                        + (scraped.carbs ? ', Sacharidy: ' + scraped.carbs + 'g' : '')
+                                        + (scraped.fat ? ', Tuky: ' + scraped.fat + 'g' : '')
+                                        + '\nTieto údaje sú z produktovej stránky — použi ich ako presné hodnoty.';
+                                    break;
+                                }
+                            }
+                        } catch(e) {}
+                    }
+                }
+
+                // 2) Open Food Facts search
+                const foodWords = msg.replace(/https?:\/\/[^\s]+/gi, '').replace(/zjedol|jedol|som|si|dal|dala|obed|raňajky|večera|snack|som mal|mala|dostal|jedla|zapíš|pridaj|celé|cele|balenie|porcia/gi, '').replace(/\b\d+(g|ml|ks)?\b/gi, '').trim();
                 if (foodWords.length > 2) {
                     const results = [];
                     const seen = new Set();
@@ -3171,9 +3227,7 @@
                             if (r.ok) { const d = await r.json(); (d.products || []).forEach(addProduct); }
                         } catch(e) {}
                     }
-                    // 1) Full phrase search
                     await offSearch(foodWords);
-                    // 2) If few results, try meaningful sub-phrases
                     if (results.length < 3) {
                         const parts = foodWords.split(/\s*[-–,+]\s*/).map(s => s.trim()).filter(s => s.length > 2);
                         if (parts.length > 1) {
@@ -3186,7 +3240,7 @@
                         }
                     }
                     if (results.length > 0) {
-                        nutritionContext = '\n\nVýživové dáta z databázy (Open Food Facts):\n' + results.join('\n');
+                        nutritionContext += (nutritionContext ? '\n' : '') + '\nVýživové dáta z databázy (Open Food Facts):\n' + results.join('\n');
                     }
                 }
             } catch(e) {}
