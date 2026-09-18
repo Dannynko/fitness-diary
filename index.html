@@ -2735,13 +2735,16 @@
                 else if (d.acts.length > 0) html += ' · <span style="color:var(--green);">šport (bez kcal)</span>';
                 if (move > 0 && d.sport > 0) html += ' · <span style="color:rgba(79,195,247,0.8);">' + Math.round(move) + ' pohyb</span>';
                 html += '</span></div>';
-                if (d.total > 0 || d.acts.length > 0) {
-                    html += '<div style="display:flex;height:6px;border-radius:3px;overflow:hidden;margin-bottom:2px;">';
-                    if (d.sport > 0) html += '<div style="width:' + sportPct + '%;background:var(--green);"></div>';
-                    else if (d.acts.length > 0 && d.total === 0) html += '<div style="width:100%;background:rgba(102,187,106,0.3);"></div>';
+                html += '<div style="display:flex;height:6px;border-radius:3px;overflow:hidden;margin-bottom:2px;">';
+                if (d.sport > 0 && d.total > 0) {
+                    html += '<div style="width:' + sportPct + '%;background:var(--green);"></div>';
                     html += '<div style="flex:1;background:rgba(79,195,247,0.3);"></div>';
-                    html += '</div>';
+                } else if (d.total > 0) {
+                    html += '<div style="flex:1;background:rgba(79,195,247,0.3);"></div>';
+                } else {
+                    html += '<div style="flex:1;background:rgba(102,187,106,0.3);"></div>';
                 }
+                html += '</div>';
                 if (d.acts.length > 0) {
                     d.acts.forEach(a => {
                         const name = a.foodName || a.activityName || 'Aktivita';
