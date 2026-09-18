@@ -2699,7 +2699,7 @@
 
         function renderActivities() {
             const container = document.getElementById('activityLog');
-            const allActs = records.filter(r => (r.source === 'activity' || r.source === 'health-workout' || r.source === 'kt-activity') && r.caloriesOut > 0);
+            const allActs = records.filter(r => r.source === 'activity' || r.source === 'health-workout' || r.source === 'kt-activity');
             const health = records.filter(r => r.source === 'health' && r.caloriesOut > 0);
 
             // Build daily data
