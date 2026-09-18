@@ -1268,7 +1268,7 @@
                     d.fat += r.fat;
                     d.caloriesIn += r.caloriesIn;
                     d.caloriesOut += r.caloriesOut;
-                    if (r.foodName || r.source === 'kt' || r.source === 'chat') d.items.push(r);
+                    if (r.foodName || r.source === 'kt' || r.source === 'chat' || r.source === 'health-workout') d.items.push(r);
                 });
 
                 const totalOut = d.caloriesOut + goals.bazal;
@@ -2700,7 +2700,8 @@
             const container = document.getElementById('activityLog');
             const manual = records.filter(r => r.source === 'activity').sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
             const health = records.filter(r => r.source === 'health' && r.caloriesOut > 0).sort((a, b) => b.date.localeCompare(a.date));
-            if (manual.length === 0 && health.length === 0) {
+            const workouts = records.filter(r => r.source === 'health-workout').sort((a, b) => b.date.localeCompare(a.date));
+            if (manual.length === 0 && health.length === 0 && workouts.length === 0) {
                 container.innerHTML = '<div class="no-data" style="padding:15px;">Žiadne záznamy</div>';
                 return;
             }
@@ -2721,6 +2722,23 @@
                     }
                     html += '</div>';
                 });
+                html += '</div>';
+            }
+            if (workouts.length > 0) {
+                const wByDate = {};
+                workouts.forEach(w => { if (!wByDate[w.date]) wByDate[w.date] = []; wByDate[w.date].push(w); });
+                html += '<div style="margin-bottom:10px;font-size:0.8rem;">';
+                for (const date of Object.keys(wByDate).sort((a, b) => b.localeCompare(a))) {
+                    html += '<div style="font-weight:600;color:var(--text-muted);font-size:0.72rem;margin:8px 0 4px;">' + formatDate(date) + '</div>';
+                    wByDate[date].forEach(w => {
+                        html += '<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:rgba(102,187,106,0.08);border-left:3px solid var(--green);border-radius:6px;margin-bottom:3px;">';
+                        html += '<span>⌚</span>';
+                        html += '<span style="flex:1;">' + (w.foodName || 'Tréning') + '</span>';
+                        html += '<span><strong>' + Math.round(w.caloriesOut) + '</strong> kcal</span>';
+                        if (w.time) html += '<span style="color:var(--text-muted);font-size:0.7rem;">' + w.time + '</span>';
+                        html += '</div>';
+                    });
+                }
                 html += '</div>';
             }
             if (manual.length > 0) {
@@ -2949,6 +2967,15 @@
         }
 
         // ===== APPLE HEALTH IMPORT =====
+        const _workoutTypes = {
+            'Running':'Beh','Walking':'Chôdza','Cycling':'Cyklistika','Swimming':'Plávanie',
+            'Strength Training':'Silový tréning','Traditional Strength Training':'Silový tréning',
+            'HIIT':'HIIT','High Intensity Interval Training':'HIIT',
+            'Yoga':'Joga','Elliptical':'Eliptický','Rowing':'Veslovanie',
+            'Stair Climbing':'Schody','Dance':'Tanec','Cooldown':'Oddych',
+            'Core Training':'Core','Functional Strength Training':'Funkčný tréning',
+            'Pilates':'Pilates','Kickboxing':'Kickbox','Hiking':'Turistika'
+        };
         function processHealthDay(day) {
             day.activeCalories = parseFloat(day.activeCalories) || 0;
             if (day.exerciseMinutes) day.exerciseMinutes = parseFloat(day.exerciseMinutes) || 0;
@@ -2983,6 +3010,36 @@
                         source: 'health'
                     });
                 }
+            }
+
+            if (Array.isArray(day.workouts)) {
+                day.workouts.forEach((w, i) => {
+                    const cal = parseFloat(w.calories) || 0;
+                    const dur = parseFloat(w.duration) || 0;
+                    const rawType = (w.type || 'Other').replace(/HKWorkoutActivityType/i, '');
+                    const name = _workoutTypes[rawType] || rawType;
+                    const wId = 'workout-' + day.date + '-' + i;
+                    const existing = records.find(r => r.id === wId);
+                    if (existing) {
+                        existing.caloriesOut = cal;
+                        existing.foodName = name + ' (' + dur + ' min)';
+                    } else {
+                        records.push({
+                            id: wId,
+                            date: day.date,
+                            foodName: name + ' (' + dur + ' min)',
+                            caloriesIn: 0,
+                            caloriesOut: cal,
+                            protein: 0,
+                            carbs: 0,
+                            fat: 0,
+                            source: 'health-workout',
+                            workoutType: rawType,
+                            duration: dur,
+                            time: w.time || ''
+                        });
+                    }
+                });
             }
         }
 
