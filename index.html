@@ -1268,7 +1268,7 @@
                     d.fat += r.fat;
                     d.caloriesIn += r.caloriesIn;
                     d.caloriesOut += r.caloriesOut;
-                    if (r.foodName || r.source === 'kt' || r.source === 'chat' || r.source === 'health-workout') d.items.push(r);
+                    if (r.foodName || r.source === 'kt' || r.source === 'chat' || r.source === 'health-workout' || r.source === 'kt-activity') d.items.push(r);
                 });
 
                 const totalOut = d.caloriesOut + goals.bazal;
@@ -2701,38 +2701,73 @@
             const manual = records.filter(r => r.source === 'activity').sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
             const health = records.filter(r => r.source === 'health' && r.caloriesOut > 0).sort((a, b) => b.date.localeCompare(a.date));
             const workouts = records.filter(r => r.source === 'health-workout').sort((a, b) => b.date.localeCompare(a.date));
-            if (manual.length === 0 && health.length === 0 && workouts.length === 0) {
+            const ktActs = records.filter(r => r.source === 'kt-activity').sort((a, b) => b.date.localeCompare(a.date));
+            if (manual.length === 0 && health.length === 0 && workouts.length === 0 && ktActs.length === 0) {
                 container.innerHTML = '<div class="no-data" style="padding:15px;">Žiadne záznamy</div>';
                 return;
             }
             let html = '';
-            if (health.length > 0) {
-                html += '<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;font-size:0.8rem;">';
-                health.forEach(h => {
-                    html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(239,83,80,0.08);border-left:3px solid var(--red);border-radius:6px;">';
-                    html += '<span>❤️</span>';
-                    html += '<span style="color:var(--text-muted);min-width:90px;">' + formatDate(h.date) + '</span>';
-                    html += '<span><strong>' + Math.round(h.caloriesOut) + '</strong> kcal';
-                    if (h.rawCalories && h.rawCalories !== h.caloriesOut) {
-                        html += ' <span style="color:var(--text-muted);font-size:0.7rem;">(Watch: ' + Math.round(h.rawCalories) + ')</span>';
-                    }
-                    html += '</span>';
-                    if (h.exerciseMinutes > 0) {
-                        html += '<span style="color:var(--green);font-size:0.75rem;">🏋️ ' + Math.round(h.exerciseMinutes) + ' min</span>';
-                    }
-                    html += '</div>';
+
+            // Daily breakdown: total vs sport vs bežný pohyb
+            const dailyData = {};
+            health.forEach(h => {
+                if (!dailyData[h.date]) dailyData[h.date] = { total: 0, sport: 0 };
+                dailyData[h.date].total = h.caloriesOut;
+            });
+            [...ktActs, ...workouts].forEach(a => {
+                if (!dailyData[a.date]) dailyData[a.date] = { total: 0, sport: 0 };
+                dailyData[a.date].sport += a.caloriesOut;
+            });
+            const dailyDates = Object.keys(dailyData).sort((a, b) => b.localeCompare(a));
+            if (dailyDates.length > 0) {
+                html += '<div style="margin-bottom:12px;font-size:0.8rem;">';
+                html += '<div style="font-weight:600;margin-bottom:6px;">Rozdelenie spálených kalórií</div>';
+                dailyDates.slice(0, 7).forEach(date => {
+                    const d = dailyData[date];
+                    const movement = Math.max(0, d.total - d.sport);
+                    const sportPct = d.total > 0 ? Math.round(d.sport / d.total * 100) : 0;
+                    const movePct = 100 - sportPct;
+                    html += '<div style="margin-bottom:6px;">';
+                    html += '<div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-muted);margin-bottom:2px;"><span>' + formatDate(date) + '</span><span><strong>' + Math.round(d.total) + '</strong> kcal total</span></div>';
+                    html += '<div style="display:flex;height:16px;border-radius:4px;overflow:hidden;font-size:0.6rem;line-height:16px;">';
+                    if (d.sport > 0) html += '<div style="width:' + sportPct + '%;background:var(--green);color:#fff;text-align:center;min-width:30px;">Šport ' + Math.round(d.sport) + '</div>';
+                    if (movement > 0) html += '<div style="width:' + movePct + '%;background:rgba(79,195,247,0.4);text-align:center;min-width:30px;">Pohyb ' + Math.round(movement) + '</div>';
+                    html += '</div></div>';
                 });
                 html += '</div>';
             }
+
+            // Graf aktivít
+            html += '<canvas id="activityChart" width="600" height="200" style="width:100%;max-height:200px;margin-bottom:12px;"></canvas>';
+
+            // KT aktivity
+            if (ktActs.length > 0) {
+                const aByDate = {};
+                ktActs.forEach(a => { if (!aByDate[a.date]) aByDate[a.date] = []; aByDate[a.date].push(a); });
+                html += '<div style="margin-bottom:10px;font-size:0.8rem;">';
+                html += '<div style="font-weight:600;margin-bottom:6px;">Športové aktivity (KT)</div>';
+                for (const date of Object.keys(aByDate).sort((a, b) => b.localeCompare(a))) {
+                    html += '<div style="font-size:0.72rem;color:var(--text-muted);margin:6px 0 3px;">' + formatDate(date) + '</div>';
+                    aByDate[date].forEach(a => {
+                        html += '<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:rgba(102,187,106,0.08);border-left:3px solid var(--green);border-radius:6px;margin-bottom:3px;">';
+                        html += '<span style="flex:1;">' + (a.foodName || 'Aktivita') + (a.duration ? ' <span style="color:var(--text-muted);font-size:0.7rem;">(' + a.duration + ' min)</span>' : '') + '</span>';
+                        html += '<span><strong>' + Math.round(a.caloriesOut) + '</strong> kcal</span>';
+                        html += '</div>';
+                    });
+                }
+                html += '</div>';
+            }
+
+            // Apple Watch workouts
             if (workouts.length > 0) {
                 const wByDate = {};
                 workouts.forEach(w => { if (!wByDate[w.date]) wByDate[w.date] = []; wByDate[w.date].push(w); });
                 html += '<div style="margin-bottom:10px;font-size:0.8rem;">';
+                html += '<div style="font-weight:600;margin-bottom:6px;">Tréningy (Apple Watch)</div>';
                 for (const date of Object.keys(wByDate).sort((a, b) => b.localeCompare(a))) {
-                    html += '<div style="font-weight:600;color:var(--text-muted);font-size:0.72rem;margin:8px 0 4px;">' + formatDate(date) + '</div>';
+                    html += '<div style="font-size:0.72rem;color:var(--text-muted);margin:6px 0 3px;">' + formatDate(date) + '</div>';
                     wByDate[date].forEach(w => {
-                        html += '<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:rgba(102,187,106,0.08);border-left:3px solid var(--green);border-radius:6px;margin-bottom:3px;">';
-                        html += '<span>⌚</span>';
+                        html += '<div style="display:flex;align-items:center;gap:8px;padding:5px 10px;background:rgba(79,195,247,0.08);border-left:3px solid var(--blue);border-radius:6px;margin-bottom:3px;">';
                         html += '<span style="flex:1;">' + (w.foodName || 'Tréning') + '</span>';
                         html += '<span><strong>' + Math.round(w.caloriesOut) + '</strong> kcal</span>';
                         if (w.time) html += '<span style="color:var(--text-muted);font-size:0.7rem;">' + w.time + '</span>';
@@ -2741,9 +2776,32 @@
                 }
                 html += '</div>';
             }
+
+            // Apple Health daily totals
+            if (health.length > 0) {
+                html += '<div style="display:flex;flex-direction:column;gap:4px;margin-bottom:10px;font-size:0.8rem;">';
+                html += '<div style="font-weight:600;margin-bottom:2px;">Denné total (Apple Health)</div>';
+                health.forEach(h => {
+                    html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(239,83,80,0.08);border-left:3px solid var(--red);border-radius:6px;">';
+                    html += '<span style="color:var(--text-muted);min-width:90px;">' + formatDate(h.date) + '</span>';
+                    html += '<span><strong>' + Math.round(h.caloriesOut) + '</strong> kcal';
+                    if (h.rawCalories && h.rawCalories !== h.caloriesOut) {
+                        html += ' <span style="color:var(--text-muted);font-size:0.7rem;">(Watch: ' + Math.round(h.rawCalories) + ')</span>';
+                    }
+                    html += '</span>';
+                    if (h.exerciseMinutes > 0) {
+                        html += '<span style="color:var(--green);font-size:0.75rem;">' + Math.round(h.exerciseMinutes) + ' min</span>';
+                    }
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+
+            // Manual activities
             if (manual.length > 0) {
                 const byDate = {};
                 manual.forEach(a => { if (!byDate[a.date]) byDate[a.date] = []; byDate[a.date].push(a); });
+                html += '<div style="font-weight:600;margin-bottom:4px;font-size:0.8rem;">Manuálne záznamy</div>';
                 html += '<table class="exercise-log-table" style="width:100%;"><thead><tr><th style="text-align:left;">Dátum / Aktivita</th><th>Trvanie</th><th>Kalórie</th><th style="width:30px;"></th></tr></thead><tbody>';
                 for (const date of Object.keys(byDate).sort((a, b) => b.localeCompare(a))) {
                     html += '<tr style="background:rgba(79,195,247,0.08);"><td colspan="4" style="text-align:left;font-weight:600;">' + formatDate(date) + '</td></tr>';
@@ -2754,6 +2812,80 @@
                 html += '</tbody></table>';
             }
             container.innerHTML = html;
+
+            // Draw activity chart
+            drawActivityChart(dailyData);
+        }
+
+        function drawActivityChart(dailyData) {
+            const canvas = document.getElementById('activityChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = canvas.offsetWidth * dpr;
+            canvas.height = 200 * dpr;
+            ctx.scale(dpr, dpr);
+            const W = canvas.offsetWidth;
+            const H = 200;
+            ctx.clearRect(0, 0, W, H);
+
+            const dates = Object.keys(dailyData).sort().slice(-14);
+            if (dates.length === 0) return;
+
+            const maxVal = Math.max(...dates.map(d => dailyData[d].total || 0), 100);
+            const barW = Math.min(30, (W - 40) / dates.length - 4);
+            const chartH = H - 35;
+            const startX = 35;
+
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.font = '10px system-ui';
+            ctx.textAlign = 'right';
+            for (let i = 0; i <= 4; i++) {
+                const y = 5 + chartH - (i / 4) * chartH;
+                const val = Math.round(maxVal * i / 4);
+                ctx.fillText(val, startX - 4, y + 3);
+                ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+                ctx.beginPath(); ctx.moveTo(startX, y); ctx.lineTo(W - 5, y); ctx.stroke();
+            }
+
+            dates.forEach((date, i) => {
+                const d = dailyData[date];
+                const x = startX + i * ((W - startX - 5) / dates.length) + 2;
+                const totalH = (d.total / maxVal) * chartH;
+                const sportH = (d.sport / maxVal) * chartH;
+                const moveH = totalH - sportH;
+                const baseY = 5 + chartH;
+
+                if (moveH > 0) {
+                    ctx.fillStyle = 'rgba(79,195,247,0.5)';
+                    ctx.fillRect(x, baseY - totalH, barW, moveH);
+                }
+                if (sportH > 0) {
+                    ctx.fillStyle = 'rgba(102,187,106,0.8)';
+                    ctx.fillRect(x, baseY - sportH, barW, sportH);
+                }
+
+                ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                ctx.font = '9px system-ui';
+                ctx.textAlign = 'center';
+                ctx.save();
+                ctx.translate(x + barW / 2, H - 2);
+                ctx.rotate(-0.5);
+                ctx.fillText(date.slice(5), 0, 0);
+                ctx.restore();
+            });
+
+            // Legend
+            ctx.font = '10px system-ui';
+            ctx.fillStyle = 'rgba(102,187,106,0.8)';
+            ctx.fillRect(W - 130, 5, 10, 10);
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.textAlign = 'left';
+            ctx.fillText('Šport', W - 117, 14);
+            ctx.fillStyle = 'rgba(79,195,247,0.5)';
+            ctx.fillRect(W - 65, 5, 10, 10);
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.fillText('Pohyb', W - 52, 14);
         }
 
         // ===== CLOUD SYNC =====
