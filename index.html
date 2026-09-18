@@ -1070,7 +1070,8 @@
                 return;
             }
 
-            showToast('Importovaných ' + response.count + ' položiek z KT pre ' + response.syncDate);
+            const actMsg = response.activityCount ? ' + ' + response.activityCount + ' aktivít' : '';
+            showToast('Importovaných ' + response.count + ' jedál' + actMsg + ' z KT pre ' + response.syncDate);
         });
 
 
@@ -1268,7 +1269,7 @@
                     d.fat += r.fat;
                     d.caloriesIn += r.caloriesIn;
                     d.caloriesOut += r.caloriesOut;
-                    if (r.foodName || r.source === 'kt' || r.source === 'chat' || r.source === 'health-workout' || r.source === 'kt-activity') d.items.push(r);
+                    if ((r.foodName || r.source === 'kt' || r.source === 'chat' || r.source === 'health-workout') && r.source !== 'kt-activity') d.items.push(r);
                 });
 
                 const totalOut = d.caloriesOut + goals.bazal;
