@@ -2710,9 +2710,10 @@
             });
             allActs.forEach(a => {
                 if (!byDate[a.date]) byDate[a.date] = { total: 0, sport: 0, acts: [] };
-                byDate[a.date].sport += a.caloriesOut;
+                byDate[a.date].sport += (a.caloriesOut || 0);
                 byDate[a.date].acts.push(a);
             });
+            Object.values(byDate).forEach(d => { if (!d.total && d.sport > 0) d.total = d.sport; });
             const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
             if (dates.length === 0) {
                 container.innerHTML = '<div class="no-data" style="padding:15px;">Žiadne záznamy</div>';
@@ -2731,11 +2732,13 @@
                 html += '<span>';
                 if (d.total > 0) html += '<strong>' + Math.round(d.total) + '</strong> total';
                 if (d.sport > 0) html += ' · <span style="color:var(--green);">' + Math.round(d.sport) + ' šport</span>';
+                else if (d.acts.length > 0) html += ' · <span style="color:var(--green);">šport (bez kcal)</span>';
                 if (move > 0 && d.sport > 0) html += ' · <span style="color:rgba(79,195,247,0.8);">' + Math.round(move) + ' pohyb</span>';
                 html += '</span></div>';
-                if (d.total > 0) {
+                if (d.total > 0 || d.acts.length > 0) {
                     html += '<div style="display:flex;height:6px;border-radius:3px;overflow:hidden;margin-bottom:2px;">';
                     if (d.sport > 0) html += '<div style="width:' + sportPct + '%;background:var(--green);"></div>';
+                    else if (d.acts.length > 0 && d.total === 0) html += '<div style="width:100%;background:rgba(102,187,106,0.3);"></div>';
                     html += '<div style="flex:1;background:rgba(79,195,247,0.3);"></div>';
                     html += '</div>';
                 }
