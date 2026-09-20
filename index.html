@@ -2747,19 +2747,20 @@
                 const restH = Math.max(0, outH - sportH - moveH);
                 const inH = Math.round(d.cIn / maxVal * chartH);
 
-                html += '<div style="flex:1;text-align:center;display:flex;flex-direction:column;align-items:center;">';
-                html += '<div style="font-size:0.52rem;font-weight:600;margin-bottom:1px;color:#fff;white-space:nowrap;">' + Math.round(totalWithBazal) + (d.cIn > 0 ? ' <span style="color:rgba(255,167,38,0.9);">' + Math.round(d.cIn) + '</span>' : '') + '</div>';
+                html += '<div style="flex:1;text-align:center;">';
                 html += '<div style="display:flex;gap:2px;align-items:flex-end;width:100%;justify-content:center;">';
-                // Burned bar
-                html += '<div style="flex:1;max-width:32px;">';
+                // Burned bar with label
+                html += '<div style="flex:1;max-width:32px;text-align:center;">';
+                html += '<div style="font-size:0.7rem;font-weight:700;margin-bottom:2px;color:#fff;">' + Math.round(totalWithBazal) + '</div>';
                 html += '<div style="height:' + outH + 'px;border-radius:3px 3px 0 0;overflow:hidden;display:flex;flex-direction:column;">';
                 if (sportH > 0) html += '<div style="height:' + sportH + 'px;background:rgba(102,187,106,0.8);"></div>';
                 if (moveH > 0) html += '<div style="height:' + moveH + 'px;background:rgba(79,195,247,0.45);"></div>';
                 if (restH > 0) html += '<div style="height:' + restH + 'px;background:rgba(158,158,158,0.25);"></div>';
                 html += '</div></div>';
-                // Intake bar
+                // Intake bar with label
                 if (d.cIn > 0) {
-                    html += '<div style="flex:1;max-width:32px;">';
+                    html += '<div style="flex:1;max-width:32px;text-align:center;">';
+                    html += '<div style="font-size:0.7rem;font-weight:700;margin-bottom:2px;color:rgba(255,167,38,0.9);">' + Math.round(d.cIn) + '</div>';
                     html += '<div style="height:' + inH + 'px;border-radius:3px 3px 0 0;background:rgba(255,167,38,0.45);"></div>';
                     html += '</div>';
                 }
