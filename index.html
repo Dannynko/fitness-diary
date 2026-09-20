@@ -2708,15 +2708,21 @@
             const bazal = goals.bazal || 0;
 
             const byDate = {};
+            const initDay = () => ({ total: 0, sport: 0, healthOut: 0, cIn: 0, acts: [] });
             health.forEach(h => {
-                if (!byDate[h.date]) byDate[h.date] = { total: 0, sport: 0, healthOut: 0, acts: [] };
+                if (!byDate[h.date]) byDate[h.date] = initDay();
                 byDate[h.date].healthOut = h.caloriesOut;
                 byDate[h.date].total = h.caloriesOut;
             });
             allActs.forEach(a => {
-                if (!byDate[a.date]) byDate[a.date] = { total: 0, sport: 0, healthOut: 0, acts: [] };
+                if (!byDate[a.date]) byDate[a.date] = initDay();
                 byDate[a.date].sport += (a.caloriesOut || 0);
                 byDate[a.date].acts.push(a);
+            });
+            records.forEach(r => {
+                if (r.caloriesIn > 0 && r.source !== 'weight' && byDate[r.date]) {
+                    byDate[r.date].cIn += r.caloriesIn;
+                }
             });
             Object.values(byDate).forEach(d => { if (!d.total && d.sport > 0) d.total = d.sport; });
             const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
@@ -2726,38 +2732,43 @@
             }
 
             const showDates = dates.slice(0, 14);
-            const maxTotal = Math.max(...showDates.map(dt => (byDate[dt].total || byDate[dt].sport || 0) + bazal), 100);
+            const maxVal = Math.max(...showDates.map(dt => Math.max((byDate[dt].total || byDate[dt].sport || 0) + bazal, byDate[dt].cIn)), 100);
             const chartH = 110;
-            const bazalY = Math.round(bazal / maxTotal * chartH);
 
             let html = '<div style="position:relative;height:' + (chartH + 38) + 'px;margin-bottom:10px;">';
-            // Bazal reference line
-            if (bazal > 0) {
-                html += '<div style="position:absolute;bottom:' + (bazalY + 18) + 'px;left:0;right:0;border-top:1px dashed rgba(158,158,158,0.35);"></div>';
-                html += '<div style="position:absolute;bottom:' + (bazalY + 20) + 'px;left:2px;font-size:0.55rem;color:rgba(158,158,158,0.6);">bazál ' + bazal + '</div>';
-            }
-            html += '<div style="display:flex;align-items:flex-end;height:' + (chartH + 18) + 'px;gap:20px;padding:0 6px;">';
+            html += '<div style="display:flex;align-items:flex-end;height:' + (chartH + 18) + 'px;gap:12px;padding:0 6px;">';
             showDates.forEach(date => {
                 const d = byDate[date];
                 const move = Math.max(0, d.total - d.sport);
                 const totalWithBazal = d.total + bazal;
-                const totalH = Math.round(totalWithBazal / maxTotal * chartH);
-                const sportH = Math.round(d.sport / maxTotal * chartH);
-                const moveH = Math.round(move / maxTotal * chartH);
-                const restH = Math.max(0, totalH - sportH - moveH);
+                const outH = Math.round(totalWithBazal / maxVal * chartH);
+                const sportH = Math.round(d.sport / maxVal * chartH);
+                const moveH = Math.round(move / maxVal * chartH);
+                const restH = Math.max(0, outH - sportH - moveH);
+                const inH = Math.round(d.cIn / maxVal * chartH);
 
-                html += '<div style="flex:1;text-align:center;">';
-                html += '<div style="font-size:0.58rem;font-weight:600;margin-bottom:1px;color:#fff;">' + Math.round(totalWithBazal) + '</div>';
-                html += '<div style="height:' + totalH + 'px;border-radius:3px 3px 0 0;overflow:hidden;display:flex;flex-direction:column;">';
+                html += '<div style="flex:1;text-align:center;display:flex;flex-direction:column;align-items:center;">';
+                html += '<div style="font-size:0.52rem;font-weight:600;margin-bottom:1px;color:#fff;white-space:nowrap;">' + Math.round(totalWithBazal) + (d.cIn > 0 ? ' <span style="color:rgba(255,167,38,0.9);">' + Math.round(d.cIn) + '</span>' : '') + '</div>';
+                html += '<div style="display:flex;gap:2px;align-items:flex-end;width:100%;justify-content:center;">';
+                // Burned bar
+                html += '<div style="flex:1;max-width:18px;">';
+                html += '<div style="height:' + outH + 'px;border-radius:3px 3px 0 0;overflow:hidden;display:flex;flex-direction:column;">';
                 if (sportH > 0) html += '<div style="height:' + sportH + 'px;background:rgba(102,187,106,0.8);"></div>';
                 if (moveH > 0) html += '<div style="height:' + moveH + 'px;background:rgba(79,195,247,0.45);"></div>';
                 if (restH > 0) html += '<div style="height:' + restH + 'px;background:rgba(158,158,158,0.25);"></div>';
+                html += '</div></div>';
+                // Intake bar
+                if (d.cIn > 0) {
+                    html += '<div style="flex:1;max-width:18px;">';
+                    html += '<div style="height:' + inH + 'px;border-radius:3px 3px 0 0;background:rgba(255,167,38,0.45);"></div>';
+                    html += '</div>';
+                }
                 html += '</div>';
                 html += '</div>';
             });
             html += '</div>';
             // Date labels
-            html += '<div style="display:flex;gap:20px;padding:0 6px;">';
+            html += '<div style="display:flex;gap:12px;padding:0 6px;">';
             showDates.forEach(date => {
                 html += '<div style="flex:1;text-align:center;font-size:0.55rem;color:var(--text-muted);padding-top:2px;">' + date.slice(8) + '.' + date.slice(5,7) + '</div>';
             });
@@ -2768,6 +2779,7 @@
             html += '<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:rgba(102,187,106,0.8);vertical-align:middle;margin-right:3px;"></span>šport</span>';
             html += '<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:rgba(79,195,247,0.45);vertical-align:middle;margin-right:3px;"></span>pohyb</span>';
             html += '<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:rgba(158,158,158,0.25);vertical-align:middle;margin-right:3px;"></span>bazál</span>';
+            html += '<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:rgba(255,167,38,0.45);vertical-align:middle;margin-right:3px;"></span>prijaté</span>';
             if (coef < 1) html += '<span style="margin-left:auto;">koef. ×' + coef + '</span>';
             html += '</div>';
 
