@@ -2736,7 +2736,7 @@
                 html += '<div style="position:absolute;bottom:' + (bazalY + 18) + 'px;left:0;right:0;border-top:1px dashed rgba(158,158,158,0.35);"></div>';
                 html += '<div style="position:absolute;bottom:' + (bazalY + 20) + 'px;left:2px;font-size:0.55rem;color:rgba(158,158,158,0.6);">bazál ' + bazal + '</div>';
             }
-            html += '<div style="display:flex;align-items:flex-end;height:' + (chartH + 18) + 'px;gap:8px;padding:0 4px;">';
+            html += '<div style="display:flex;align-items:flex-end;height:' + (chartH + 18) + 'px;gap:20px;padding:0 6px;">';
             showDates.forEach(date => {
                 const d = byDate[date];
                 const move = Math.max(0, d.total - d.sport);
@@ -2757,7 +2757,7 @@
             });
             html += '</div>';
             // Date labels
-            html += '<div style="display:flex;gap:8px;padding:0 4px;">';
+            html += '<div style="display:flex;gap:20px;padding:0 6px;">';
             showDates.forEach(date => {
                 html += '<div style="flex:1;text-align:center;font-size:0.55rem;color:var(--text-muted);padding-top:2px;">' + date.slice(8) + '.' + date.slice(5,7) + '</div>';
             });
