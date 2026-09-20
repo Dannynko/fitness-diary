@@ -1681,7 +1681,7 @@
             }
             goalDate = d.toISOString().split('T')[0];
             document.getElementById('weightDate').value = goalDate;
-            document.getElementById('actDate').value = goalDate;
+            if (document.getElementById('actDate')) document.getElementById('actDate').value = goalDate;
             document.getElementById('measureDate').value = goalDate;
             loadMeasurementsForDate();
             updateGoals();
@@ -3570,7 +3570,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('measureDate').valueAsDate = new Date();
             document.getElementById('exDate').valueAsDate = new Date();
-            document.getElementById('actDate').valueAsDate = new Date();
+            if (document.getElementById('actDate')) document.getElementById('actDate').valueAsDate = new Date();
             loadMeasurementsForDate();
             switchTab(localStorage.getItem('activeTab') || 'Strava');
         });
