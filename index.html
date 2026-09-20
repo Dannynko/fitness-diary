@@ -1262,18 +1262,21 @@
             let html = '';
             for (const date of datesToShow) {
                 const dayRecords = records.filter(r => r.date === date && r.source !== 'weight');
-                const d = { protein: 0, carbs: 0, fat: 0, caloriesIn: 0, caloriesOut: 0, items: [] };
+                const d = { protein: 0, carbs: 0, fat: 0, caloriesIn: 0, caloriesOut: 0, healthOut: 0, items: [] };
                 dayRecords.forEach(r => {
                     d.protein += r.protein;
                     d.carbs += r.carbs;
                     d.fat += r.fat;
                     d.caloriesIn += r.caloriesIn;
-                    d.caloriesOut += r.caloriesOut;
+                    d.caloriesOut += (r.caloriesOut || 0);
+                    if (r.source === 'health') d.healthOut += (r.caloriesOut || 0);
                     if ((r.foodName || r.source === 'kt' || r.source === 'chat' || r.source === 'health-workout') && r.source !== 'kt-activity') d.items.push(r);
                 });
 
-                const totalOut = d.caloriesOut + goals.bazal;
-                const diff = d.caloriesIn - totalOut;
+                const totalOutRaw = d.caloriesOut + goals.bazal;
+                const coef = getHealthCalCoef();
+                const adjustedOut = (d.caloriesOut - d.healthOut) + (d.healthOut * coef) + goals.bazal;
+                const diff = d.caloriesIn - adjustedOut;
                 const cls = diff > 0 ? 'negative' : diff < 0 ? 'positive' : 'neutral';
                 const hasItems = d.items.length > 0;
                 html += `<tr${hasItems ? ' style="cursor:pointer" onclick="toggleDetail(\'' + date + '\')"' : ''}>
@@ -1282,7 +1285,7 @@
                     <td>${d.carbs.toFixed(1)} g</td>
                     <td>${d.fat.toFixed(1)} g</td>
                     <td>${d.caloriesIn.toFixed(0)} kcal</td>
-                    <td>${totalOut.toFixed(0)} kcal</td>
+                    <td>${totalOutRaw.toFixed(0)} kcal${d.healthOut > 0 && coef < 1 ? '<br><span style="font-size:0.6rem;color:var(--text-muted);">×' + coef + ' → ' + Math.round(adjustedOut) + '</span>' : ''}</td>
                     <td class="${cls}">${diff > 0 ? '+' : ''}${diff.toFixed(0)} kcal</td>
                     <td>${dayRecords.length > 0 ? '<span style="color:var(--red);cursor:pointer;font-size:1.1rem;font-weight:700;display:inline-block;width:22px;height:22px;line-height:22px;text-align:center;" onclick="event.stopPropagation();deleteRecordsByDate(\'' + date + '\',this)">&times;</span>' : ''}</td>
                 </tr>`;
@@ -2946,6 +2949,13 @@
                 }
                 mergedRecords = ktDeduped;
 
+                mergedRecords.forEach(r => {
+                    if (r.source === 'health' && r.rawCalories && r.rawCalories > r.caloriesOut) {
+                        r.caloriesOut = Math.round(r.rawCalories);
+                        delete r.rawCalories;
+                    }
+                });
+
                 const allMeasurements = [...localData.measurements, ...(remoteData.measurements || [])];
                 const mergedMeasurements = dedup(allMeasurements, m => m.date);
 
@@ -3050,13 +3060,10 @@
             localStorage.setItem('healthData', JSON.stringify(healthData));
 
             if (day.activeCalories > 0) {
-                const coef = getHealthCalCoef();
-                const rawCal = day.activeCalories;
-                const adjCal = Math.round(rawCal * coef);
+                const rawCal = Math.round(day.activeCalories);
                 const existing = records.find(r => r.date === day.date && r.source === 'health');
                 if (existing) {
-                    existing.caloriesOut = adjCal;
-                    existing.rawCalories = rawCal;
+                    existing.caloriesOut = rawCal;
                     existing.exerciseMinutes = day.exerciseMinutes || 0;
                 } else {
                     records.push({
@@ -3064,8 +3071,7 @@
                         date: day.date,
                         foodName: '',
                         caloriesIn: 0,
-                        caloriesOut: adjCal,
-                        rawCalories: rawCal,
+                        caloriesOut: rawCal,
                         exerciseMinutes: day.exerciseMinutes || 0,
                         protein: 0,
                         carbs: 0,
