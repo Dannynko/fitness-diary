@@ -709,39 +709,38 @@
                     <button class="btn-secondary" onclick="addWeight()">Uložiť</button>
                 </div>
             </div>
+            <!-- Spálené kalórie -->
+            <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px; margin-bottom:16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;">
+                    <h2 style="margin: 0; border: none; padding: 0;">Spálené kalórie</h2>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
+                    <div class="date-input-wrap">
+                        <div class="spin-btns">
+                            <span onclick="spinDate('actDate', 1)">&#9650;</span>
+                            <span onclick="spinDate('actDate', -1)">&#9660;</span>
+                        </div>
+                        <input type="date" id="actDate" style="padding: 4px 8px; border: none; color: #fff; font-size: 0.8rem; background: transparent; outline: none; box-shadow: none;">
+                    </div>
+                    <select id="actType" style="padding: 4px 8px; border: none; border-radius: 6px; background: rgba(255,255,255,0.1); color: #fff; font-size: 0.8rem; cursor: pointer;">
+                        <option value="Beh">Beh</option>
+                        <option value="Chôdza">Chôdza</option>
+                        <option value="Bicykel">Bicykel</option>
+                        <option value="Plávanie">Plávanie</option>
+                        <option value="Posilňovňa">Posilňovňa</option>
+                        <option value="HIIT">HIIT</option>
+                        <option value="Iné">Iné</option>
+                    </select>
+                    <input type="number" id="actDuration" min="1" placeholder="min" style="width: 60px; padding: 4px 8px; border: none; border-radius: 6px; background: rgba(255,255,255,0.1); color: #fff; font-size: 0.8rem;">
+                    <input type="number" id="actCalories" min="1" placeholder="kcal" style="width: 65px; padding: 4px 8px; border: none; border-radius: 6px; background: rgba(255,255,255,0.1); color: #fff; font-size: 0.8rem;">
+                    <button class="btn-secondary" onclick="addActivity()">Pridať</button>
+                </div>
+                <div id="activityLog"></div>
+            </div>
+
             <div class="chart-container" id="weightChart">
                 <div class="no-data">Žiadne záznamy váhy</div>
             </div>
-        </div>
-
-
-        <!-- Spálené kalórie -->
-        <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:12px; margin-top:16px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;">
-                <h2 style="margin: 0; border: none; padding: 0;">Spálené kalórie</h2>
-            </div>
-            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
-                <div class="date-input-wrap">
-                    <div class="spin-btns">
-                        <span onclick="spinDate('actDate', 1)">&#9650;</span>
-                        <span onclick="spinDate('actDate', -1)">&#9660;</span>
-                    </div>
-                    <input type="date" id="actDate" style="padding: 4px 8px; border: none; color: #fff; font-size: 0.8rem; background: transparent; outline: none; box-shadow: none;">
-                </div>
-                <select id="actType" style="padding: 4px 8px; border: none; border-radius: 6px; background: rgba(255,255,255,0.1); color: #fff; font-size: 0.8rem; cursor: pointer;">
-                    <option value="Beh">Beh</option>
-                    <option value="Chôdza">Chôdza</option>
-                    <option value="Bicykel">Bicykel</option>
-                    <option value="Plávanie">Plávanie</option>
-                    <option value="Posilňovňa">Posilňovňa</option>
-                    <option value="HIIT">HIIT</option>
-                    <option value="Iné">Iné</option>
-                </select>
-                <input type="number" id="actDuration" min="1" placeholder="min" style="width: 60px; padding: 4px 8px; border: none; border-radius: 6px; background: rgba(255,255,255,0.1); color: #fff; font-size: 0.8rem;">
-                <input type="number" id="actCalories" min="1" placeholder="kcal" style="width: 65px; padding: 4px 8px; border: none; border-radius: 6px; background: rgba(255,255,255,0.1); color: #fff; font-size: 0.8rem;">
-                <button class="btn-secondary" onclick="addActivity()">Pridať</button>
-            </div>
-            <div id="activityLog"></div>
         </div>
         </div><!-- /tabStrava -->
 
