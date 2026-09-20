@@ -1255,7 +1255,7 @@
                 const totalOutRaw = d.caloriesOut + goals.bazal;
                 const coef = getHealthCalCoef();
                 const adjustedOut = (d.caloriesOut - d.healthOut) + (d.healthOut * coef) + goals.bazal;
-                const diff = d.caloriesIn - adjustedOut;
+                const diff = d.caloriesIn - totalOutRaw;
                 const cls = diff > 0 ? 'negative' : diff < 0 ? 'positive' : 'neutral';
                 const hasItems = d.items.length > 0;
                 html += `<tr${hasItems ? ' style="cursor:pointer" onclick="toggleDetail(\'' + date + '\')"' : ''}>
