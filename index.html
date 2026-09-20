@@ -2704,15 +2704,17 @@
             const container = document.getElementById('activityLog');
             const allActs = records.filter(r => r.source === 'activity' || r.source === 'health-workout' || r.source === 'kt-activity');
             const health = records.filter(r => r.source === 'health' && r.caloriesOut > 0);
+            const coef = getHealthCalCoef();
+            const bazal = goals.bazal || 0;
 
-            // Build daily data
             const byDate = {};
             health.forEach(h => {
-                if (!byDate[h.date]) byDate[h.date] = { total: 0, sport: 0, acts: [] };
+                if (!byDate[h.date]) byDate[h.date] = { total: 0, sport: 0, healthOut: 0, acts: [] };
+                byDate[h.date].healthOut = h.caloriesOut;
                 byDate[h.date].total = h.caloriesOut;
             });
             allActs.forEach(a => {
-                if (!byDate[a.date]) byDate[a.date] = { total: 0, sport: 0, acts: [] };
+                if (!byDate[a.date]) byDate[a.date] = { total: 0, sport: 0, healthOut: 0, acts: [] };
                 byDate[a.date].sport += (a.caloriesOut || 0);
                 byDate[a.date].acts.push(a);
             });
@@ -2723,45 +2725,54 @@
                 return;
             }
 
-            let html = '<canvas id="activityChart" width="600" height="160" style="width:100%;max-height:160px;margin-bottom:8px;"></canvas>';
-            html += '<div style="font-size:0.78rem;">';
+            let html = '<canvas id="activityChart" width="600" height="180" style="width:100%;max-height:180px;margin-bottom:12px;"></canvas>';
             dates.slice(0, 10).forEach(date => {
                 const d = byDate[date];
                 const move = Math.max(0, d.total - d.sport);
-                const sportPct = d.total > 0 ? Math.round(d.sport / d.total * 100) : 0;
-                html += '<div style="margin-bottom:6px;">';
-                html += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:0.72rem;margin-bottom:2px;">';
-                html += '<span style="color:var(--text-muted);">' + formatDate(date, true) + '</span>';
-                html += '<span>';
-                if (d.total > 0) html += '<strong>' + Math.round(d.total) + '</strong> total';
-                if (d.sport > 0) html += ' · <span style="color:var(--green);">' + Math.round(d.sport) + ' šport</span>';
-                else if (d.acts.length > 0) html += ' · <span style="color:var(--green);">šport (bez kcal)</span>';
-                if (move > 0 && d.sport > 0) html += ' · <span style="color:rgba(79,195,247,0.8);">' + Math.round(move) + ' pohyb</span>';
-                html += '</span></div>';
-                html += '<div style="display:flex;height:6px;border-radius:3px;overflow:hidden;margin-bottom:2px;">';
-                if (d.sport > 0 && d.total > 0) {
-                    html += '<div style="width:' + sportPct + '%;background:var(--green);"></div>';
-                    html += '<div style="flex:1;background:rgba(79,195,247,0.3);"></div>';
-                } else if (d.total > 0) {
-                    html += '<div style="flex:1;background:rgba(79,195,247,0.3);"></div>';
-                } else {
-                    html += '<div style="flex:1;background:rgba(102,187,106,0.3);"></div>';
-                }
+                const totalWithBazal = d.total + bazal;
+                const adjusted = (d.total - d.healthOut) + (d.healthOut * coef) + bazal;
+                const maxSeg = Math.max(bazal, move, d.sport, 1);
+
+                html += '<div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:10px 12px;margin-bottom:6px;">';
+                html += '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">';
+                html += '<span style="font-weight:600;font-size:0.82rem;">' + formatDate(date, true) + '</span>';
+                html += '<span style="font-size:0.95rem;font-weight:700;">' + Math.round(totalWithBazal) + ' <span style="font-size:0.7rem;font-weight:400;color:var(--text-muted);">kcal</span></span>';
                 html += '</div>';
+
+                function segBar(label, val, color, maxW) {
+                    const pct = maxW > 0 ? Math.max(4, Math.round(val / maxW * 100)) : 0;
+                    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;font-size:0.7rem;">'
+                        + '<span style="width:44px;text-align:right;color:var(--text-muted);">' + label + '</span>'
+                        + '<div style="flex:1;height:7px;border-radius:3px;background:rgba(255,255,255,0.05);overflow:hidden;">'
+                        + '<div style="width:' + (val > 0 ? pct : 0) + '%;height:100%;border-radius:3px;background:' + color + ';"></div></div>'
+                        + '<span style="min-width:40px;text-align:right;color:#fff;">' + Math.round(val) + '</span>'
+                        + '</div>';
+                }
+
+                const maxAll = Math.max(bazal, move, d.sport, 1);
+                html += segBar('Bazál', bazal, 'rgba(158,158,158,0.5)', maxAll);
+                if (move > 0) html += segBar('Pohyb', move, 'rgba(79,195,247,0.7)', maxAll);
+                if (d.sport > 0 || d.acts.length > 0) html += segBar('Šport', d.sport, 'var(--green)', maxAll);
+
+                if (d.healthOut > 0 && coef < 1) {
+                    html += '<div style="text-align:right;font-size:0.62rem;color:var(--text-muted);margin-top:2px;">×' + coef + ' → ' + Math.round(adjusted) + ' kcal pre bilanciu</div>';
+                }
+
                 if (d.acts.length > 0) {
+                    html += '<div style="margin-top:4px;border-top:1px solid rgba(255,255,255,0.06);padding-top:4px;">';
                     d.acts.forEach(a => {
                         const name = a.foodName || a.activityName || 'Aktivita';
                         const dur = a.duration ? a.duration + ' min' : '';
-                        html += '<div style="display:flex;align-items:center;gap:6px;padding:2px 0 2px 12px;font-size:0.7rem;color:var(--text-muted);">';
+                        html += '<div style="display:flex;align-items:center;gap:6px;padding:1px 0 1px 52px;font-size:0.68rem;color:var(--text-muted);">';
                         html += '<span style="color:var(--green);">·</span> ' + name;
-                        if (dur) html += ' <span style="opacity:0.6;">' + dur + '</span>';
-                        html += ' <span style="margin-left:auto;">' + Math.round(a.caloriesOut) + ' kcal</span>';
+                        if (dur) html += ' <span style="opacity:0.5;">' + dur + '</span>';
+                        if (a.caloriesOut) html += '<span style="margin-left:auto;">' + Math.round(a.caloriesOut) + '</span>';
                         html += '</div>';
                     });
+                    html += '</div>';
                 }
                 html += '</div>';
             });
-            html += '</div>';
             container.innerHTML = html;
             drawActivityChart(byDate);
         }
@@ -2772,20 +2783,21 @@
             const ctx = canvas.getContext('2d');
             const dpr = window.devicePixelRatio || 1;
             const W = canvas.offsetWidth;
-            const H = 160;
+            const H = 180;
             canvas.width = W * dpr;
             canvas.height = H * dpr;
             ctx.scale(dpr, dpr);
             ctx.clearRect(0, 0, W, H);
 
+            const bazal = goals.bazal || 0;
             const dates = Object.keys(byDate).sort().slice(-14);
             if (dates.length === 0) return;
 
-            const maxVal = Math.max(...dates.map(d => byDate[d].total || byDate[d].sport || 0), 100);
+            const maxVal = Math.max(...dates.map(d => (byDate[d].total || byDate[d].sport || 0) + bazal), 100);
             const gap = 3;
-            const startX = 30;
-            const barW = Math.min(24, (W - startX - 5) / dates.length - gap);
-            const chartH = H - 28;
+            const startX = 34;
+            const barW = Math.min(26, (W - startX - 5) / dates.length - gap);
+            const chartH = H - 30;
 
             ctx.fillStyle = 'rgba(255,255,255,0.3)';
             ctx.font = '9px system-ui';
@@ -2800,19 +2812,27 @@
             dates.forEach((date, i) => {
                 const d = byDate[date];
                 const x = startX + i * (barW + gap);
-                const tH = ((d.total || d.sport) / maxVal) * chartH;
-                const sH = (d.sport / maxVal) * chartH;
                 const baseY = 2 + chartH;
+                const totalH = ((d.total || d.sport || 0) + bazal) / maxVal * chartH;
+                const bazalH = bazal / maxVal * chartH;
+                const moveH = Math.max(0, d.total - d.sport) / maxVal * chartH;
+                const sportH = d.sport / maxVal * chartH;
 
-                ctx.fillStyle = 'rgba(79,195,247,0.35)';
-                ctx.beginPath();
-                ctx.roundRect(x, baseY - tH, barW, tH, 2);
-                ctx.fill();
-                if (sH > 0) {
+                // Stacked: bazal (bottom) → move → sport (top)
+                let y = baseY;
+                if (bazalH > 0) {
+                    ctx.fillStyle = 'rgba(158,158,158,0.3)';
+                    ctx.beginPath(); ctx.roundRect(x, y - bazalH, barW, bazalH, [0,0,2,2]); ctx.fill();
+                    y -= bazalH;
+                }
+                if (moveH > 0) {
+                    ctx.fillStyle = 'rgba(79,195,247,0.4)';
+                    ctx.beginPath(); ctx.roundRect(x, y - moveH, barW, moveH, 0); ctx.fill();
+                    y -= moveH;
+                }
+                if (sportH > 0) {
                     ctx.fillStyle = 'rgba(102,187,106,0.8)';
-                    ctx.beginPath();
-                    ctx.roundRect(x, baseY - sH, barW, sH, 2);
-                    ctx.fill();
+                    ctx.beginPath(); ctx.roundRect(x, y - sportH, barW, sportH, [2,2,0,0]); ctx.fill();
                 }
 
                 ctx.fillStyle = 'rgba(255,255,255,0.35)';
