@@ -2725,40 +2725,58 @@
                 return;
             }
 
-            const maxTotal = Math.max(...dates.map(dt => (byDate[dt].total || byDate[dt].sport || 0) + bazal), 100);
-            let html = '<div style="display:flex;gap:4px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px;">';
-            dates.slice(0, 14).forEach(date => {
+            const showDates = dates.slice(0, 14);
+            const maxTotal = Math.max(...showDates.map(dt => (byDate[dt].total || byDate[dt].sport || 0) + bazal), 100);
+            const chartH = 110;
+            const bazalY = Math.round(bazal / maxTotal * chartH);
+
+            let html = '<div style="position:relative;height:' + (chartH + 38) + 'px;margin-bottom:10px;">';
+            // Bazal reference line
+            if (bazal > 0) {
+                html += '<div style="position:absolute;bottom:' + (bazalY + 18) + 'px;left:0;right:0;border-top:1px dashed rgba(158,158,158,0.35);"></div>';
+                html += '<div style="position:absolute;bottom:' + (bazalY + 20) + 'px;left:2px;font-size:0.55rem;color:rgba(158,158,158,0.6);">bazál ' + bazal + '</div>';
+            }
+            html += '<div style="display:flex;align-items:flex-end;height:' + (chartH + 18) + 'px;gap:2px;">';
+            showDates.forEach(date => {
                 const d = byDate[date];
                 const move = Math.max(0, d.total - d.sport);
                 const totalWithBazal = d.total + bazal;
-                const adjusted = (d.total - d.healthOut) + (d.healthOut * coef) + bazal;
-                const barH = 80;
-                const bazalH = Math.round(bazal / maxTotal * barH);
-                const moveH = Math.round(move / maxTotal * barH);
-                const sportH = Math.round(d.sport / maxTotal * barH);
+                const totalH = Math.round(totalWithBazal / maxTotal * chartH);
+                const sportH = Math.round(d.sport / maxTotal * chartH);
+                const moveH = Math.round(move / maxTotal * chartH);
+                const restH = Math.max(0, totalH - sportH - moveH);
 
-                html += '<div style="min-width:58px;flex-shrink:0;text-align:center;font-size:0.62rem;">';
-                html += '<div style="color:var(--text-muted);margin-bottom:2px;">' + date.slice(8) + '.' + date.slice(5,7) + '</div>';
-                html += '<div style="font-weight:700;font-size:0.72rem;margin-bottom:3px;">' + Math.round(totalWithBazal) + '</div>';
-                html += '<div style="display:flex;flex-direction:column;justify-content:flex-end;height:' + barH + 'px;margin:0 auto;width:28px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,0.04);">';
-                if (sportH > 0) html += '<div style="height:' + sportH + 'px;background:var(--green);"></div>';
-                if (moveH > 0) html += '<div style="height:' + moveH + 'px;background:rgba(79,195,247,0.5);"></div>';
-                if (bazalH > 0) html += '<div style="height:' + bazalH + 'px;background:rgba(158,158,158,0.35);"></div>';
-                html += '</div>';
-                html += '<div style="margin-top:3px;line-height:1.3;color:var(--text-muted);">';
-                if (d.sport > 0) html += '<div style="color:var(--green);">' + Math.round(d.sport) + ' š</div>';
-                if (move > 0) html += '<div style="color:rgba(79,195,247,0.8);">' + Math.round(move) + ' p</div>';
-                if (d.healthOut > 0 && coef < 1) html += '<div style="opacity:0.6;">×' + coef + '</div>';
+                html += '<div style="flex:1;text-align:center;">';
+                html += '<div style="font-size:0.58rem;font-weight:600;margin-bottom:1px;color:#fff;">' + Math.round(totalWithBazal) + '</div>';
+                html += '<div style="height:' + totalH + 'px;border-radius:3px 3px 0 0;overflow:hidden;display:flex;flex-direction:column;">';
+                if (sportH > 0) html += '<div style="height:' + sportH + 'px;background:rgba(102,187,106,0.8);"></div>';
+                if (moveH > 0) html += '<div style="height:' + moveH + 'px;background:rgba(79,195,247,0.45);"></div>';
+                if (restH > 0) html += '<div style="height:' + restH + 'px;background:rgba(158,158,158,0.25);"></div>';
                 html += '</div>';
                 html += '</div>';
             });
             html += '</div>';
-            // Activity list below
+            // Date labels
+            html += '<div style="display:flex;gap:2px;">';
+            showDates.forEach(date => {
+                html += '<div style="flex:1;text-align:center;font-size:0.55rem;color:var(--text-muted);padding-top:2px;">' + date.slice(8) + '.' + date.slice(5,7) + '</div>';
+            });
+            html += '</div></div>';
+
+            // Legend
+            html += '<div style="display:flex;gap:10px;font-size:0.6rem;color:var(--text-muted);margin-bottom:8px;">';
+            html += '<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:rgba(102,187,106,0.8);vertical-align:middle;margin-right:3px;"></span>šport</span>';
+            html += '<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:rgba(79,195,247,0.45);vertical-align:middle;margin-right:3px;"></span>pohyb</span>';
+            html += '<span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:rgba(158,158,158,0.25);vertical-align:middle;margin-right:3px;"></span>bazál</span>';
+            if (coef < 1) html += '<span style="margin-left:auto;">koef. ×' + coef + '</span>';
+            html += '</div>';
+
+            // Activity list
             html += '<div style="font-size:0.68rem;">';
             dates.slice(0, 10).forEach(date => {
                 const d = byDate[date];
                 if (d.acts.length === 0) return;
-                html += '<div style="margin-bottom:4px;">';
+                html += '<div style="margin-bottom:3px;">';
                 html += '<span style="color:var(--text-muted);font-size:0.62rem;">' + formatDate(date, true) + '</span>';
                 d.acts.forEach(a => {
                     const name = a.foodName || a.activityName || 'Aktivita';
