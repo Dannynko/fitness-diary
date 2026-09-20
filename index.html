@@ -2726,26 +2726,29 @@
                 const restH = Math.max(0, outH - sportH - moveH);
                 const inH = Math.round(d.cIn / maxVal * chartH);
 
+                const barMax = Math.max(outH, inH);
                 html += '<div style="flex:1;text-align:center;">';
-                html += '<div style="display:flex;gap:2px;align-items:flex-end;width:100%;justify-content:center;">';
+                html += '<div style="display:flex;gap:2px;width:100%;justify-content:center;">';
                 // Burned bar with label
-                html += '<div style="flex:1;max-width:32px;text-align:center;">';
+                html += '<div style="flex:1;max-width:32px;text-align:center;display:flex;flex-direction:column;">';
                 html += '<div style="font-size:0.7rem;font-weight:700;margin-bottom:2px;color:#fff;">' + Math.round(totalWithBazal) + '</div>';
+                html += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;">';
                 html += '<div style="height:' + outH + 'px;border-radius:3px 3px 0 0;overflow:hidden;display:flex;flex-direction:column;">';
                 if (sportH > 0) html += '<div style="height:' + sportH + 'px;background:rgba(102,187,106,0.8);"></div>';
                 if (moveH > 0) html += '<div style="height:' + moveH + 'px;background:rgba(79,195,247,0.45);"></div>';
                 if (restH > 0) html += '<div style="height:' + restH + 'px;background:rgba(158,158,158,0.25);"></div>';
-                html += '</div></div>';
-                // Intake bar - same height as burned, empty part shows diff
+                html += '</div></div></div>';
+                // Intake bar - same total height, empty part has border outline
                 if (d.cIn > 0) {
                     const diff = Math.round(totalWithBazal - d.cIn);
                     const emptyH = Math.max(0, outH - inH);
-                    html += '<div style="flex:1;max-width:32px;text-align:center;">';
+                    html += '<div style="flex:1;max-width:32px;text-align:center;display:flex;flex-direction:column;">';
                     html += '<div style="font-size:0.7rem;font-weight:700;margin-bottom:2px;color:rgba(255,235,59,0.9);">' + Math.round(d.cIn) + '</div>';
-                    html += '<div style="height:' + outH + 'px;border-radius:3px 3px 0 0;overflow:hidden;display:flex;flex-direction:column;">';
-                    if (emptyH > 0) html += '<div style="height:' + emptyH + 'px;display:flex;align-items:center;justify-content:center;font-size:0.5rem;font-weight:600;color:' + (diff > 0 ? 'rgba(102,187,106,0.8)' : 'rgba(239,83,80,0.8)') + ';">' + (diff > 0 ? '-' : '+') + Math.abs(diff) + '</div>';
-                    html += '<div style="height:' + inH + 'px;background:rgba(255,235,59,0.45);"></div>';
-                    html += '</div></div>';
+                    html += '<div style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;">';
+                    html += '<div style="height:' + outH + 'px;border-radius:3px 3px 0 0;display:flex;flex-direction:column;">';
+                    if (emptyH > 0) html += '<div style="height:' + emptyH + 'px;border:1px dashed rgba(255,235,59,0.25);border-bottom:none;border-radius:3px 3px 0 0;display:flex;align-items:center;justify-content:center;font-size:0.5rem;font-weight:600;color:' + (diff > 0 ? 'rgba(102,187,106,0.8)' : 'rgba(239,83,80,0.8)') + ';">' + (diff > 0 ? '-' : '+') + Math.abs(diff) + '</div>';
+                    html += '<div style="height:' + inH + 'px;background:rgba(255,235,59,0.45);border-radius:0 0 0 0;"></div>';
+                    html += '</div></div></div>';
                 }
                 html += '</div>';
                 html += '</div>';
