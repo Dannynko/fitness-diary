@@ -2725,7 +2725,7 @@
                 }
             });
             Object.values(byDate).forEach(d => { if (!d.total && d.sport > 0) d.total = d.sport; });
-            const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+            const dates = Object.keys(byDate).sort((a, b) => a.localeCompare(b));
             if (dates.length === 0) {
                 container.innerHTML = '<div class="no-data" style="padding:15px;">Žiadne záznamy</div>';
                 return;
