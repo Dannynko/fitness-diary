@@ -2725,50 +2725,51 @@
                 return;
             }
 
-            let html = '<canvas id="activityChart" width="600" height="180" style="width:100%;max-height:180px;margin-bottom:12px;"></canvas>';
-            html += '<div style="font-size:0.75rem;">';
-            dates.slice(0, 10).forEach(date => {
+            const maxTotal = Math.max(...dates.map(dt => (byDate[dt].total || byDate[dt].sport || 0) + bazal), 100);
+            let html = '<div style="display:flex;gap:4px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px;">';
+            dates.slice(0, 14).forEach(date => {
                 const d = byDate[date];
                 const move = Math.max(0, d.total - d.sport);
                 const totalWithBazal = d.total + bazal;
                 const adjusted = (d.total - d.healthOut) + (d.healthOut * coef) + bazal;
-                const bazalPct = totalWithBazal > 0 ? Math.round(bazal / totalWithBazal * 100) : 0;
-                const movePct = totalWithBazal > 0 ? Math.round(move / totalWithBazal * 100) : 0;
-                const sportPct = totalWithBazal > 0 ? Math.round(d.sport / totalWithBazal * 100) : 0;
+                const barH = 80;
+                const bazalH = Math.round(bazal / maxTotal * barH);
+                const moveH = Math.round(move / maxTotal * barH);
+                const sportH = Math.round(d.sport / maxTotal * barH);
 
-                html += '<div style="margin-bottom:8px;">';
-                html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">';
-                html += '<span style="font-weight:600;font-size:0.78rem;">' + formatDate(date, true) + '</span>';
-                html += '<span style="font-weight:700;">' + Math.round(totalWithBazal) + ' kcal</span>';
+                html += '<div style="min-width:58px;flex-shrink:0;text-align:center;font-size:0.62rem;">';
+                html += '<div style="color:var(--text-muted);margin-bottom:2px;">' + date.slice(8) + '.' + date.slice(5,7) + '</div>';
+                html += '<div style="font-weight:700;font-size:0.72rem;margin-bottom:3px;">' + Math.round(totalWithBazal) + '</div>';
+                html += '<div style="display:flex;flex-direction:column;justify-content:flex-end;height:' + barH + 'px;margin:0 auto;width:28px;border-radius:4px;overflow:hidden;background:rgba(255,255,255,0.04);">';
+                if (sportH > 0) html += '<div style="height:' + sportH + 'px;background:var(--green);"></div>';
+                if (moveH > 0) html += '<div style="height:' + moveH + 'px;background:rgba(79,195,247,0.5);"></div>';
+                if (bazalH > 0) html += '<div style="height:' + bazalH + 'px;background:rgba(158,158,158,0.35);"></div>';
                 html += '</div>';
-                html += '<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:3px;">';
-                if (bazalPct > 0) html += '<div style="width:' + bazalPct + '%;background:rgba(158,158,158,0.4);"></div>';
-                if (movePct > 0) html += '<div style="width:' + movePct + '%;background:rgba(79,195,247,0.5);"></div>';
-                if (sportPct > 0) html += '<div style="width:' + sportPct + '%;background:var(--green);"></div>';
-                if (!totalWithBazal) html += '<div style="flex:1;background:rgba(255,255,255,0.05);"></div>';
+                html += '<div style="margin-top:3px;line-height:1.3;color:var(--text-muted);">';
+                if (d.sport > 0) html += '<div style="color:var(--green);">' + Math.round(d.sport) + ' š</div>';
+                if (move > 0) html += '<div style="color:rgba(79,195,247,0.8);">' + Math.round(move) + ' p</div>';
+                if (d.healthOut > 0 && coef < 1) html += '<div style="opacity:0.6;">×' + coef + '</div>';
                 html += '</div>';
-                html += '<div style="display:flex;gap:8px;font-size:0.65rem;color:var(--text-muted);">';
-                html += '<span>bazál <strong style="color:rgba(200,200,200,0.7);">' + bazal + '</strong></span>';
-                if (move > 0) html += '<span>pohyb <strong style="color:rgba(79,195,247,0.9);">' + Math.round(move) + '</strong></span>';
-                if (d.sport > 0 || d.acts.length > 0) html += '<span>šport <strong style="color:var(--green);">' + Math.round(d.sport) + '</strong></span>';
-                if (d.healthOut > 0 && coef < 1) html += '<span style="margin-left:auto;">×' + coef + '→' + Math.round(adjusted) + '</span>';
                 html += '</div>';
-                if (d.acts.length > 0) {
-                    d.acts.forEach(a => {
-                        const name = a.foodName || a.activityName || 'Aktivita';
-                        const dur = a.duration ? a.duration + ' min' : '';
-                        html += '<div style="display:flex;align-items:center;gap:5px;padding:1px 0 1px 8px;font-size:0.65rem;color:var(--text-muted);">';
-                        html += '<span style="color:var(--green);">·</span>' + name;
-                        if (dur) html += ' <span style="opacity:0.5;">' + dur + '</span>';
-                        if (a.caloriesOut) html += '<span style="margin-left:auto;">' + Math.round(a.caloriesOut) + '</span>';
-                        html += '</div>';
-                    });
-                }
+            });
+            html += '</div>';
+            // Activity list below
+            html += '<div style="font-size:0.68rem;">';
+            dates.slice(0, 10).forEach(date => {
+                const d = byDate[date];
+                if (d.acts.length === 0) return;
+                html += '<div style="margin-bottom:4px;">';
+                html += '<span style="color:var(--text-muted);font-size:0.62rem;">' + formatDate(date, true) + '</span>';
+                d.acts.forEach(a => {
+                    const name = a.foodName || a.activityName || 'Aktivita';
+                    const dur = a.duration ? ' ' + a.duration + 'min' : '';
+                    const kcal = a.caloriesOut ? ' ' + Math.round(a.caloriesOut) : '';
+                    html += '<span style="color:var(--text-muted);"> · </span><span style="color:var(--green);">' + name + '</span><span style="opacity:0.5;">' + dur + kcal + '</span>';
+                });
                 html += '</div>';
             });
             html += '</div>';
             container.innerHTML = html;
-            drawActivityChart(byDate);
         }
 
         function drawActivityChart(byDate) {
